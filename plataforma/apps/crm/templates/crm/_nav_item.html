@@ -1,0 +1,12 @@
+{# Parámetros: url, etiqueta, clave, icono (atributo d de un path SVG 24x24), badge (opcional). #}
+{# Queda activo cuando clave == seccion_panel (lo define cada vista del CRM). #}
+{% with activo=clave|default:"-" %}
+<li>
+  <a href="{{ url }}" {% if activo == seccion_panel %}aria-current="page"{% endif %}
+     class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {% if activo == seccion_panel %}bg-white/10 text-white{% else %}text-lila hover:bg-white/5 hover:text-white{% endif %}">
+    <svg class="h-5 w-5 shrink-0 {% if activo == seccion_panel %}text-rosa{% endif %}" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ icono }}"/></svg>
+    <span class="flex-1">{{ etiqueta }}</span>
+    {% if badge %}<span class="rounded-full bg-rosa px-2 py-0.5 text-[11px] font-bold text-vino-oscuro">{{ badge }}</span>{% endif %}
+  </a>
+</li>
+{% endwith %}

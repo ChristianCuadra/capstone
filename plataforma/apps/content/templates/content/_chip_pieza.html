@@ -1,0 +1,20 @@
+{# Parámetros: pieza (content_pieces), grande (True en la vista lista). El estado se lee por punto + texto, no solo por color. #}
+<a href="{% if pieza.estado == 'en_revision' %}{% url 'content:aprobacion' %}{% else %}#{% endif %}"
+   title="{{ pieza.hora }} · {{ pieza.red_nombre }} · {{ pieza.formato }}: {{ pieza.titulo }}"
+   class="relative block rounded-md border {% if grande %}px-3 py-2.5{% else %}px-1.5 py-1{% endif %}
+     {% if pieza.estado == 'en_revision' %}border-rosa bg-rosa/20 text-vino hover:bg-rosa/30
+     {% elif pieza.estado == 'aprobado' %}border-transparent bg-lila/45 text-vino hover:bg-lila/60
+     {% elif pieza.estado == 'publicado' %}border-transparent bg-fondo-suave text-gris-txt hover:bg-gris-borde/50
+     {% else %}border-dashed border-lila bg-white text-gris-txt hover:bg-fondo-suave{% endif %}">
+  <span class="flex items-center gap-1 {% if grande %}text-xs{% else %}text-[10px]{% endif %} leading-none">
+    <span class="h-1.5 w-1.5 shrink-0 rounded-full {% if pieza.estado == 'en_revision' %}bg-rosa{% elif pieza.estado == 'aprobado' %}bg-malva{% elif pieza.estado == 'publicado' %}bg-vino{% else %}bg-gris-borde ring-1 ring-lila{% endif %}"></span>
+    <span class="tabular-nums">{{ pieza.hora }}</span>
+    <span aria-hidden="true">·</span>
+    <span class="font-semibold uppercase">{% if pieza.red == 'instagram' %}IG{% elif pieza.red == 'tiktok' %}TT{% else %}FB{% endif %}</span>
+    {% if grande %}<span class="ml-auto">{{ pieza.estado_nombre }}</span>{% endif %}
+  </span>
+  <span class="mt-1 block {% if grande %}text-sm{% else %}line-clamp-2 text-[11px]{% endif %} leading-snug {% if pieza.estado == 'en_revision' %}font-semibold{% endif %}">
+    {% if grande %}{{ pieza.formato }}: {% endif %}{{ pieza.titulo }}
+  </span>
+  <span class="sr-only">— {{ pieza.red_nombre }}, {{ pieza.estado_nombre }}</span>
+</a>

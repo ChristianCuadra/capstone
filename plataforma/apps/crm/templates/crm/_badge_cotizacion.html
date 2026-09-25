@@ -1,0 +1,9 @@
+{# Parámetros: estado (clave de cotizaciones.estado), nombre (texto visible). #}
+<span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold
+  {% if estado == 'borrador' %}bg-fondo-suave text-malva ring-1 ring-inset ring-gris-borde
+  {% elif estado == 'enviada' %}bg-rosa/20 text-vino ring-1 ring-inset ring-rosa/50
+  {% elif estado == 'aceptada' %}bg-vino text-white
+  {% else %}bg-fondo-suave text-gris-txt line-through decoration-gris-txt/40{% endif %}">
+  <span class="h-1.5 w-1.5 rounded-full {% if estado == 'enviada' %}bg-rosa{% elif estado == 'aceptada' %}bg-white/80{% else %}bg-current{% endif %}"></span>
+  {{ nombre }}
+</span>

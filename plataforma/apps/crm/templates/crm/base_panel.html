@@ -1,0 +1,83 @@
+{% extends "base_app.html" %}
+
+{% block title %}{% block page_title %}Panel{% endblock %} · Panel {{ agencia.nombre }}{% endblock %}
+
+{% block body %}
+{# ── Sidebar fijo (off-canvas en móvil) ─────────────────────────────── #}
+<div id="fondo-sidebar" class="fixed inset-0 z-40 hidden bg-vino-oscuro/50 lg:hidden"></div>
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-vino transition-transform lg:translate-x-0" aria-label="Navegación del panel">
+  <div class="flex h-16 items-center justify-between px-5 lg:h-20">
+    <a href="{% url 'crm:dashboard' %}">{% include "partials/logo.html" with claro=True subtitulo="Panel interno" %}</a>
+    <button type="button" id="cerrar-sidebar" class="grid h-9 w-9 place-items-center rounded-md text-lila hover:text-white lg:hidden" aria-label="Cerrar menú">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  {# Badge de Prospectos = prospectos en etapa "nuevo". Contenido del sitio y Configuración usan el admin de Django por ahora. #}
+  {# Calendarios se agrega con el módulo de contenido; Facturación está fuera de alcance (Documento de Alcance 4.2). #}
+  <nav class="flex-1 overflow-y-auto px-3 py-4">
+    <ul class="space-y-1">
+      {% url 'crm:dashboard' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Dashboard" clave="dashboard" icono="M4 5h6v6H4zM14 5h6v4h-6zM14 13h6v6h-6zM4 15h6v4H4z" %}
+      {% url 'crm:prospectos' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Prospectos" clave="prospectos" icono="M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 19v-1a4 4 0 00-3-3.87M16 3.13a3.5 3.5 0 010 6.74" badge=panel_badges.prospectos %}
+      {% url 'crm:cotizaciones' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Cotizaciones" clave="cotizaciones" icono="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" %}
+      {% url 'crm:clientes' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Clientes" clave="clientes" icono="M4 21V8l8-5 8 5v13M9 21v-6h6v6" %}
+      {% url 'admin:app_list' 'catalog' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Planes y servicios" icono="M3 5h18v14H3zM3 9h18M7 13h6M7 16h10" %}
+      {% url 'admin:index' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Configuración" icono="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" %}
+    </ul>
+  </nav>
+
+  <div class="flex items-center gap-3 border-t border-white/10 px-5 py-4">
+    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rosa text-sm font-bold text-vino-oscuro">{{ panel_usuario.iniciales }}</span>
+    <div class="min-w-0 flex-1 leading-tight">
+      <p class="truncate text-sm font-semibold text-white">{{ panel_usuario.nombre }}</p>
+      <p class="truncate text-xs text-lila">{{ panel_usuario.cargo }}</p>
+    </div>
+    <form method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="grid h-9 w-9 place-items-center rounded-md text-lila hover:bg-white/10 hover:text-white" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17l5-5-5-5M20 12H9M12 20H5V4h7"/></svg>
+      </button>
+    </form>
+  </div>
+</aside>
+
+{# ── Área de contenido ──────────────────────────────────────────────── #}
+<div class="lg:pl-64">
+  <div class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gris-borde bg-white px-4 lg:hidden">
+    <button type="button" id="abrir-sidebar" class="grid h-10 w-10 place-items-center rounded-md text-vino hover:bg-fondo-suave" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú">
+      <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    {% include "partials/logo.html" with solo_monograma=True %}
+    <span class="grid h-9 w-9 place-items-center rounded-full bg-rosa text-xs font-bold text-vino-oscuro">{{ panel_usuario.iniciales }}</span>
+  </div>
+
+  <main class="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+    {% if messages %}
+    <ul class="mb-6 space-y-2" role="status">
+      {% for m in messages %}
+      <li class="rounded-xl border px-4 py-3 text-sm {% if m.tags == 'error' %}border-[#B3261E]/40 bg-[#B3261E]/5 text-[#B3261E]{% else %}border-gris-borde bg-white text-vino{% endif %}">{{ m }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Sidebar off-canvas en móvil
+  const sidebar = document.getElementById('sidebar');
+  const fondoSidebar = document.getElementById('fondo-sidebar');
+  const abrirSidebar = document.getElementById('abrir-sidebar');
+  function toggleSidebar(abrir) {
+    sidebar.classList.toggle('-translate-x-full', !abrir);
+    fondoSidebar.classList.toggle('hidden', !abrir);
+    abrirSidebar.setAttribute('aria-expanded', abrir);
+  }
+  abrirSidebar.addEventListener('click', () => toggleSidebar(true));
+  document.getElementById('cerrar-sidebar').addEventListener('click', () => toggleSidebar(false));
+  fondoSidebar.addEventListener('click', () => toggleSidebar(false));
+</script>
+{% block page_scripts %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}Cotizaciones{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Cotizaciones</h1>
+    <p class="mt-1 text-sm">{{ cotizaciones|length }} en total</p>
+  </div>
+  <a href="{% url 'crm:cotizacion_nueva' %}" class="self-start rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro lg:self-auto">+ Nueva cotización</a>
+</header>
+
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  {% if not cotizaciones %}
+  <p class="px-5 py-14 text-center text-sm">Aún no hay cotizaciones. Se crean desde la ficha de un prospecto o con «+ Nueva cotización».</p>
+  {% else %}
+  <div class="relative overflow-x-auto">
+    <table class="w-full min-w-[720px] text-left text-sm">
+      <thead class="border-b border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr>
+          <th scope="col" class="px-5 py-3 font-semibold">Número</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Prospecto</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Mensual</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Total</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Creada</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for c in cotizaciones %}
+        <tr class="hover:bg-fondo-suave/60">
+          <td class="px-5 py-3.5"><a href="{% url 'crm:cotizacion_editar' c.pk %}" class="font-semibold text-vino hover:underline">#{{ c.numero }}</a></td>
+          <td class="px-5 py-3.5"><a href="{% url 'crm:prospecto_detalle' c.prospecto.pk %}" class="hover:text-vino hover:underline">{{ c.prospecto.empresa }}</a></td>
+          <td class="px-5 py-3.5">{% include "crm/_badge_cotizacion.html" with estado=c.estado nombre=c.get_estado_display %}</td>
+          <td class="px-5 py-3.5 text-right tabular-nums">{{ c.t.mensual|clp }}</td>
+          <td class="px-5 py-3.5 text-right font-semibold tabular-nums text-vino">{{ c.t.total|clp }}</td>
+          <td class="px-5 py-3.5 text-right tabular-nums">{{ c.creado_en|date:"j M Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

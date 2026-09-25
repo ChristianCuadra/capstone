@@ -1,0 +1,261 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}{{ prospecto.empresa }}{% endblock %}
+
+{% block content %}
+{# Datos desde las tablas prospectos, interacciones y cotizaciones (crm.views.prospecto_detalle). #}
+
+<nav aria-label="Ruta" class="text-sm">
+  <ol class="flex items-center gap-2">
+    <li><a href="{% url 'crm:prospectos' %}" class="hover:text-vino">Prospectos</a></li>
+    <li aria-hidden="true" class="text-lila">›</li>
+    <li aria-current="page" class="font-medium text-vino">{{ prospecto.empresa }}</li>
+  </ol>
+</nav>
+
+{# ── Header ─────────────────────────────────────────────────────────── #}
+<header class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <div>
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="font-serif text-3xl text-vino lg:text-4xl">{{ prospecto.empresa }}</h1>
+      {% include "crm/_badge_etapa.html" with etapa=prospecto.etapa nombre=prospecto.get_etapa_display %}
+      {% if prospecto.cliente %}<span class="rounded-full bg-vino px-2.5 py-1 text-xs font-semibold text-white">Cliente</span>{% endif %}
+    </div>
+    <p class="mt-1 text-sm">{{ prospecto.rubro }} · {{ prospecto.region }} · Recibido el {{ prospecto.creado_en|date:"j \d\e F Y, H:i" }}</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="#nueva-interaccion" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Registrar interacción</a>
+    <a href="{% url 'admin:crm_prospecto_change' prospecto.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Editar ficha</a>
+    <form method="post" action="{% url 'crm:cotizacion_nueva' %}">
+      {% csrf_token %}<input type="hidden" name="prospecto" value="{{ prospecto.pk }}">
+      <button type="submit" class="rounded-full border border-vino bg-white px-4 py-2 text-sm font-semibold text-vino hover:bg-fondo-suave">Crear cotización</button>
+    </form>
+    {% if prospecto.cliente %}
+    <a href="{% url 'crm:clientes' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Ver cliente</a>
+    {% else %}
+    <form method="post" onsubmit="return confirm('¿Convertir {{ prospecto.empresa|escapejs }} en cliente? Quedará en etapa Ganado.')">
+      {% csrf_token %}<input type="hidden" name="accion" value="convertir_cliente">
+      <button type="submit" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Convertir en cliente</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+{# ── Tabs ───────────────────────────────────────────────────────────── #}
+<nav class="mt-6 border-b border-gris-borde" aria-label="Secciones del prospecto">
+  <ul class="flex gap-6 text-sm font-medium">
+    <li><a href="?tab=resumen" class="-mb-px block border-b-2 pb-3 {% if tab == 'resumen' %}border-vino text-vino{% else %}border-transparent hover:text-vino{% endif %}" {% if tab == 'resumen' %}aria-current="page"{% endif %}>Resumen</a></li>
+    <li><a href="?tab=cotizaciones" class="-mb-px block border-b-2 pb-3 {% if tab == 'cotizaciones' %}border-vino text-vino{% else %}border-transparent hover:text-vino{% endif %}" {% if tab == 'cotizaciones' %}aria-current="page"{% endif %}>
+      Cotizaciones <span class="ml-1 rounded-full bg-fondo-suave px-1.5 text-xs ring-1 ring-gris-borde">{{ cotizaciones|length }}</span></a></li>
+  </ul>
+</nav>
+
+{% if tab == 'cotizaciones' %}
+{# ── Tab: cotizaciones del prospecto ───────────────────────────────── #}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  {% if not cotizaciones %}
+  <p class="px-5 py-12 text-center text-sm">Este prospecto aún no tiene cotizaciones. Usa «Crear cotización» arriba.</p>
+  {% else %}
+  <ul class="divide-y divide-gris-borde">
+    {% for c in cotizaciones %}
+    <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div>
+        <a href="{% url 'crm:cotizacion_editar' c.pk %}" class="font-semibold text-vino hover:underline">Cotización #{{ c.numero }}</a>
+        <p class="text-xs">{{ c.get_estado_display }} · creada {{ c.creado_en|date:"j M Y" }}{% if c.enviada_en %} · enviada {{ c.enviada_en|date:"j M Y" }}{% endif %}</p>
+      </div>
+      <p class="text-sm tabular-nums"><strong class="text-vino">{{ c.t.total|clp }}</strong> total · {{ c.t.mensual|clp }}/mes</p>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+{% else %}
+<div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[400px_minmax(0,1fr)]">
+  {# ── Panel izquierdo ────────────────────────────────────────────── #}
+  <div class="space-y-6">
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Contacto</h2>
+      <dl class="mt-4 space-y-3 text-sm">
+        <div class="flex justify-between gap-4"><dt>Nombre</dt><dd class="text-right font-medium text-vino">{{ prospecto.nombre }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Correo</dt><dd class="min-w-0 truncate text-right"><a href="mailto:{{ prospecto.correo }}" class="text-vino underline decoration-rosa underline-offset-2">{{ prospecto.correo }}</a></dd></div>
+        <div class="flex justify-between gap-4"><dt>Teléfono</dt><dd class="text-right text-vino">{% if prospecto.telefono %}<a href="tel:{{ prospecto.telefono|cut:' ' }}" class="hover:underline">{{ prospecto.telefono }}</a>{% else %}—{% endif %}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Sitio web</dt><dd class="min-w-0 truncate text-right">{% if prospecto.sitio_web %}<a href="{{ prospecto.sitio_web }}" target="_blank" rel="noopener noreferrer" class="text-vino underline decoration-rosa underline-offset-2">{{ prospecto.sitio_web|cut:"https://"|cut:"http://" }}</a>{% else %}—{% endif %}</dd></div>
+        <div class="flex items-center justify-between gap-4"><dt>Instagram</dt>
+          <dd class="text-right">
+            {% if prospecto.instagram %}
+            <a href="https://instagram.com/{{ prospecto.instagram|urlencode }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-full bg-rosa/15 px-2.5 py-1 text-xs font-semibold text-vino hover:bg-rosa/25">
+              @{{ prospecto.instagram }}{% if prospecto.instagram_seguidores is not None %} · {{ prospecto.instagram_seguidores|miles }} seguidores{% endif %}
+            </a>
+            {% else %}—{% endif %}
+          </dd>
+        </div>
+      </dl>
+      <details class="mt-4 rounded-xl bg-fondo-suave px-4 py-3 text-sm">
+        <summary class="cursor-pointer font-medium text-vino">{% if prospecto.instagram_seguidores is None %}Agregar seguidores de Instagram{% else %}Editar Instagram{% endif %}</summary>
+        <form method="post" class="mt-3 grid grid-cols-[1fr_120px_auto] items-end gap-2">
+          {% csrf_token %}<input type="hidden" name="accion" value="instagram">
+          <label class="text-xs">Cuenta<input name="instagram" value="{{ prospecto.instagram }}" placeholder="cuenta" class="mt-1 w-full rounded-lg border border-gris-borde px-2 py-1.5 text-sm"></label>
+          <label class="text-xs">Seguidores<input name="seguidores" inputmode="numeric" value="{{ prospecto.instagram_seguidores|default_if_none:'' }}" placeholder="0" class="mt-1 w-full rounded-lg border border-gris-borde px-2 py-1.5 text-sm"></label>
+          <button type="submit" class="rounded-full bg-vino px-3 py-1.5 text-xs font-semibold text-white">Guardar</button>
+        </form>
+      </details>
+    </section>
+
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Oportunidad</h2>
+      <dl class="mt-4 space-y-3 text-sm">
+        <div class="flex justify-between gap-4"><dt>Canal</dt><dd class="text-right text-vino">{{ prospecto.get_canal_display }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>¿Cómo nos conoció?</dt><dd class="text-right text-vino">{{ prospecto.get_como_nos_conocio_display|default:"No indicó" }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Tamaño</dt><dd class="text-right text-vino">{{ prospecto.get_tamano_display }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>¿Trabaja con agencia?</dt><dd class="text-right text-vino">{{ prospecto.get_agencia_actual_display }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Presupuesto declarado</dt><dd class="text-right text-vino">{{ prospecto.get_presupuesto_display }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Plan de interés</dt><dd class="text-right text-vino">{{ prospecto.plan_interes.nombre|default:"—" }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Plan sugerido (cotizador)</dt><dd class="text-right font-semibold text-vino">{% if prospecto.plan_sugerido %}{{ prospecto.plan_sugerido.nombre }} · {{ prospecto.plan_sugerido.precio_mensual|clp }}/mes{% else %}Servicios sueltos{% endif %}</dd></div>
+        <div class="flex items-center justify-between gap-4"><dt>Responsable</dt>
+          <dd class="flex items-center gap-2 text-right text-vino">
+            {% if prospecto.responsable %}{{ prospecto.responsable.get_full_name|default:prospecto.responsable.email }}{% else %}Sin asignar{% endif %}
+            {% if prospecto.responsable_id != request.user.pk %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="asignarme"><button type="submit" class="rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Asignarme</button></form>
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+
+      <form method="post" class="mt-5 flex items-end gap-2 border-t border-gris-borde pt-4">
+        {% csrf_token %}<input type="hidden" name="accion" value="cambiar_etapa">
+        <label class="flex-1 text-xs font-medium text-vino">Mover a etapa
+          <select name="etapa" class="mt-1 w-full rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm">
+            {% for clave, nombre in etapas %}<option value="{{ clave }}" {% if clave == prospecto.etapa %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Mover</button>
+      </form>
+
+      <h3 class="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-malva">Objetivos</h3>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        {% for objetivo in prospecto.objetivos %}<li class="rounded-full bg-rosa/15 px-3 py-1 text-xs font-medium text-vino">{{ objetivo }}</li>
+        {% empty %}<li class="text-sm">No indicó.</li>{% endfor %}
+      </ul>
+      <h3 class="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-malva">Servicios de interés</h3>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        {% for s in prospecto.servicios_requeridos.all %}<li class="rounded-full bg-lila/30 px-3 py-1 text-xs font-medium text-vino">{{ s.nombre }}</li>
+        {% empty %}<li class="text-sm">No indicó.</li>{% endfor %}
+      </ul>
+      <h3 class="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-malva">Canales actuales</h3>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        {% for red in prospecto.nombres_redes %}<li class="rounded-full bg-fondo-suave px-3 py-1 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde">{{ red }}</li>
+        {% empty %}<li class="text-sm">No indicó.</li>{% endfor %}
+      </ul>
+      {% if prospecto.situacion_actual %}
+      <h3 class="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-malva">Situación actual (en sus palabras)</h3>
+      <p class="mt-2 whitespace-pre-line rounded-xl bg-fondo-suave p-3 text-sm leading-relaxed">{{ prospecto.situacion_actual }}</p>
+      {% endif %}
+    </section>
+  </div>
+
+  {# ── Panel derecho ──────────────────────────────────────────────── #}
+  <div class="min-w-0 space-y-6">
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Avance en el embudo</h2>
+      {% if prospecto.etapa == 'perdido' %}<p class="mt-3 text-sm">Prospecto marcado como <strong class="text-vino">perdido</strong>.</p>{% endif %}
+      {# Móvil: lista vertical; desde sm: barra horizontal de 5 tramos #}
+      <ol class="mt-5 grid gap-2.5 sm:grid-cols-5 sm:gap-1.5">
+        {% for paso in progreso_embudo %}
+        <li class="flex min-w-0 items-center gap-3 sm:block">
+          <div class="h-2 w-10 shrink-0 rounded-full sm:w-auto {% if paso.estado == 'completada' %}bg-vino{% elif paso.estado == 'actual' %}bg-rosa{% else %}bg-fondo-suave ring-1 ring-inset ring-gris-borde{% endif %}"></div>
+          <p class="text-xs leading-tight sm:mt-2 {% if paso.estado == 'actual' %}font-semibold text-vino{% elif paso.estado == 'completada' %}text-vino{% endif %}">
+            {% if paso.estado == 'completada' %}<span aria-hidden="true">✓ </span>{% endif %}{{ paso.nombre }}
+            <span class="sr-only">({{ paso.estado }})</span>
+          </p>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    {# Diagnóstico con IA: borrador que el equipo revisa antes de usar (Alcance 6.1 y 6.4) #}
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-wrap items-center gap-3">
+          <h2 class="font-serif text-xl text-vino">Diagnóstico con IA</h2>
+          {% if prospecto.diagnostico_revisado_en %}
+          <span class="rounded-full bg-vino/10 px-2.5 py-1 text-xs font-semibold text-vino">Revisado por {{ prospecto.diagnostico_revisado_por.get_full_name|default:prospecto.diagnostico_revisado_por.email }}</span>
+          {% elif prospecto.diagnostico_ia %}
+          <span class="rounded-full bg-rosa/15 px-2.5 py-1 text-xs font-semibold text-vino">Borrador sin revisar</span>
+          {% endif %}
+        </div>
+        <form method="post">
+          {% csrf_token %}<input type="hidden" name="accion" value="generar_diagnostico">
+          <button type="submit" class="rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if not ia_configurada %}text-gris-txt{% else %}text-vino{% endif %}"
+                  {% if prospecto.diagnostico_ia %}onclick="return confirm('Se reemplazará el texto actual por uno nuevo. ¿Continuar?')"{% endif %}>
+            {% if prospecto.diagnostico_ia %}↻ Regenerar{% else %}Generar con IA{% endif %}
+          </button>
+        </form>
+      </div>
+      {% if not ia_configurada %}<p class="mt-2 text-xs">La IA se activa al agregar <code>AI_API_KEY</code> (Google Gemini) en el archivo <code>.env</code>. Mientras, puedes escribir el diagnóstico a mano.</p>{% endif %}
+      <form method="post" class="mt-4">
+        {% csrf_token %}<input type="hidden" name="accion" value="guardar_diagnostico">
+        <label for="diagnostico" class="sr-only">Diagnóstico</label>
+        <textarea id="diagnostico" name="diagnostico" rows="10" placeholder="Resumen de la empresa, situación, plan sugerido y próximos pasos…" class="w-full rounded-xl border border-gris-borde bg-fondo-suave/50 p-4 text-sm leading-relaxed text-vino outline-none focus:border-malva focus:ring-2 focus:ring-lila/40">{{ prospecto.diagnostico_ia }}</textarea>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-xs">{% if prospecto.diagnostico_generado_en %}Generado por IA el {{ prospecto.diagnostico_generado_en|date:"j M Y, H:i" }}.{% endif %}</p>
+          <button type="submit" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Guardar y marcar como revisado</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="font-serif text-xl text-vino">Historial de interacciones</h2>
+        <ul class="flex flex-wrap gap-1.5 text-sm">
+          {% for clave, etiqueta in filtros %}
+          <li><a href="?tipo={{ clave }}" class="block rounded-full px-3 py-1 {% if clave == filtro_activo %}bg-vino font-semibold text-white{% else %}text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ etiqueta }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <ol class="relative mt-6 space-y-6 before:absolute before:bottom-2 before:left-[19px] before:top-2 before:w-px before:bg-gris-borde">
+        {% for i in interacciones %}
+        <li class="relative flex gap-4">
+          <span class="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full ring-4 ring-white
+            {% if i.tipo == 'correo' %}bg-lila/40 text-vino{% elif i.tipo == 'llamada' %}bg-rosa/25 text-vino{% elif i.tipo == 'reunion' %}bg-malva text-white{% else %}bg-fondo-suave text-malva{% endif %}">
+            {% if i.tipo == 'correo' %}<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4zM4 7l8 6 8-6"/></svg>
+            {% elif i.tipo == 'llamada' %}<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></svg>
+            {% elif i.tipo == 'reunion' %}<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9"/></svg>
+            {% else %}<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>{% endif %}
+          </span>
+          <div class="min-w-0 flex-1 pt-0.5">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-4">
+              <h3 class="font-semibold text-vino">{{ i.titulo }}</h3>
+              <p class="text-xs tabular-nums"><time datetime="{{ i.fecha|date:'c' }}">{{ i.fecha|date:"j M Y · H:i" }}</time></p>
+            </div>
+            {% if i.descripcion %}<p class="mt-1 whitespace-pre-line text-sm leading-relaxed">{{ i.descripcion }}</p>{% endif %}
+            <p class="mt-1.5 text-xs text-malva">{{ i.get_tipo_display }}{% if i.autor %} · {{ i.autor.get_full_name|default:i.autor.email }}{% endif %}</p>
+          </div>
+        </li>
+        {% empty %}
+        <li class="rounded-xl bg-fondo-suave p-5 text-center text-sm">No hay interacciones de este tipo.</li>
+        {% endfor %}
+      </ol>
+
+      <form id="nueva-interaccion" method="post" class="mt-6 scroll-mt-24 space-y-3 border-t border-gris-borde pt-5">
+        {% csrf_token %}<input type="hidden" name="accion" value="registrar_interaccion">
+        <h3 class="text-sm font-semibold text-vino">Registrar interacción</h3>
+        <div class="grid gap-3 sm:grid-cols-[160px_1fr]">
+          <label class="sr-only" for="tipo-interaccion">Tipo</label>
+          <select id="tipo-interaccion" name="tipo" class="rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm">
+            {% for clave, nombre in tipos_interaccion %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
+          </select>
+          <label class="sr-only" for="titulo-interaccion">Título</label>
+          <input id="titulo-interaccion" name="titulo" required maxlength="160" placeholder="Ej.: Llamada para resolver dudas de la cotización" class="rounded-xl border border-gris-borde px-3 py-2 text-sm outline-none focus:border-malva focus:ring-2 focus:ring-lila/40">
+        </div>
+        <label class="sr-only" for="descripcion-interaccion">Detalle</label>
+        <textarea id="descripcion-interaccion" name="descripcion" rows="2" placeholder="Detalle (opcional)" class="w-full rounded-xl border border-gris-borde px-3 py-2 text-sm outline-none focus:border-malva focus:ring-2 focus:ring-lila/40"></textarea>
+        <button type="submit" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Registrar</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

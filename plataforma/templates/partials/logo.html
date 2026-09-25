@@ -1,0 +1,16 @@
+{# Logo según el manual de marca: monograma AC (A rosa, C blanca) + "AGENCIA" serif rosa sobre "COSMOPOLITAN" sans. #}
+{# Uso: {% include "partials/logo.html" with claro=True %} para fondos oscuros. #}
+{# Opcionales: subtitulo="Panel interno" (línea extra bajo el nombre), solo_monograma=True. #}
+{# TODO: reemplazar el monograma tipográfico por el SVG oficial (AC con la copa) cuando la agencia entregue los archivos. #}
+<span class="inline-flex items-center gap-3">
+  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-vino font-serif text-[22px] font-bold leading-none {% if claro %}ring-1 ring-white/25{% endif %}" aria-hidden="true">
+    <span class="-mt-0.5"><span class="text-rosa">A</span><span class="-ml-px text-white">C</span></span>
+  </span>
+  {% if solo_monograma %}<span class="sr-only">Agencia Cosmopolitan</span>{% else %}
+  <span class="leading-none">
+    <span class="block font-serif text-[13px] uppercase tracking-[0.3em] text-rosa">Agencia</span>
+    <span class="mt-0.5 block font-sans text-[15px] font-semibold uppercase tracking-[0.14em] {% if claro %}text-white{% else %}text-vino{% endif %}">Cosmopolitan</span>
+    {% if subtitulo %}<span class="mt-1 block text-[9px] font-medium uppercase tracking-[0.2em] {% if claro %}text-lila{% else %}text-malva{% endif %}">{{ subtitulo }}</span>{% endif %}
+  </span>
+  {% endif %}
+</span>

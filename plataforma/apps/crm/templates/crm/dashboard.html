@@ -1,0 +1,276 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}Resumen comercial{% endblock %}
+
+{% block content %}
+{# Todo desde la base (crm.views.dashboard). Sin datos, cada bloque muestra su estado vacío. #}
+
+{# ── Header ─────────────────────────────────────────────────────────── #}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Resumen comercial</h1>
+    <p class="mt-1 text-sm">{{ fecha_hoy|date:"l j \d\e F \d\e Y"|capfirst }}</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <form method="get" class="flex items-center gap-2">
+      <label class="sr-only" for="periodo">Período</label>
+      <select id="periodo" name="periodo" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino">
+        {% for clave, nombre in periodos %}<option value="{{ clave }}" {% if clave == periodo_actual %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Ver</button>
+    </form>
+    <a href="{% url 'crm:prospectos_exportar' %}" class="inline-flex items-center gap-2 rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+      Exportar prospectos
+    </a>
+    {# Ingreso manual (p. ej. un prospecto que llegó por WhatsApp) desde el admin #}
+    <a href="{% url 'admin:crm_prospecto_add' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
+  </div>
+</header>
+
+{# ── KPIs: desde cotizaciones del período ───────────────────────────── #}
+<section class="mt-7 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" aria-label="Indicadores: {{ periodo_nombre }}">
+  <article class="rounded-2xl border border-gris-borde bg-white p-4 sm:p-5">
+    <h2 class="text-[10px] font-semibold uppercase tracking-[0.12em] text-malva sm:text-xs">Nuevo ingreso mensual</h2>
+    <p class="mt-2 font-serif text-2xl text-vino sm:mt-3 sm:text-3xl">{% if kpis.ingresos.valor %}{{ kpis.ingresos.valor|clp }}{% else %}—{% endif %}</p>
+    <p class="mt-2 text-xs sm:text-sm">
+      {% if kpis.ingresos.variacion_pct is not None %}
+        {% if kpis.ingresos.variacion_pct >= 0 %}<span class="font-semibold text-vino">▲ {{ kpis.ingresos.variacion_pct|floatformat:1 }}%</span>
+        {% else %}<span class="font-semibold text-malva">▼ {{ kpis.ingresos.variacion_pct|absoluto|floatformat:1 }}%</span>{% endif %}
+        vs período anterior
+      {% else %}Cotizaciones aceptadas · {{ periodo_nombre|lower }}{% endif %}
+    </p>
+  </article>
+  <article class="rounded-2xl border border-gris-borde bg-white p-4 sm:p-5">
+    <h2 class="text-[10px] font-semibold uppercase tracking-[0.12em] text-malva sm:text-xs">Cotizaciones enviadas</h2>
+    <p class="mt-2 font-serif text-2xl text-vino sm:mt-3 sm:text-3xl">{{ kpis.cotizaciones.cantidad }}</p>
+    <p class="mt-2 text-xs sm:text-sm">{% if kpis.cotizaciones.cantidad %}por <span class="font-semibold text-vino">{{ kpis.cotizaciones.monto|clp }}</span>{% else %}{{ periodo_nombre }}{% endif %}</p>
+  </article>
+  <article class="rounded-2xl border border-gris-borde bg-white p-4 sm:p-5">
+    <h2 class="text-[10px] font-semibold uppercase tracking-[0.12em] text-malva sm:text-xs">Tasa de cierre</h2>
+    <p class="mt-2 font-serif text-2xl text-vino sm:mt-3 sm:text-3xl">{% if kpis.cierre.tasa_pct is not None %}{{ kpis.cierre.tasa_pct }}%{% else %}—{% endif %}</p>
+    <p class="mt-2 text-xs sm:text-sm">{{ kpis.cierre.aceptadas }} aceptadas · {{ kpis.cierre.rechazadas }} rechazadas · {{ kpis.cierre.en_espera }} en espera</p>
+  </article>
+  <article class="rounded-2xl border border-gris-borde bg-white p-4 sm:p-5">
+    <h2 class="text-[10px] font-semibold uppercase tracking-[0.12em] text-malva sm:text-xs">Ticket promedio</h2>
+    <p class="mt-2 font-serif text-2xl text-vino sm:mt-3 sm:text-3xl">{% if kpis.ticket.valor %}{{ kpis.ticket.valor|clp }}{% else %}—{% endif %}</p>
+    <p class="mt-2 text-xs sm:text-sm">Mensual, cotizaciones aceptadas</p>
+  </article>
+</section>
+
+<div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+  {# ── Columna principal ──────────────────────────────────────────── #}
+  <div class="min-w-0 space-y-6">
+    <div class="grid grid-cols-1 gap-6 2xl:grid-cols-2">
+      {# Embudo: estado actual de todos los prospectos #}
+      <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+        <h2 class="font-serif text-xl text-vino">Embudo de prospectos</h2>
+        <p class="text-sm">Cantidad y valor mensual estimado por etapa</p>
+        <ol class="mt-5 space-y-4">
+          {% for fila in embudo %}
+          <li>
+            <a href="{% url 'crm:prospectos' %}?etapa={{ fila.etapa }}" class="block rounded-lg hover:bg-fondo-suave/60">
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <span class="font-medium text-vino">{{ fila.nombre }}</span>
+                <span class="whitespace-nowrap"><strong class="text-vino">{{ fila.cantidad }}</strong>{% if fila.monto %} · {{ fila.monto|clp }}{% endif %}</span>
+              </div>
+              <div class="mt-1.5 h-2.5 rounded-full bg-fondo-suave">
+                {% if fila.cantidad %}<div class="h-2.5 rounded-full {% cycle 'bg-lila' 'bg-[#AE8199]' 'bg-malva' 'bg-[#6E3A51]' 'bg-vino' %}" style="width: {{ fila.ancho_pct }}%"></div>{% endif %}
+              </div>
+            </a>
+          </li>
+          {% endfor %}
+        </ol>
+        {% if not hay_prospectos %}<p class="mt-5 text-sm">Aún no hay prospectos. Llegan desde el formulario de cotización del sitio.</p>{% endif %}
+      </section>
+
+      {# Gráfico cotizaciones #}
+      <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+        <h2 class="font-serif text-xl text-vino">Cotizaciones enviadas vs. aceptadas</h2>
+        <p class="text-sm">Últimos 6 meses</p>
+        {% if hay_grafico %}
+        <div class="relative mt-4 h-64" role="img" aria-label="Gráfico de barras: cotizaciones enviadas y aceptadas por mes">
+          <canvas id="grafico-cotizaciones"></canvas>
+        </div>
+        {# sr-only va en un div: una <table> no respeta height:1px y desbordaría la página #}
+        <div class="sr-only">
+          <table>
+            <caption>Cotizaciones enviadas y aceptadas por mes</caption>
+            <tr><th>Mes</th><th>Enviadas</th><th>Aceptadas</th></tr>
+            {% for fila in tabla_cotizaciones %}<tr><td>{{ fila.mes }}</td><td>{{ fila.enviadas }}</td><td>{{ fila.aceptadas }}</td></tr>{% endfor %}
+          </table>
+        </div>
+        {% else %}
+        <div class="mt-4 grid h-64 place-items-center rounded-xl bg-fondo-suave px-6 text-center text-sm">
+          <p>Aún no hay cotizaciones enviadas. <a href="{% url 'crm:cotizacion_nueva' %}" class="font-semibold text-vino underline decoration-rosa underline-offset-2">Crear la primera</a></p>
+        </div>
+        {% endif %}
+      </section>
+    </div>
+
+    {# Tabla de prospectos: etapas activas, los con más días sin movimiento primero #}
+    <section class="rounded-2xl border border-gris-borde bg-white">
+      <div class="flex items-center justify-between gap-4 p-5 lg:px-6">
+        <h2 class="font-serif text-xl text-vino">Prospectos que requieren acción</h2>
+        <a href="{% url 'crm:prospectos' %}" class="whitespace-nowrap text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-4">Ver todos</a>
+      </div>
+      {% if not prospectos_accion %}
+      <p class="border-t border-gris-borde px-5 py-10 text-center text-sm lg:px-6">No hay prospectos pendientes. Los que lleguen por el formulario de cotización del sitio aparecerán aquí.</p>
+      {% else %}
+      {# relative: contiene los .sr-only (position:absolute) dentro del scroll horizontal #}
+      <div class="relative overflow-x-auto">
+        <table class="w-full min-w-[680px] text-left text-sm">
+          <thead class="border-y border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+            <tr>
+              <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Prospecto</th>
+              <th scope="col" class="px-5 py-3 font-semibold">Etapa</th>
+              <th scope="col" class="px-5 py-3 text-right font-semibold">Valor</th>
+              <th scope="col" class="px-5 py-3 font-semibold">Responsable</th>
+              <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">Días</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gris-borde">
+            {% for p in prospectos_accion %}
+            <tr class="hover:bg-fondo-suave/60">
+              <td class="px-5 py-3.5 lg:px-6">
+                <a href="{% url 'crm:prospecto_detalle' p.id %}" class="whitespace-nowrap font-semibold text-vino hover:underline">{{ p.empresa }}</a>
+                <span class="block text-xs">{{ p.detalle }}</span>
+              </td>
+              <td class="px-5 py-3.5">{% include "crm/_badge_etapa.html" with etapa=p.etapa nombre=p.etapa_nombre %}</td>
+              <td class="px-5 py-3.5 text-right tabular-nums text-vino">{% if p.valor_mensual %}{{ p.valor_mensual|clp }}<span class="text-xs text-gris-txt">/mes</span>{% else %}—{% endif %}</td>
+              <td class="px-5 py-3.5">{{ p.responsable|default:"Sin asignar" }}</td>
+              <td class="px-5 py-3.5 text-right tabular-nums lg:px-6">
+                {% if p.dias > dias_alerta %}
+                <span class="inline-flex items-center gap-1 font-semibold text-vino" title="Más de {{ dias_alerta }} días sin movimiento">
+                  <svg class="h-3.5 w-3.5 text-rosa" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-.75 4h1.5v5h-1.5V6zm0 6.5h1.5V14h-1.5v-1.5z"/></svg>
+                  {{ p.dias }}<span class="sr-only"> días, atrasado</span>
+                </span>
+                {% else %}{{ p.dias }}{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  {# ── Panel derecho ──────────────────────────────────────────────── #}
+  <aside class="space-y-6">
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="font-serif text-xl text-vino">Tareas pendientes</h2>
+      {% if tareas %}
+      <ul class="mt-4 divide-y divide-gris-borde">
+        {% for tarea in tareas %}
+        <li class="flex items-start gap-3 py-3">
+          <form method="post" action="{% url 'crm:tarea_alternar' tarea.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="mt-0.5 grid h-4 w-4 place-items-center rounded border border-malva hover:bg-lila/40" title="Marcar como hecha" aria-label="Marcar «{{ tarea.titulo }}» como hecha"></button>
+          </form>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-medium text-vino">{{ tarea.titulo }}</span>
+            <span class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+              {% if tarea.fecha %}<span class="{% if tarea.vencida %}font-semibold text-[#B3261E]{% elif tarea.es_hoy %}font-semibold text-rosa{% endif %}">{% if tarea.es_hoy %}Hoy{% else %}{{ tarea.fecha|date:"D j M" }}{% endif %}{% if tarea.vencida %} · vencida{% endif %}</span>{% endif %}
+              {% if tarea.responsable %}<span class="grid h-5 w-5 place-items-center rounded-full bg-lila/40 text-[9px] font-bold text-vino" title="{{ tarea.responsable_nombre }}">{{ tarea.responsable }}</span>{% endif %}
+              {% if tarea.prospecto %}<a href="{% url 'crm:prospecto_detalle' tarea.prospecto.pk %}" class="text-malva hover:underline">{{ tarea.prospecto.empresa }}</a>{% endif %}
+            </span>
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="mt-3 text-sm">No hay tareas pendientes.</p>
+      {% endif %}
+
+      <form method="post" action="{% url 'crm:tarea_crear' %}" class="mt-4 space-y-2 border-t border-gris-borde pt-4">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label class="sr-only" for="nueva-tarea">Nueva tarea</label>
+        <input id="nueva-tarea" name="titulo" type="text" required maxlength="160" placeholder="Nueva tarea…" class="w-full rounded-xl border border-gris-borde px-3 py-2 text-sm outline-none focus:border-malva focus:ring-2 focus:ring-lila/40">
+        <div class="flex gap-2">
+          <label class="sr-only" for="fecha-tarea">Fecha límite</label>
+          <input id="fecha-tarea" name="fecha" type="date" class="min-w-0 flex-1 rounded-xl border border-gris-borde px-3 py-2 text-sm">
+          <label class="sr-only" for="responsable-tarea">Responsable</label>
+          <select id="responsable-tarea" name="responsable" class="min-w-0 flex-1 rounded-xl border border-gris-borde bg-white px-2 py-2 text-sm">
+            <option value="">Sin responsable</option>
+            {% for u in equipo %}<option value="{{ u.pk }}" {% if u.pk == request.user.pk %}selected{% endif %}>{{ u.get_full_name|default:u.email }}</option>{% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="w-full rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Agregar tarea</button>
+      </form>
+    </section>
+
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="font-serif text-xl text-vino">Origen de los prospectos</h2>
+      <p class="text-sm">{{ periodo_nombre }}</p>
+      {% if not origenes %}
+      <p class="mt-4 text-sm">Sin prospectos en este período. Se calcula con la respuesta «¿Cómo nos conociste?» del formulario.</p>
+      {% else %}
+      <div class="mt-4 flex items-center gap-5">
+        <div class="relative h-28 w-28 shrink-0" role="img" aria-label="Gráfico de dona con el origen de los prospectos">
+          <canvas id="grafico-origen"></canvas>
+        </div>
+        {# Leyenda con valores: la identidad nunca depende solo del color #}
+        <ul class="min-w-0 flex-1 space-y-2.5 text-sm">
+          {% for o in origenes %}
+          <li class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 shrink-0 rounded-sm {% cycle 'bg-vino' 'bg-rosa' 'bg-malva' 'bg-gris-borde' %}"></span>
+            <span class="flex-1 leading-tight">{{ o.origen }}</span>
+            <strong class="tabular-nums text-vino">{{ o.pct }}%</strong>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+
+{{ grafico_cotizaciones|json_script:"datos-cotizaciones" }}
+{{ origenes|json_script:"datos-origen" }}
+{% endblock %}
+
+{% block page_scripts %}
+{% include "partials/chartjs.html" %}
+<script>
+  const cot = JSON.parse(document.getElementById('datos-cotizaciones').textContent);
+  const lienzoCot = document.getElementById('grafico-cotizaciones');
+  if (lienzoCot) new Chart(lienzoCot, {
+    type: 'bar',
+    data: {
+      labels: cot.meses,
+      datasets: [
+        { label: 'Enviadas', data: cot.enviadas, backgroundColor: '#E18BA6', borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 22 },
+        { label: 'Aceptadas', data: cot.aceptadas, backgroundColor: '#522136', borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 22 },
+      ],
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'top', align: 'end' } },
+      datasets: { bar: { categoryPercentage: 0.6, barPercentage: 0.9 } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { precision: 0 }, border: { display: false } },
+      },
+    },
+  });
+
+  const origen = JSON.parse(document.getElementById('datos-origen').textContent);
+  const lienzoOrigen = document.getElementById('grafico-origen');
+  if (lienzoOrigen) new Chart(lienzoOrigen, {
+    type: 'doughnut',
+    data: {
+      labels: origen.map(o => o.origen),
+      // Orden fijo de color; "Otros" usa --gris-borde (validado contra rosa para daltonismo)
+      datasets: [{ data: origen.map(o => o.cantidad), backgroundColor: ['#522136', '#F47FB1', '#8A5A72', '#E3D5DC'], borderColor: '#FFFFFF', borderWidth: 2 }],
+    },
+    options: {
+      cutout: '64%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}` } } },
+    },
+  });
+</script>
+{% endblock %}

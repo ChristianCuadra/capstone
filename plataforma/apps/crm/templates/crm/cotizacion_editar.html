@@ -1,0 +1,219 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}Cotización #{{ cotizacion.numero }}{% endblock %}
+
+{% block content %}
+{# Tablas cotizaciones + cotizacion_items. Los precios se copian del catálogo al agregar cada ítem. #}
+<nav aria-label="Ruta" class="text-sm">
+  <ol class="flex items-center gap-2">
+    <li><a href="{% url 'crm:cotizaciones' %}" class="hover:text-vino">Cotizaciones</a></li>
+    <li aria-hidden="true" class="text-lila">›</li>
+    <li aria-current="page" class="font-medium text-vino">#{{ cotizacion.numero }}</li>
+  </ol>
+</nav>
+
+{# ── Header ─────────────────────────────────────────────────────────── #}
+<header class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <div>
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="font-serif text-3xl text-vino lg:text-4xl">Cotización #{{ cotizacion.numero }}</h1>
+      {% include "crm/_badge_cotizacion.html" with estado=cotizacion.estado nombre=cotizacion.get_estado_display %}
+    </div>
+    <p class="mt-1 text-sm">
+      Para <a href="{% url 'crm:prospecto_detalle' prospecto.pk %}" class="font-medium text-vino underline decoration-rosa underline-offset-2">{{ prospecto.empresa }}</a>
+      · guardada {{ cotizacion.actualizado_en|date:"j M, H:i" }}{% if cotizacion.enviada_en %} · enviada {{ cotizacion.enviada_en|date:"j M Y" }}{% endif %}
+    </p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'crm:cotizacion_imprimir' cotizacion.pk %}" target="_blank" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Vista para imprimir / PDF</a>
+    {% if editable %}
+    <button type="submit" form="form-cotizacion" name="accion" value="enviar" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Marcar como enviada</button>
+    {% elif cotizacion.estado == 'enviada' %}
+    <form method="post" class="flex flex-wrap gap-2">
+      {% csrf_token %}
+      <button type="submit" name="accion" value="aceptada" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Aceptada</button>
+      <button type="submit" name="accion" value="rechazada" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Rechazada</button>
+      <button type="submit" name="accion" value="volver_borrador" class="rounded-full px-4 py-2 text-sm font-medium text-malva underline underline-offset-4">Volver a borrador</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+<form id="form-cotizacion" method="post" class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+  {% csrf_token %}
+  {# Botón por defecto para la tecla Enter: guarda sin ejecutar otras acciones #}
+  <button type="submit" name="accion" value="guardar" class="sr-only" tabindex="-1" aria-hidden="true">Guardar</button>
+  <fieldset class="min-w-0 space-y-6" {% if not editable %}disabled{% endif %}>
+    {% if not editable %}<p class="rounded-xl bg-fondo-suave px-4 py-3 text-sm text-vino">Esta cotización está {{ cotizacion.get_estado_display|lower }}: solo lectura.{% if cotizacion.estado == 'enviada' %} Para editarla, vuélvela a borrador.{% endif %}</p>{% endif %}
+
+    {# ── Destinatario ── #}
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Destinatario</h2>
+      <div class="mt-4 grid gap-4 md:grid-cols-[1fr_1.4fr_180px]">
+        <div class="text-sm"><span class="font-medium text-vino">Prospecto</span>
+          <p class="mt-1.5 rounded-xl border border-gris-borde bg-fondo-suave px-3 py-2.5">{{ prospecto.empresa }}</p>
+        </div>
+        <label class="block text-sm"><span class="font-medium text-vino">Contacto</span>
+          <input type="text" name="contacto" value="{{ cotizacion.contacto }}" class="mt-1.5 w-full rounded-xl border border-gris-borde px-3 py-2.5">
+        </label>
+        <label class="block text-sm"><span class="font-medium text-vino">Válida hasta</span>
+          <input type="date" name="valida_hasta" value="{{ cotizacion.valida_hasta|date:'Y-m-d' }}" class="mt-1.5 w-full rounded-xl border border-gris-borde px-3 py-2.5">
+        </label>
+      </div>
+    </section>
+
+    {# ── Servicios ── #}
+    <section class="rounded-2xl border border-gris-borde bg-white">
+      <h2 class="p-5 font-serif text-xl text-vino lg:px-6">Servicios</h2>
+      {% if items %}
+      {# relative: contiene los .sr-only (position:absolute) dentro del scroll horizontal #}
+      <div class="relative overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <thead class="whitespace-nowrap border-y border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+            <tr>
+              <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Servicio</th>
+              <th scope="col" class="px-3 py-3 text-center font-semibold">Cantidad</th>
+              <th scope="col" class="px-3 py-3 text-right font-semibold">Valor unitario</th>
+              <th scope="col" class="px-3 py-3 text-center font-semibold">Meses</th>
+              <th scope="col" class="px-3 py-3 text-right font-semibold">Subtotal</th>
+              <th scope="col" class="w-12 px-3 py-3"><span class="sr-only">Quitar</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gris-borde">
+            {% for item in items %}
+            <tr>
+              <td class="px-5 py-3.5 lg:px-6">
+                <p class="font-semibold text-vino">{{ item.descripcion }}</p>
+                {% if item.detalle %}<p class="text-xs">{{ item.detalle }}</p>{% endif %}
+              </td>
+              <td class="px-3 py-3.5">
+                <div class="mx-auto flex w-fit items-center rounded-full border border-gris-borde">
+                  <button type="submit" name="accion" value="menos:{{ item.pk }}" class="grid h-7 w-7 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Restar uno a {{ item.descripcion }}">−</button>
+                  <input type="number" name="cantidad_{{ item.pk }}" value="{{ item.cantidad }}" min="1" class="w-9 bg-transparent text-center tabular-nums text-vino [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" aria-label="Cantidad de {{ item.descripcion }}">
+                  <button type="submit" name="accion" value="mas:{{ item.pk }}" class="grid h-7 w-7 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Sumar uno a {{ item.descripcion }}">+</button>
+                </div>
+              </td>
+              <td class="px-3 py-3.5 text-right tabular-nums text-vino">{{ item.valor_unitario|clp }}</td>
+              <td class="px-3 py-3.5 text-center tabular-nums">
+                {% if item.meses %}<input type="number" name="meses_{{ item.pk }}" value="{{ item.meses }}" min="1" max="36" class="w-14 rounded-lg border border-gris-borde px-2 py-1 text-center" aria-label="Meses de {{ item.descripcion }}">
+                {% else %}<span class="rounded-full bg-fondo-suave px-2 py-0.5 text-xs">Único</span>{% endif %}
+              </td>
+              <td class="px-3 py-3.5 text-right font-semibold tabular-nums text-vino">{{ item.subtotal|clp }}</td>
+              <td class="px-3 py-3.5 text-center">
+                <button type="submit" name="accion" value="quitar:{{ item.pk }}" class="grid h-7 w-7 place-items-center rounded-full text-malva hover:bg-fondo-suave hover:text-vino" aria-label="Quitar {{ item.descripcion }}">×</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="border-t border-gris-borde px-5 py-8 text-center text-sm lg:px-6">Sin servicios todavía. Agrega un plan o un servicio del catálogo.</p>
+      {% endif %}
+      <div class="grid gap-3 border-t border-gris-borde p-5 sm:grid-cols-2 lg:px-6">
+        {% if planes_disponibles %}
+        <div class="flex gap-2">
+          <label class="sr-only" for="plan-agregar">Plan</label>
+          <select id="plan-agregar" name="plan_agregar" class="min-w-0 flex-1 rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm">
+            {% for p in planes_disponibles %}<option value="{{ p.pk }}">Plan {{ p.nombre }} · {{ p.precio_mensual|clp }}/mes</option>{% endfor %}
+          </select>
+          <button type="submit" name="accion" value="agregar_plan" class="rounded-full border border-dashed border-malva px-3 py-2 text-sm font-semibold text-vino hover:bg-fondo-suave">+ Plan</button>
+        </div>
+        {% endif %}
+        {% if servicios_disponibles %}
+        <div class="flex gap-2">
+          <label class="sr-only" for="servicio-agregar">Servicio</label>
+          <select id="servicio-agregar" name="servicio_agregar" class="min-w-0 flex-1 rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm">
+            {% for s in servicios_disponibles %}<option value="{{ s.pk }}">{{ s.nombre }} · {{ s.precio|clp }}</option>{% endfor %}
+          </select>
+          <button type="submit" name="accion" value="agregar_servicio" class="rounded-full border border-dashed border-malva px-3 py-2 text-sm font-semibold text-vino hover:bg-fondo-suave">+ Servicio</button>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {# ── Diagnóstico ── #}
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-wrap items-center gap-3">
+          <h2 class="font-serif text-xl text-vino">Diagnóstico</h2>
+          <span class="rounded-full bg-rosa/15 px-2.5 py-1 text-xs font-semibold text-vino">Editable antes de enviar</span>
+        </div>
+        <div class="flex gap-2 text-sm">
+          <button type="submit" name="accion" value="ia_regenerar" class="rounded-full px-3 py-1.5 font-medium ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if ia_configurada %}text-vino{% else %}text-gris-txt{% endif %}">↻ Generar con IA</button>
+        </div>
+      </div>
+      {% if not ia_configurada %}<p class="mt-2 text-xs">La IA se activa al agregar <code>AI_API_KEY</code> (Google Gemini) en <code>.env</code>. Mientras, escribe el diagnóstico a mano.</p>{% endif %}
+      <label for="diagnostico" class="sr-only">Texto del diagnóstico</label>
+      <textarea id="diagnostico" name="diagnostico" rows="11" maxlength="{{ maximo_diagnostico }}" placeholder="Resumen de la empresa, situación, plan propuesto y próximos pasos…" class="mt-4 w-full rounded-xl border border-gris-borde bg-fondo-suave/50 p-4 text-sm leading-relaxed text-vino outline-none focus:border-malva focus:ring-2 focus:ring-lila/40">{{ cotizacion.diagnostico }}</textarea>
+      <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-xs tabular-nums">{{ cotizacion.diagnostico|length|miles }} / {{ maximo_diagnostico|miles }} caracteres</p>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <button type="submit" name="accion" value="ia_acortar" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Acortar</button>
+          <button type="submit" name="accion" value="ia_formal" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Tono más formal</button>
+          <button type="submit" name="accion" value="guardar" class="rounded-full bg-vino px-4 py-1.5 font-semibold text-white hover:bg-vino-oscuro">Guardar cambios</button>
+        </div>
+      </div>
+    </section>
+  </fieldset>
+
+  {# ── Panel derecho ───────────────────────────────────────────────── #}
+  <aside class="space-y-6 xl:sticky xl:top-8 xl:self-start">
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Resumen</h2>
+      <dl class="mt-4 space-y-2.5 text-sm tabular-nums">
+        <div class="flex justify-between"><dt>Servicios recurrentes</dt><dd class="text-vino">{{ totales.recurrentes|clp }}</dd></div>
+        <div class="flex justify-between"><dt>Servicios puntuales</dt><dd class="text-vino">{{ totales.puntuales|clp }}</dd></div>
+        <div class="flex justify-between"><dt>Descuento ({{ cotizacion.descuento_pct }}%)</dt><dd class="text-malva">{% if totales.descuento %}−{% endif %}{{ totales.descuento|clp }}</dd></div>
+        <div class="flex justify-between border-t border-gris-borde pt-2.5"><dt>Neto</dt><dd class="font-medium text-vino">{{ totales.neto|clp }}</dd></div>
+        <div class="flex justify-between"><dt>IVA (19%)</dt><dd class="text-vino">{{ totales.iva|clp }}</dd></div>
+        <div class="flex items-baseline justify-between border-t border-gris-borde pt-3"><dt class="font-semibold text-vino">Total</dt><dd class="font-serif text-2xl text-vino">{{ totales.total|clp }}</dd></div>
+        <div class="flex justify-between text-xs"><dt>Valor mensual recurrente</dt><dd>{{ totales.mensual|clp }}</dd></div>
+      </dl>
+    </section>
+
+    <fieldset class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6" {% if not editable %}disabled{% endif %}>
+      <legend class="sr-only">Condiciones comerciales</legend>
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Condiciones comerciales</h2>
+      <div class="mt-4 space-y-4 text-sm">
+        <label class="block"><span class="font-medium text-vino">Forma de pago</span>
+          <select name="forma_pago" form="form-cotizacion" class="mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-3 py-2.5">
+            {% for clave, nombre in formas_pago %}<option value="{{ clave }}" {% if clave == cotizacion.forma_pago %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="block"><span class="font-medium text-vino">Descuento sobre recurrentes</span>
+          <select name="descuento_pct" form="form-cotizacion" class="mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-3 py-2.5">
+            {% for pct, etiqueta in descuentos %}<option value="{{ pct }}" {% if pct == cotizacion.descuento_pct %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="block"><span class="font-medium text-vino">Inicio estimado</span>
+          <input type="date" name="inicio_estimado" form="form-cotizacion" value="{{ cotizacion.inicio_estimado|date:'Y-m-d' }}" class="mt-1.5 w-full rounded-xl border border-gris-borde px-3 py-2.5">
+        </label>
+        {% if editable %}<button type="submit" name="accion" value="guardar" class="w-full rounded-full border border-vino px-4 py-2 text-sm font-semibold text-vino hover:bg-fondo-suave">Guardar condiciones</button>{% endif %}
+      </div>
+    </fieldset>
+
+    <section class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Antes de enviar</h2>
+      <ul class="mt-4 space-y-2.5 text-sm">
+        {% for item in checklist %}
+        <li class="flex items-start gap-2.5">
+          {% if item.hecho %}
+          <span class="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-vino text-white"><svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
+          <span class="text-vino">{{ item.texto }}<span class="sr-only"> (listo)</span></span>
+          {% else %}
+          <span class="mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 border-dashed border-rosa"></span>
+          <span>{{ item.texto }}<span class="sr-only"> (pendiente)</span></span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% if editable %}
+      <button type="submit" name="accion" value="enviar" class="mt-6 w-full rounded-full bg-vino px-4 py-3 text-sm font-semibold text-white hover:bg-vino-oscuro">Marcar como enviada</button>
+      <p class="mt-2 text-xs">El envío automático por correo se activa al configurar el servicio de correo.</p>
+      {% endif %}
+    </section>
+  </aside>
+</form>
+{% endblock %}

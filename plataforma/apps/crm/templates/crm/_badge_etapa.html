@@ -1,0 +1,12 @@
+{# Parámetros: etapa (clave de prospectos.etapa), nombre (texto visible). El color acompaña al texto, nunca lo reemplaza. #}
+<span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold
+  {% if etapa == 'nuevo' %}bg-white text-malva ring-1 ring-inset ring-gris-borde
+  {% elif etapa == 'contactado' %}bg-lila/30 text-vino
+  {% elif etapa == 'reunion' %}bg-lila/60 text-vino
+  {% elif etapa == 'cotizacion_enviada' %}bg-rosa/20 text-vino ring-1 ring-inset ring-rosa/50
+  {% elif etapa == 'ganado' %}bg-vino text-white
+  {% elif etapa == 'perdido' %}bg-fondo-suave text-gris-txt line-through decoration-gris-txt/40
+  {% else %}bg-fondo-suave text-gris-txt{% endif %}">
+  <span class="h-1.5 w-1.5 rounded-full {% if etapa == 'cotizacion_enviada' %}bg-rosa{% elif etapa == 'ganado' %}bg-white/80{% else %}bg-current{% endif %}"></span>
+  {{ nombre }}
+</span>

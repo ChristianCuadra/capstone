@@ -1,0 +1,64 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}Prospectos{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Prospectos</h1>
+    <p class="mt-1 text-sm">{{ total }} en total · llegan desde el formulario de cotización del sitio</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'crm:prospectos_exportar' %}{% if etapa_activa %}?etapa={{ etapa_activa }}{% endif %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Exportar CSV</a>
+    <a href="{% url 'admin:crm_prospecto_add' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
+  </div>
+</header>
+
+<nav class="relative mt-6 overflow-x-auto" aria-label="Filtrar por etapa">
+  <ul class="flex w-max gap-1.5 text-sm">
+    <li><a href="{% url 'crm:prospectos' %}" class="block rounded-full px-3.5 py-1.5 {% if not etapa_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">Todas</a></li>
+    {% for clave, nombre in etapas %}
+    <li><a href="?etapa={{ clave }}" class="block rounded-full px-3.5 py-1.5 {% if clave == etapa_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ nombre }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<section class="mt-5 rounded-2xl border border-gris-borde bg-white">
+  {% if not prospectos %}
+  <p class="px-5 py-14 text-center text-sm">
+    {% if etapa_activa %}No hay prospectos en esta etapa.{% else %}Aún no hay prospectos. Prueba el formulario en <a href="{% url 'website:cotizacion' %}" target="_blank" class="font-semibold text-vino underline decoration-rosa underline-offset-2">/cotizacion/</a> y aparecerá aquí.{% endif %}
+  </p>
+  {% else %}
+  <div class="relative overflow-x-auto">
+    <table class="w-full min-w-[760px] text-left text-sm">
+      <thead class="border-b border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr>
+          <th scope="col" class="px-5 py-3 font-semibold">Prospecto</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Etapa</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Plan</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Valor</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Responsable</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Recibido</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for p in prospectos %}
+        <tr class="hover:bg-fondo-suave/60">
+          <td class="px-5 py-3.5">
+            <a href="{% url 'crm:prospecto_detalle' p.id %}" class="font-semibold text-vino hover:underline">{{ p.empresa }}</a>
+            <span class="block text-xs">{{ p.nombre }} · {{ p.detalle }}</span>
+          </td>
+          <td class="px-5 py-3.5">{% include "crm/_badge_etapa.html" with etapa=p.etapa nombre=p.etapa_nombre %}</td>
+          <td class="px-5 py-3.5">{{ p.plan|default:"—" }}</td>
+          <td class="px-5 py-3.5 text-right tabular-nums text-vino">{% if p.valor_mensual %}{{ p.valor_mensual|clp }}<span class="text-xs text-gris-txt">/mes</span>{% else %}—{% endif %}</td>
+          <td class="px-5 py-3.5">{{ p.responsable|default:"Sin asignar" }}</td>
+          <td class="px-5 py-3.5 text-right tabular-nums">{{ p.creado_en|date:"j M Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

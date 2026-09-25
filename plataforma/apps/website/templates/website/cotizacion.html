@@ -1,0 +1,234 @@
+{% extends "website/base.html" %}
+{% load formato %}
+
+{% block title %}Solicitar cotización · {{ agencia.nombre }}{% endblock %}
+
+{% block head %}
+<style type="text/tailwindcss">
+  .campo { @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40; }
+  .campo-error { @apply border-[#B3261E]; }
+  .etiqueta { @apply text-sm font-medium text-vino; }
+  .error { @apply mt-1 text-xs font-medium text-[#B3261E]; }
+  .chip { @apply cursor-pointer rounded-full border border-gris-borde bg-white px-4 py-2 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-rosa; }
+  .chip-radio { @apply has-[:checked]:border-vino has-[:checked]:bg-vino has-[:checked]:text-white; }
+  .chip-check { @apply has-[:checked]:border-rosa has-[:checked]:bg-rosa/15 has-[:checked]:text-vino; }
+  .bloque { @apply space-y-5 border-t border-gris-borde pt-7 first:border-t-0 first:pt-0; }
+  .bloque-titulo { @apply font-serif text-xl text-vino; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="bg-fondo-suave">
+  <div class="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_1.35fr] lg:gap-16 lg:px-8 lg:py-20">
+
+    {# ── Columna izquierda: texto de apoyo ─────────────────────────── #}
+    <div class="lg:sticky lg:top-28 lg:self-start">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Cotización</p>
+      <h1 class="mt-3 font-serif text-4xl leading-tight text-vino sm:text-5xl">Cuéntanos sobre tu marca</h1>
+      <p class="mt-5 text-lg leading-relaxed">Con esta información preparamos un diagnóstico de tu marca y una propuesta con valores reales, no un rango genérico.</p>
+
+      {# TODO: Supabase - sitio_contenido (cotizacion_beneficios) #}
+      <ul class="mt-9 space-y-6">
+        {% for beneficio in beneficios %}
+        <li class="flex gap-4">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white font-serif text-vino ring-1 ring-gris-borde">{{ forloop.counter }}</span>
+          <div>
+            <p class="font-semibold text-vino">{{ beneficio.titulo }}</p>
+            <p class="mt-1 text-sm leading-relaxed">{{ beneficio.texto }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <div class="mt-10 rounded-2xl border border-gris-borde bg-white p-5 text-sm">
+        <p class="font-semibold text-vino">¿Prefieres conversar directo?</p>
+        <p class="mt-1">Escríbenos a <a href="mailto:{{ agencia.correo }}" class="font-medium text-vino underline decoration-rosa underline-offset-2">{{ agencia.correo }}</a> o llámanos al {{ agencia.telefono }}.</p>
+      </div>
+    </div>
+
+    {# ── Columna derecha: formulario ───────────────────────────────── #}
+    <div class="rounded-3xl border border-gris-borde bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+      {% if enviado %}
+      <div class="py-8 text-center">
+        <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rosa/20 text-vino">
+          <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </span>
+        <h2 class="mt-5 font-serif text-3xl text-vino">¡Recibimos tu solicitud!</h2>
+        <p class="mx-auto mt-3 max-w-md">Una de las socias revisará tus respuestas y te enviará la cotización con diagnóstico dentro de 3 días hábiles.</p>
+
+        {% if prospecto_enviado %}
+        <div class="mx-auto mt-8 max-w-md rounded-2xl bg-fondo-suave p-6 text-left">
+          {% if prospecto_enviado.plan_sugerido %}
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">Según lo que nos contaste</p>
+          <p class="mt-2 text-vino">El plan que mejor calza con tu marca es <strong class="font-serif text-2xl">{{ prospecto_enviado.plan_sugerido.nombre }}</strong></p>
+          <p class="mt-1 text-sm">{{ prospecto_enviado.plan_sugerido.precio_mensual|clp }}/mes · {{ prospecto_enviado.plan_sugerido.descripcion }}</p>
+          {% else %}
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">Según lo que nos contaste</p>
+          <p class="mt-2 text-vino">Te conviene partir con <strong>servicios sueltos</strong> y sumar un plan mensual cuando tu marca lo necesite.</p>
+          {% endif %}
+          <p class="mt-3 text-xs">Es una sugerencia inicial: la confirmaremos contigo en la cotización.</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <a href="{% url 'website:planes' %}" class="rounded-full bg-vino px-6 py-3 font-semibold text-white hover:bg-vino-oscuro">Ver los planes</a>
+          <a href="{% url 'website:home' %}" class="rounded-full border border-vino px-6 py-3 font-semibold text-vino hover:bg-fondo-suave">Volver al inicio</a>
+        </div>
+      </div>
+      {% else %}
+      {# Al enviar se crea un registro en la tabla prospectos (crm.services.registrar_solicitud). #}
+      <form method="post" class="space-y-7" novalidate>
+        {% csrf_token %}
+        {% if plan_interes %}
+        <input type="hidden" name="plan" value="{{ plan_interes.slug }}">
+        <p class="flex flex-wrap items-center gap-2 rounded-2xl bg-fondo-suave px-4 py-3 text-sm text-vino">
+          Plan de interés: <strong>{{ plan_interes.nombre }}</strong> · {{ plan_interes.precio_mensual|clp }}/mes
+          <a href="{% url 'website:planes' %}" class="ml-auto text-xs font-semibold underline decoration-rosa underline-offset-2">Cambiar</a>
+        </p>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">{{ form.non_field_errors.0 }}</div>
+        {% elif form.errors %}
+        <div class="rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">Revisa los campos marcados antes de enviar.</div>
+        {% endif %}
+
+        {# ── Tus datos ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Tus datos</legend>
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block"><span class="etiqueta">Nombre</span>
+              <input type="text" name="nombre" value="{{ form.nombre.value|default:'' }}" required autocomplete="name" class="campo {% if form.nombre.errors %}campo-error{% endif %}">
+              {% if form.nombre.errors %}<p class="error">{{ form.nombre.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Empresa o marca</span>
+              <input type="text" name="empresa" value="{{ form.empresa.value|default:'' }}" required autocomplete="organization" class="campo {% if form.empresa.errors %}campo-error{% endif %}">
+              {% if form.empresa.errors %}<p class="error">{{ form.empresa.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Correo</span>
+              <input type="email" name="correo" value="{{ form.correo.value|default:'' }}" required autocomplete="email" class="campo {% if form.correo.errors %}campo-error{% endif %}">
+              {% if form.correo.errors %}<p class="error">{{ form.correo.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Teléfono <span class="font-normal text-gris-txt">(opcional)</span></span>
+              <input type="tel" name="telefono" value="{{ form.telefono.value|default:'' }}" autocomplete="tel" placeholder="+56 9" class="campo">
+            </label>
+          </div>
+        </fieldset>
+
+        {# ── Tu negocio ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Tu negocio</legend>
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block"><span class="etiqueta">Rubro</span>
+              <select name="rubro" required class="campo {% if form.rubro.errors %}campo-error{% endif %}">
+                <option value="" {% if not form.rubro.value %}selected{% endif %} disabled>Selecciona tu rubro</option>
+                {% for valor, etiqueta in form.fields.rubro.choices %}{% if valor %}<option value="{{ valor }}" {% if form.rubro.value == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endif %}{% endfor %}
+              </select>
+              {% if form.rubro.errors %}<p class="error">{{ form.rubro.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Región</span>
+              <select name="region" required class="campo {% if form.region.errors %}campo-error{% endif %}">
+                <option value="" {% if not form.region.value %}selected{% endif %} disabled>Selecciona tu región</option>
+                {% for valor, etiqueta in form.fields.region.choices %}{% if valor %}<option value="{{ valor }}" {% if form.region.value == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endif %}{% endfor %}
+              </select>
+              {% if form.region.errors %}<p class="error">{{ form.region.errors.0 }}</p>{% endif %}
+            </label>
+          </div>
+          <div>
+            <p class="etiqueta">¿Cuántas personas trabajan en tu marca?</p>
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              {% for opcion in form.tamano %}{% if opcion.data.value %}<label class="chip chip-radio">{{ opcion.tag }}{{ opcion.choice_label }}</label>{% endif %}{% endfor %}
+            </div>
+            {% if form.tamano.errors %}<p class="error">{{ form.tamano.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <p class="etiqueta">¿Trabajas actualmente con una agencia?</p>
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              {% for opcion in form.agencia_actual %}{% if opcion.data.value %}<label class="chip chip-radio px-5">{{ opcion.tag }}{{ opcion.choice_label }}</label>{% endif %}{% endfor %}
+            </div>
+            {% if form.agencia_actual.errors %}<p class="error">{{ form.agencia_actual.errors.0 }}</p>{% endif %}
+          </div>
+        </fieldset>
+
+        {# ── Dónde estás hoy ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Dónde estás hoy</legend>
+          <div>
+            <p class="etiqueta">¿En qué canales está tu marca? <span class="font-normal text-gris-txt">Puedes elegir varios</span></p>
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              {% for opcion in form.redes_actuales %}<label class="chip chip-check">{{ opcion.tag }}{{ opcion.choice_label }}</label>{% endfor %}
+            </div>
+          </div>
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block"><span class="etiqueta">Usuario de Instagram <span class="font-normal text-gris-txt">(opcional)</span></span>
+              <span class="relative block"><span class="pointer-events-none absolute left-4 top-1/2 mt-[3px] -translate-y-1/2 text-gris-txt">@</span>
+                <input type="text" name="instagram" value="{{ form.instagram.value|default:'' }}" placeholder="tumarca" class="campo !pl-8"></span>
+            </label>
+            <label class="block"><span class="etiqueta">Sitio web <span class="font-normal text-gris-txt">(opcional)</span></span>
+              <input type="url" name="sitio_web" value="{{ form.sitio_web.value|default:'' }}" placeholder="https://tumarca.cl" class="campo {% if form.sitio_web.errors %}campo-error{% endif %}">
+              {% if form.sitio_web.errors %}<p class="error">{{ form.sitio_web.errors.0 }}</p>{% endif %}
+            </label>
+          </div>
+        </fieldset>
+
+        {# ── Qué necesitas ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Qué necesitas</legend>
+          <div>
+            <p class="etiqueta">¿Qué quieres lograr? <span class="font-normal text-gris-txt">Puedes elegir varios</span></p>
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              {% for opcion in form.objetivos %}<label class="chip chip-check">{{ opcion.tag }}{{ opcion.choice_label }}</label>{% endfor %}
+            </div>
+          </div>
+          <div>
+            <p class="etiqueta">¿Te interesa algún servicio en particular? <span class="font-normal text-gris-txt">(opcional)</span></p>
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              {% for opcion in form.servicios_requeridos %}<label class="chip chip-check">{{ opcion.tag }}{{ opcion.choice_label }}</label>{% endfor %}
+            </div>
+          </div>
+          <div>
+            <p class="etiqueta">Presupuesto mensual estimado</p>
+            <div class="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {% for opcion in form.presupuesto %}{% if opcion.data.value %}
+              <label class="cursor-pointer rounded-xl border border-gris-borde px-3 py-3 text-center text-sm has-[:checked]:border-vino has-[:checked]:bg-fondo-suave has-[:checked]:font-semibold has-[:checked]:text-vino has-[:checked]:ring-1 has-[:checked]:ring-vino has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-rosa">{{ opcion.tag }}{{ opcion.choice_label }}</label>
+              {% endif %}{% endfor %}
+            </div>
+            {% if form.presupuesto.errors %}<p class="error">{{ form.presupuesto.errors.0 }}</p>{% endif %}
+          </div>
+        </fieldset>
+
+        {# ── Contexto ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Cuéntanos más</legend>
+          <label class="block"><span class="etiqueta">Tu situación actual</span>
+            <textarea name="situacion_actual" rows="4" placeholder="Qué están haciendo hoy en redes, qué funciona, qué no, y cualquier fecha importante." class="campo">{{ form.situacion_actual.value|default:'' }}</textarea>
+          </label>
+          <label class="block sm:max-w-xs"><span class="etiqueta">¿Cómo nos conociste?</span>
+            <select name="como_nos_conocio" class="campo">
+              <option value="">Prefiero no decir</option>
+              {% for valor, etiqueta in form.fields.como_nos_conocio.choices %}{% if valor %}<option value="{{ valor }}" {% if form.como_nos_conocio.value == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endif %}{% endfor %}
+            </select>
+          </label>
+
+          {# Campo trampa anti-spam: invisible para personas #}
+          <div class="absolute -left-[9999px]" aria-hidden="true">
+            <label>No completar <input type="text" name="sitio_empresa" tabindex="-1" autocomplete="off"></label>
+          </div>
+
+          {# Consentimiento de tratamiento de datos (RGPD / Ley 19.628) #}
+          <div>
+            <label class="flex items-start gap-3 text-sm">
+              <input type="checkbox" name="acepta_privacidad" required {% if form.acepta_privacidad.value %}checked{% endif %} class="mt-0.5 h-4 w-4 rounded border-gris-borde accent-vino">
+              <span>Acepto que {{ agencia.nombre }} trate mis datos para responder esta solicitud, según su política de privacidad.</span>
+            </label>
+            {% if form.acepta_privacidad.errors %}<p class="error">{{ form.acepta_privacidad.errors.0 }}</p>{% endif %}
+          </div>
+        </fieldset>
+
+        <button type="submit" class="w-full rounded-full bg-vino px-7 py-4 font-semibold text-white hover:bg-vino-oscuro sm:w-auto">Enviar solicitud</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

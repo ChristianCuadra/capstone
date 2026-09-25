@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+{# Base común del panel interno (crm/base_panel.html) y del portal de clientes (content/base_portal.html). #}
+<html lang="es-CL">
+<head>
+  {% include "partials/head.html" %}
+  <title>{% block title %}{{ agencia.nombre }}{% endblock %}</title>
+  <meta name="robots" content="noindex">
+  {% block head %}{% endblock %}
+</head>
+<body class="font-sans antialiased {% block body_class %}bg-fondo-suave{% endblock %}">
+  {% block body %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,80 @@
+{% extends "base_app.html" %}
+{% load formato %}
+{# Versión imprimible: desde el navegador, Imprimir → «Guardar como PDF». No depende de WeasyPrint. #}
+
+{% block title %}Cotización #{{ cotizacion.numero }} · {{ cotizacion.prospecto.empresa }}{% endblock %}
+{% block head %}<style>@media print { .no-imprimir { display: none !important; } body { background: #fff !important; } @page { margin: 16mm; } }</style>{% endblock %}
+{% block body_class %}bg-fondo-suave print:bg-white{% endblock %}
+
+{% block body %}
+<div class="no-imprimir sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gris-borde bg-white px-6 py-3">
+  <a href="{% url 'crm:cotizacion_editar' cotizacion.pk %}" class="text-sm font-medium text-vino">← Volver a la cotización</a>
+  <button type="button" onclick="window.print()" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Imprimir / Guardar como PDF</button>
+</div>
+
+<main class="mx-auto my-8 max-w-3xl rounded-2xl bg-white p-10 shadow-sm print:my-0 print:max-w-none print:rounded-none print:p-0 print:shadow-none">
+  <header class="flex items-start justify-between gap-6 border-b border-gris-borde pb-6">
+    {% include "partials/logo.html" %}
+    <div class="text-right text-sm">
+      <p class="font-serif text-2xl text-vino">Cotización #{{ cotizacion.numero }}</p>
+      <p class="mt-1">Emitida el {% firstof cotizacion.enviada_en|date:"j \d\e F \d\e Y" cotizacion.creado_en|date:"j \d\e F \d\e Y" %}</p>
+      {% if cotizacion.valida_hasta %}<p>Válida hasta el {{ cotizacion.valida_hasta|date:"j \d\e F \d\e Y" }}</p>{% endif %}
+    </div>
+  </header>
+
+  <section class="mt-6 grid gap-4 text-sm sm:grid-cols-2">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Para</p>
+      <p class="mt-1 font-semibold text-vino">{{ cotizacion.prospecto.empresa }}</p>
+      <p>{{ cotizacion.contacto }}</p>
+    </div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">De</p>
+      <p class="mt-1 font-semibold text-vino">{{ agencia.nombre }}</p>
+      <p>{{ agencia.correo }} · {{ agencia.telefono }}</p>
+    </div>
+  </section>
+
+  {% if cotizacion.diagnostico %}
+  <section class="mt-8">
+    <h2 class="font-serif text-xl text-vino">Diagnóstico</h2>
+    <p class="mt-2 whitespace-pre-line text-sm leading-relaxed">{{ cotizacion.diagnostico }}</p>
+  </section>
+  {% endif %}
+
+  <section class="mt-8">
+    <h2 class="font-serif text-xl text-vino">Propuesta</h2>
+    <table class="mt-3 w-full text-left text-sm">
+      <thead class="border-b border-gris-borde text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr><th class="py-2">Servicio</th><th class="py-2 text-center">Cant.</th><th class="py-2 text-right">Valor unitario</th><th class="py-2 text-center">Meses</th><th class="py-2 text-right">Subtotal</th></tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for item in items %}
+        <tr>
+          <td class="py-2.5"><p class="font-medium text-vino">{{ item.descripcion }}</p>{% if item.detalle %}<p class="text-xs">{{ item.detalle }}</p>{% endif %}</td>
+          <td class="py-2.5 text-center tabular-nums">{{ item.cantidad }}</td>
+          <td class="py-2.5 text-right tabular-nums">{{ item.valor_unitario|clp }}</td>
+          <td class="py-2.5 text-center tabular-nums">{{ item.meses|default:"Único" }}</td>
+          <td class="py-2.5 text-right tabular-nums text-vino">{{ item.subtotal|clp }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="py-4 text-center">Sin servicios.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <dl class="ml-auto mt-4 w-full max-w-xs space-y-1.5 text-sm tabular-nums">
+      <div class="flex justify-between"><dt>Recurrentes</dt><dd>{{ totales.recurrentes|clp }}</dd></div>
+      <div class="flex justify-between"><dt>Puntuales</dt><dd>{{ totales.puntuales|clp }}</dd></div>
+      {% if totales.descuento %}<div class="flex justify-between"><dt>Descuento ({{ cotizacion.descuento_pct }}%)</dt><dd>−{{ totales.descuento|clp }}</dd></div>{% endif %}
+      <div class="flex justify-between border-t border-gris-borde pt-1.5"><dt>Neto</dt><dd>{{ totales.neto|clp }}</dd></div>
+      <div class="flex justify-between"><dt>IVA (19%)</dt><dd>{{ totales.iva|clp }}</dd></div>
+      <div class="flex justify-between border-t border-gris-borde pt-1.5 font-semibold text-vino"><dt>Total</dt><dd class="font-serif text-xl">{{ totales.total|clp }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="mt-8 border-t border-gris-borde pt-6 text-sm">
+    <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-malva">Condiciones</h2>
+    <p class="mt-2">Forma de pago: {{ cotizacion.get_forma_pago_display }}.{% if cotizacion.inicio_estimado %} Inicio estimado: {{ cotizacion.inicio_estimado|date:"j \d\e F \d\e Y" }}.{% endif %} Valores en pesos chilenos.</p>
+  </section>
+</main>
+{% endblock %}

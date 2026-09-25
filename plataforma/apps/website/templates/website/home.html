@@ -1,0 +1,192 @@
+{% extends "website/base.html" %}
+{% load formato %}
+
+{% block content %}
+
+{# ── Hero ───────────────────────────────────────────────────────────── #}
+{# TODO: Supabase - sitio_contenido (hero) #}
+<section class="bg-fondo-suave">
+  <div class="mx-auto grid max-w-7xl items-center gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8 lg:py-24">
+    <div>
+      <h1 class="font-serif text-4xl leading-[1.1] text-vino sm:text-5xl lg:text-6xl">
+        {{ hero.titulo }} <em class="text-malva">{{ hero.titulo_cursiva }}</em>{{ hero.titulo_final }}
+      </h1>
+      <p class="mt-6 max-w-lg text-lg leading-relaxed">{{ hero.subtitulo }}</p>
+      <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+        <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-7 py-3.5 text-center font-semibold text-white hover:bg-vino-oscuro">Solicitar cotización</a>
+        {% if casos %}
+        <a href="#casos" class="rounded-full border border-vino px-7 py-3.5 text-center font-semibold text-vino hover:bg-white">Ver casos de clientes</a>
+        {% else %}
+        <a href="{% url 'website:planes' %}" class="rounded-full border border-vino px-7 py-3.5 text-center font-semibold text-vino hover:bg-white">Ver planes</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="relative {% if hero.caso_destacado %}pb-10 sm:pb-0{% endif %}">
+      {# TODO: Supabase Storage - imagen del hero #}
+      <div class="placeholder-rayado grid aspect-[4/3] place-items-center rounded-3xl border border-gris-borde sm:aspect-[5/4] lg:aspect-[4/5]">
+        <span class="rounded-full bg-white/80 px-3 py-1 text-xs uppercase tracking-widest text-malva">Imagen principal</span>
+      </div>
+      {% if hero.caso_destacado %}
+      <div class="absolute bottom-0 left-4 right-4 rounded-2xl border border-gris-borde bg-white p-4 shadow-lg shadow-vino/10 sm:-left-6 sm:bottom-8 sm:right-auto sm:max-w-xs">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-rosa">{{ hero.caso_destacado.etiqueta }}</p>
+        <p class="mt-1 font-serif text-lg leading-snug text-vino">{{ hero.caso_destacado.texto }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ── Stats (solo con cifras reales) ─────────────────────────────────── #}
+{# TODO: Supabase - sitio_stats #}
+{% if stats %}
+<section class="border-y border-gris-borde">
+  <dl class="mx-auto grid max-w-7xl divide-y divide-gris-borde px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6 lg:px-8">
+    {% for stat in stats %}
+    <div class="py-8 text-center sm:py-10">
+      <dt class="sr-only">{{ stat.etiqueta }}</dt>
+      <dd class="font-serif text-4xl text-vino lg:text-5xl">{{ stat.valor }}</dd>
+      <dd class="mt-2 text-sm">{{ stat.etiqueta }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+</section>
+{% endif %}
+
+{# ── Servicios ──────────────────────────────────────────────────────── #}
+{# Desde la base: catalog.Service (visibles en el sitio) y el precio más bajo de catalog.Plan #}
+<section id="servicios" class="scroll-mt-20 py-16 lg:py-24">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Servicios</p>
+    <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Lo que hacemos por tu marca</h2>
+    <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas.</p>
+
+    <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {% for servicio in servicios %}
+      <article class="flex flex-col rounded-2xl border border-gris-borde bg-white p-6 transition hover:border-lila hover:shadow-lg hover:shadow-vino/5">
+        <span class="font-serif text-sm text-lila">{{ forloop.counter|stringformat:"02d" }}</span>
+        <h3 class="mt-3 font-serif text-xl text-vino">{{ servicio.nombre }}</h3>
+        {% if servicio.descripcion %}<p class="mt-3 text-sm leading-relaxed">{{ servicio.descripcion }}</p>{% endif %}
+        <div class="flex-1"></div>
+        <p class="mt-6 border-t border-gris-borde pt-4 text-sm text-vino">
+          <strong class="text-base">{{ servicio.precio|clp }}</strong>{{ servicio.sufijo_precio }}
+        </p>
+      </article>
+      {% endfor %}
+      {% if plan_desde %}
+      <a href="{% url 'website:planes' %}" class="group flex flex-col justify-between rounded-2xl bg-vino p-6 text-lila transition hover:bg-vino-oscuro">
+        <span class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
+        <span class="mt-3 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
+        <span class="mt-6 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ── Nosotras: equipo y metodología ─────────────────────────────────── #}
+{# TODO: Supabase - sitio_contenido (nosotras) + fotos del equipo en Storage #}
+<section id="nosotras" class="scroll-mt-20 border-t border-gris-borde py-16 lg:py-24">
+  <div class="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_1.2fr] lg:gap-16 lg:px-8">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Nosotras</p>
+      <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Dos socias, un proceso claro</h2>
+      <p class="mt-4 max-w-lg leading-relaxed">{{ nosotras.intro }}</p>
+      <ul class="mt-8 grid gap-4 sm:grid-cols-2">
+        {% for persona in nosotras.equipo %}
+        <li class="rounded-2xl border border-gris-borde p-5">
+          <div class="placeholder-rayado grid aspect-[4/3] place-items-center rounded-xl">
+            <span class="grid h-14 w-14 place-items-center rounded-full bg-vino font-serif text-xl text-white">{{ persona.iniciales }}</span>
+          </div>
+          <p class="mt-4 font-serif text-xl text-vino">{{ persona.nombre }}</p>
+          <p class="text-sm">{{ persona.cargo }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-serif text-2xl text-vino">Cómo trabajamos</h3>
+      <ol class="mt-6 space-y-5">
+        {% for paso in nosotras.metodologia %}
+        <li class="flex gap-4">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rosa/15 font-serif text-lg text-vino">{{ forloop.counter }}</span>
+          <div class="border-b border-gris-borde pb-5">
+            <p class="font-semibold text-vino">{{ paso.titulo }}</p>
+            <p class="mt-1 text-sm leading-relaxed">{{ paso.texto }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+</section>
+
+{# ── Casos (solo reales y autorizados por el cliente) ──────────────────── #}
+{# TODO: Supabase - casos #}
+{% if casos %}
+<section id="casos" class="scroll-mt-20 bg-fondo-suave py-16 lg:py-24">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Resultados</p>
+        <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Casos recientes</h2>
+      </div>
+      <a href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-4">Quiero resultados así →</a>
+    </div>
+
+    <div class="mt-10 grid gap-6 md:grid-cols-3">
+      {% for caso in casos %}
+      <article class="overflow-hidden rounded-2xl border border-gris-borde bg-white">
+        {# TODO: Supabase Storage - imagen del caso #}
+        <div class="placeholder-rayado aspect-[16/10]"></div>
+        <div class="p-6">
+          <p class="text-xs uppercase tracking-widest text-malva">{{ caso.rubro }}</p>
+          <h3 class="mt-1 font-serif text-xl text-vino">{{ caso.cliente }}</h3>
+          <div class="mt-5 flex items-baseline gap-3">
+            <span class="font-serif text-4xl text-vino">{{ caso.metrica }}</span>
+            <span class="text-sm leading-tight">{{ caso.metrica_etiqueta }}<br><span class="text-malva">{{ caso.detalle }}</span></span>
+          </div>
+          <p class="mt-4 text-sm leading-relaxed">{{ caso.resumen }}</p>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ── Testimonios (solo reales y autorizados) ────────────────────────── #}
+{# TODO: Supabase - testimonios #}
+{% if testimonios %}
+<section class="py-16 lg:py-24">
+  <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 md:grid-cols-2 lg:gap-10 lg:px-8">
+    {% for testimonio in testimonios %}
+    <figure class="rounded-2xl border border-gris-borde p-7 lg:p-10">
+      <span class="font-serif text-5xl leading-none text-rosa" aria-hidden="true">“</span>
+      <blockquote class="mt-2 font-serif text-xl leading-relaxed text-vino lg:text-2xl">{{ testimonio.cita }}</blockquote>
+      <figcaption class="mt-6 flex items-center gap-3">
+        <span class="grid h-11 w-11 place-items-center rounded-full bg-lila font-semibold text-vino">{{ testimonio.autor|slice:":1" }}</span>
+        <span class="text-sm">
+          <strong class="block text-vino">{{ testimonio.autor }}</strong>
+          {{ testimonio.cargo }}, {{ testimonio.empresa }}
+        </span>
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ── CTA final ──────────────────────────────────────────────────────── #}
+<section class="bg-vino-oscuro">
+  <div class="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:py-24">
+    <h2 class="font-serif text-3xl text-white sm:text-5xl">¿Conversamos sobre tu marca?</h2>
+    <p class="mx-auto mt-4 max-w-xl text-lila">Cuéntanos de tu marca y te enviamos una cotización con diagnóstico en 3 días hábiles.</p>
+    <div class="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+      <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Solicitar cotización</a>
+      <a href="{% url 'website:planes' %}" class="rounded-full border border-lila px-7 py-3.5 font-semibold text-white hover:border-white">Ver planes</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

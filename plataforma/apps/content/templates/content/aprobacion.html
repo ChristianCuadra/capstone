@@ -1,0 +1,25 @@
+{% extends "content/base_portal.html" %}
+
+{% block page_title %}Aprobaciones{% endblock %}
+
+{% block content %}
+{# Piezas en revisión desde content_pieces + versiones + comentarios (pendiente: módulo de contenido, Alcance 5.7). #}
+<h1 class="font-serif text-3xl text-vino lg:text-4xl">Aprobaciones</h1>
+<p class="mt-1 text-sm">Aquí apruebas o pides cambios a las publicaciones antes de que salgan.</p>
+
+{% if pendientes %}
+{# El detalle de la pieza (video, copy, versiones, comentarios y botones Aprobar / Solicitar cambios / Reprogramar) se muestra cuando exista el módulo de contenido. #}
+<ul class="mt-6 space-y-2">
+  {% for p in pendientes %}<li class="rounded-2xl border border-gris-borde bg-white px-5 py-4 text-sm text-vino">{{ p.titulo }}</li>{% endfor %}
+</ul>
+{% else %}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white px-6 py-14 text-center">
+  <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rosa/15 text-vino">
+    <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>
+  </span>
+  <h2 class="mt-4 font-serif text-2xl text-vino">No tienes publicaciones por revisar</h2>
+  <p class="mx-auto mt-2 max-w-md text-sm">Cada semana la agencia te enviará las piezas para aprobar. Te avisaremos cuando haya algo nuevo.</p>
+  <a href="{% url 'content:calendario' %}" class="mt-6 inline-block rounded-full border border-vino px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Ver calendario</a>
+</section>
+{% endif %}
+{% endblock %}

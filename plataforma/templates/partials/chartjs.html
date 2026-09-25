@@ -1,0 +1,15 @@
+{# Chart.js con los defaults de la marca. Incluir en {% block scripts %} de las páginas con gráficos. #}
+{# Paleta validada para daltonismo: 2 series = vino #522136 + rosa viejo #E18BA6. Nunca rosa y rosa viejo como series distintas. #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  Chart.defaults.font.family = '"Cocomat Pro", Jost, system-ui, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#5A5A63';          // --gris-txt
+  Chart.defaults.borderColor = '#E3D5DC';    // --gris-borde
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.pointStyle = 'rectRounded';
+  Chart.defaults.plugins.tooltip.backgroundColor = '#3D1828';   // --vino-oscuro
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.maintainAspectRatio = false;
+</script>

@@ -1,0 +1,21 @@
+# Entorno
+.venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Editor / SO
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

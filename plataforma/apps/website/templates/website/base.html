@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  {% include "partials/head.html" %}
+  <title>{% block title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}</title>
+  {% block head %}{% endblock %}
+</head>
+<body class="font-sans antialiased">
+  {% with seccion=request.resolver_match.url_name %}
+  <header class="sticky top-0 z-40 border-b border-gris-borde bg-white/95 backdrop-blur">
+    <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:h-20 lg:px-8" aria-label="Principal">
+      <a href="{% url 'website:home' %}" class="shrink-0">{% include "partials/logo.html" %}</a>
+
+      <ul class="hidden items-center gap-7 text-sm font-medium lg:flex">
+        <li><a href="{% url 'website:home' %}" class="{% if seccion == 'home' %}text-vino{% else %}hover:text-vino{% endif %}">Inicio</a></li>
+        <li><a href="{% url 'website:home' %}#servicios" class="hover:text-vino">Servicios</a></li>
+        <li><a href="{% url 'website:planes' %}" class="{% if seccion == 'planes' %}text-vino underline decoration-rosa decoration-2 underline-offset-8{% else %}hover:text-vino{% endif %}">Planes</a></li>
+        {% if agencia.mostrar_casos %}<li><a href="{% url 'website:home' %}#casos" class="hover:text-vino">Casos</a></li>{% endif %}
+        <li><a href="{% url 'website:home' %}#nosotras" class="hover:text-vino">Nosotras</a></li>
+        <li><a href="#contacto" class="hover:text-vino">Contacto</a></li>
+      </ul>
+
+      <div class="hidden items-center gap-3 lg:flex">
+        {% if user.is_authenticated %}
+        <a href="{% if user.is_staff %}{% url 'crm:dashboard' %}{% else %}{% url 'content:calendario' %}{% endif %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">{% if user.is_staff %}Ir al panel{% else %}Mi portal{% endif %}</a>
+        {% else %}
+        <a href="{% url 'account_login' %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">Acceso clientes</a>
+        {% endif %}
+        <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Cotizar proyecto</a>
+      </div>
+
+      <button type="button" id="boton-menu" class="grid h-10 w-10 place-items-center rounded-md text-vino hover:bg-fondo-suave lg:hidden"
+              aria-controls="menu-movil" aria-expanded="false" aria-label="Abrir menú">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </nav>
+
+    <div id="menu-movil" class="hidden border-t border-gris-borde bg-white px-4 pb-6 pt-2 lg:hidden">
+      <ul class="divide-y divide-gris-borde text-base font-medium text-vino">
+        <li><a href="{% url 'website:home' %}" class="block py-3">Inicio</a></li>
+        <li><a href="{% url 'website:home' %}#servicios" class="block py-3">Servicios</a></li>
+        <li><a href="{% url 'website:planes' %}" class="block py-3">Planes</a></li>
+        {% if agencia.mostrar_casos %}<li><a href="{% url 'website:home' %}#casos" class="block py-3">Casos</a></li>{% endif %}
+        <li><a href="{% url 'website:home' %}#nosotras" class="block py-3">Nosotras</a></li>
+        <li><a href="#contacto" class="block py-3">Contacto</a></li>
+      </ul>
+      <div class="mt-4 grid gap-3">
+        <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-5 py-3 text-center font-semibold text-white">Cotizar proyecto</a>
+        {% if user.is_authenticated %}
+        <a href="{% if user.is_staff %}{% url 'crm:dashboard' %}{% else %}{% url 'content:calendario' %}{% endif %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">{% if user.is_staff %}Ir al panel{% else %}Mi portal{% endif %}</a>
+        {% else %}
+        <a href="{% url 'account_login' %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">Acceso clientes</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  {% endwith %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer id="contacto" class="bg-vino text-lila">
+    {# TODO: Supabase - agencia_config (vía context processor apps.website.context_processors.agencia) #}
+    <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
+      <div>
+        {% include "partials/logo.html" with claro=True %}
+        <p class="mt-4 max-w-xs text-sm leading-relaxed">Estrategia, contenido y pauta para marcas chilenas que quieren vender, no solo publicar.</p>
+      </div>
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-white">Contacto</h2>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="mailto:{{ agencia.correo }}" class="hover:text-white">{{ agencia.correo }}</a></li>
+          <li><a href="tel:{{ agencia.telefono|cut:' ' }}" class="hover:text-white">{{ agencia.telefono }}</a></li>
+          <li>{{ agencia.ciudad }}</li>
+        </ul>
+      </div>
+      {# Redes solo cuando la agencia confirme sus URLs (context_processors.agencia); mientras, accesos del sitio. #}
+      {% if agencia.instagram or agencia.linkedin %}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-white">Síguenos</h2>
+        <ul class="mt-4 space-y-2 text-sm">
+          {% if agencia.instagram %}<li><a href="{{ agencia.instagram.url }}" class="hover:text-white" rel="noopener" target="_blank">Instagram · {{ agencia.instagram.usuario }}</a></li>{% endif %}
+          {% if agencia.linkedin %}<li><a href="{{ agencia.linkedin.url }}" class="hover:text-white" rel="noopener" target="_blank">LinkedIn · {{ agencia.linkedin.nombre }}</a></li>{% endif %}
+        </ul>
+      </div>
+      {% else %}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-white">Empieza aquí</h2>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="{% url 'website:planes' %}" class="hover:text-white">Planes y precios</a></li>
+          <li><a href="{% url 'website:cotizacion' %}" class="hover:text-white">Solicitar cotización</a></li>
+          <li><a href="{% url 'account_login' %}" class="hover:text-white">Acceso clientes</a></li>
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+    <div class="border-t border-white/10">
+      <p class="mx-auto max-w-7xl px-4 py-5 text-xs sm:px-6 lg:px-8">© {% now "Y" %} {{ agencia.nombre }}. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Único JS del sitio público: abrir/cerrar el menú móvil
+    const botonMenu = document.getElementById('boton-menu');
+    const menuMovil = document.getElementById('menu-movil');
+    botonMenu.addEventListener('click', () => {
+      const abierto = menuMovil.classList.toggle('hidden') === false;
+      botonMenu.setAttribute('aria-expanded', abierto);
+    });
+    // Los enlaces ancla no recargan la página: cerrar el menú al elegir uno
+    menuMovil.addEventListener('click', (e) => {
+      if (e.target.closest('a')) {
+        menuMovil.classList.add('hidden');
+        botonMenu.setAttribute('aria-expanded', false);
+      }
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

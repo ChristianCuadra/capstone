@@ -1,0 +1,39 @@
+{% load i18n %}<!DOCTYPE html>
+{# Reemplaza el layout de django-allauth (login, cierre de sesión, recuperar contraseña) con la identidad de la agencia. #}
+<html lang="es-CL">
+<head>
+  {% include "partials/head.html" %}
+  <title>{% block head_title %}{% endblock head_title %} · {{ agencia.nombre }}</title>
+  <style type="text/tailwindcss">
+    .cuenta h1 { @apply font-serif text-3xl text-vino; }
+    .cuenta p { @apply mt-3 text-sm leading-relaxed; }
+    .cuenta a { @apply font-medium text-vino underline decoration-rosa underline-offset-2; }
+    .cuenta form { @apply mt-6 space-y-4; }
+    .cuenta label { @apply block text-sm font-medium text-vino; }
+    .cuenta input[type=email], .cuenta input[type=text], .cuenta input[type=password] {
+      @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40;
+    }
+    .cuenta input[type=checkbox] { @apply mr-2 h-4 w-4 accent-vino; }
+    .cuenta button[type=submit], .cuenta button:not([type]) { @apply mt-2 w-full rounded-full bg-vino px-6 py-3 font-semibold text-white hover:bg-vino-oscuro; }
+    .cuenta ul.errorlist { @apply mt-1 text-xs font-medium text-[#B3261E]; }
+  </style>
+  {% block extra_head %}{% endblock extra_head %}
+</head>
+<body class="grid min-h-screen place-items-center bg-fondo-suave px-4 py-10 font-sans antialiased">
+  {% block body %}
+  <main class="w-full max-w-md">
+    <a href="{% url 'website:home' %}" class="mb-8 flex justify-center">{% include "partials/logo.html" %}</a>
+    <div class="cuenta rounded-3xl border border-gris-borde bg-white p-7 shadow-sm sm:p-9">
+      {% if messages %}
+      <ul class="mb-5 space-y-2">
+        {% for message in messages %}<li class="rounded-xl bg-fondo-suave px-4 py-2.5 text-sm text-vino">{{ message }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% block content %}{% endblock content %}
+    </div>
+    <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" class="text-malva hover:text-vino">← Volver al sitio</a></p>
+  </main>
+  {% endblock body %}
+  {% block extra_body %}{% endblock extra_body %}
+</body>
+</html>

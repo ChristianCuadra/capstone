@@ -1,0 +1,22 @@
+{% extends "account/base_entrance.html" %}
+{% load i18n allauth account %}
+{# Login sin enlace de registro: las cuentas las crea la agencia (CuentaAdapter.is_open_for_signup = False). #}
+{% block head_title %}Iniciar sesión{% endblock head_title %}
+{% block content %}
+  <h1>Iniciar sesión</h1>
+  <p>Acceso para el equipo de la agencia y para clientes con plan activo. Si no tienes cuenta, pídela a tu contacto en la agencia.</p>
+  {% url 'account_login' as login_url %}
+  {% element form form=form method="post" action=login_url tags="entrance,login" %}
+    {% slot body %}
+      {% csrf_token %}
+      {% element fields form=form %}
+      {% endelement %}
+      {{ redirect_field }}
+    {% endslot %}
+    {% slot actions %}
+      {% element button type="submit" tags="prominent,login" %}
+        Entrar
+      {% endelement %}
+    {% endslot %}
+  {% endelement %}
+{% endblock content %}

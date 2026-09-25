@@ -1,0 +1,22 @@
+{# Parámetros: url, etiqueta, clave, icono (path SVG 24x24), badge (opcional), movil (True = variante de barra inferior). #}
+{# Queda activa cuando clave == seccion_portal (lo define cada vista del portal). #}
+{% with activa=clave|default:"-" %}
+{% if movil %}
+<li class="flex-1">
+  <a href="{{ url }}" {% if activa == seccion_portal %}aria-current="page"{% endif %}
+     class="relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium {% if activa == seccion_portal %}text-vino{% else %}text-gris-txt{% endif %}">
+    <svg class="h-5 w-5 {% if activa == seccion_portal %}text-rosa{% endif %}" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ icono }}"/></svg>
+    {{ etiqueta }}
+    {% if badge %}<span class="absolute right-1/2 top-1 translate-x-4 rounded-full bg-rosa px-1.5 text-[9px] font-bold leading-4 text-vino-oscuro">{{ badge }}</span>{% endif %}
+  </a>
+</li>
+{% else %}
+<li>
+  <a href="{{ url }}" {% if activa == seccion_portal %}aria-current="page"{% endif %}
+     class="flex h-16 items-center gap-2 border-b-2 text-sm font-medium lg:h-[72px] {% if activa == seccion_portal %}border-vino text-vino{% else %}border-transparent hover:text-vino{% endif %}">
+    {{ etiqueta }}
+    {% if badge %}<span class="rounded-full bg-rosa px-1.5 text-[11px] font-bold leading-5 text-vino-oscuro">{{ badge }}</span>{% endif %}
+  </a>
+</li>
+{% endif %}
+{% endwith %}

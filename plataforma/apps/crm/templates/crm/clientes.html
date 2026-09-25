@@ -1,0 +1,33 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Clientes{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Clientes</h1>
+    <p class="mt-1 text-sm">Se crean con «Convertir en cliente» desde la ficha de un prospecto.</p>
+  </div>
+</header>
+
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  {% if not clientes %}
+  <p class="px-5 py-14 text-center text-sm">Aún no hay clientes. Convierte un prospecto ganado desde su ficha.</p>
+  {% else %}
+  <ul class="divide-y divide-gris-borde">
+    {% for c in clientes %}
+    <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div>
+        <p class="font-semibold text-vino">{{ c.nombre }}</p>
+        <p class="text-xs">Cliente desde {{ c.creado_en|date:"j M Y" }}{% if not c.activo %} · inactivo{% endif %}</p>
+      </div>
+      <div class="flex gap-2 text-sm">
+        {% if c.prospecto %}<a href="{% url 'crm:prospecto_detalle' c.prospecto.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Ver ficha comercial</a>{% endif %}
+        <a href="{% url 'admin:clients_cliente_change' c.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

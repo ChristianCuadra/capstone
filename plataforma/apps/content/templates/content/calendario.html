@@ -1,0 +1,80 @@
+{% extends "content/base_portal.html" %}
+
+{% block page_title %}Calendario editorial{% endblock %}
+
+{% block content %}
+{# Piezas desde content_pieces (pendiente: módulo de contenido). Sin piezas, la grilla se muestra vacía. #}
+
+<header class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Calendario editorial</h1>
+    <p class="mt-1 text-sm">
+      {% if total_piezas %}
+      {{ total_piezas }} publicaciones planificadas para {{ mes_nombre }}{% if en_revision %} ·
+      <a href="{% url 'content:aprobacion' %}" class="font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-2">{{ en_revision }} esperan tu aprobación</a>{% endif %}
+      {% else %}Aún no hay publicaciones planificadas para {{ mes_nombre }}.{% endif %}
+    </p>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <div class="flex items-center rounded-full border border-gris-borde bg-white">
+      <a href="?mes={{ mes_anterior }}&vista={{ vista }}" class="grid h-9 w-9 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Mes anterior">‹</a>
+      <span class="min-w-[9rem] text-center text-sm font-semibold capitalize text-vino">{{ mes_nombre }} {{ anio }}</span>
+      <a href="?mes={{ mes_siguiente }}&vista={{ vista }}" class="grid h-9 w-9 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Mes siguiente">›</a>
+    </div>
+    {# Toggle Mes/Lista resuelto en el servidor (?vista=lista). En móvil siempre se muestra la lista. #}
+    <div class="hidden rounded-full border border-gris-borde bg-white p-1 text-sm font-medium md:flex">
+      <a href="?mes={{ mes_param }}&vista=mes" class="rounded-full px-4 py-1.5 {% if vista == 'mes' %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Mes</a>
+      <a href="?mes={{ mes_param }}&vista=lista" class="rounded-full px-4 py-1.5 {% if vista == 'lista' %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Lista</a>
+    </div>
+  </div>
+</header>
+
+{# ── Leyenda ────────────────────────────────────────────────────────── #}
+<ul class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs" aria-label="Estados">
+  {% for clave, nombre in estados %}
+  <li class="flex items-center gap-1.5">
+    <span class="h-2.5 w-2.5 rounded-full {% if clave == 'en_revision' %}bg-rosa{% elif clave == 'aprobado' %}bg-malva{% elif clave == 'publicado' %}bg-vino{% else %}bg-gris-borde ring-1 ring-lila{% endif %}"></span>
+    {{ nombre }}
+  </li>
+  {% endfor %}
+</ul>
+
+{# ── Vista mes (grilla) ─────────────────────────────────────────────── #}
+<section class="mt-5 overflow-hidden rounded-2xl border border-gris-borde bg-white {% if vista == 'lista' %}hidden{% else %}hidden md:block{% endif %}" aria-label="Calendario mensual">
+  <div class="grid grid-cols-7 border-b border-gris-borde bg-fondo-suave text-center text-xs font-semibold uppercase tracking-[0.14em] text-malva">
+    {% for d in dias_semana %}<div class="py-2.5">{{ d }}</div>{% endfor %}
+  </div>
+  <div class="grid grid-cols-7 [&>div:nth-child(7n)]:border-r-0">
+    {% for semana in semanas %}{% for dia in semana %}
+    <div class="min-h-[128px] border-b border-r border-gris-borde p-1.5 lg:p-2 {% if not dia.en_mes %}bg-fondo-suave/60{% endif %} {% if forloop.parentloop.last %}border-b-0{% endif %}">
+      <p class="mb-1.5 flex justify-end">
+        <span class="grid h-6 min-w-6 place-items-center rounded-full px-1 text-xs tabular-nums {% if dia.hoy %}bg-vino font-bold text-white{% elif dia.en_mes %}font-medium text-vino{% else %}text-lila{% endif %}">
+          {{ dia.fecha.day }}{% if dia.hoy %}<span class="sr-only"> (hoy)</span>{% endif %}
+        </span>
+      </p>
+      <div class="space-y-1">
+        {% for pieza in dia.piezas %}{% include "content/_chip_pieza.html" %}{% endfor %}
+      </div>
+    </div>
+    {% endfor %}{% endfor %}
+  </div>
+</section>
+
+{# ── Vista lista (siempre en móvil) ─────────────────────────────────── #}
+<section class="mt-5 space-y-5 {% if vista == 'lista' %}{% else %}md:hidden{% endif %}" aria-label="Lista de publicaciones">
+  {% for dia in dias_con_piezas %}
+  <div class="grid grid-cols-[3.25rem_1fr] gap-3">
+    <p class="pt-1 text-center leading-tight">
+      <span class="block text-[11px] uppercase tracking-wider {% if dia.hoy %}font-bold text-rosa{% else %}text-malva{% endif %}">{{ dia.fecha|date:"D" }}</span>
+      <span class="block font-serif text-2xl text-vino">{{ dia.fecha.day }}</span>
+    </p>
+    <div class="space-y-2">
+      {% for pieza in dia.piezas %}{% include "content/_chip_pieza.html" with grande=True %}{% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  <p class="rounded-2xl border border-gris-borde bg-white px-5 py-12 text-center text-sm">Aún no hay publicaciones en {{ mes_nombre }}. Cuando la agencia planifique tu contenido, aparecerá aquí.</p>
+  {% endfor %}
+</section>
+{% endblock %}

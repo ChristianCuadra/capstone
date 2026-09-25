@@ -1,0 +1,120 @@
+{% extends "website/base.html" %}
+{% load formato %}
+
+{% block title %}Planes · {{ agencia.nombre }}{% endblock %}
+
+{% block content %}
+<section class="bg-fondo-suave">
+  <div class="mx-auto max-w-7xl px-4 pb-12 pt-14 text-center sm:px-6 lg:px-8 lg:pt-20">
+    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes</p>
+    <h1 class="mx-auto mt-3 max-w-2xl font-serif text-4xl leading-tight text-vino sm:text-5xl">Un plan para cada etapa de tu marca</h1>
+    <p class="mx-auto mt-4 max-w-xl text-lg">Planes de cobro mensual. Elige el que calza con tu etapa o contrata solo los servicios que necesitas.</p>
+  </div>
+</section>
+
+{# ── Cards de planes ────────────────────────────────────────────────── #}
+{# Desde la base: catalog.Plan + PlanDeliverable. Editable en /admin/ sin tocar código. #}
+<section class="bg-gradient-to-b from-fondo-suave to-white pb-16 lg:pb-24">
+  <div class="mx-auto grid max-w-7xl items-stretch gap-6 px-4 sm:px-6 md:grid-cols-2 lg:px-8 xl:grid-cols-4">
+    {% for plan in planes %}
+    <article class="relative flex flex-col rounded-3xl border p-7 {% if plan.destacado %}border-vino bg-vino text-lila shadow-xl shadow-vino/20 xl:-my-4 xl:py-11{% else %}border-gris-borde bg-white{% endif %}">
+      {% if plan.badge %}
+      <span class="absolute -top-3 left-7 rounded-full bg-rosa px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-vino-oscuro">{{ plan.badge }}</span>
+      {% endif %}
+      <h2 class="font-serif text-3xl {% if plan.destacado %}text-white{% else %}text-vino{% endif %}">{{ plan.nombre }}</h2>
+      {# Altura mínima para que precio y lista queden alineados entre tarjetas #}
+      <p class="mt-2 text-sm leading-relaxed xl:min-h-[4.5rem]">{{ plan.descripcion }}</p>
+
+      <div class="mt-6">
+        <p class="font-serif text-4xl {% if plan.destacado %}text-white{% else %}text-vino{% endif %}">{{ plan.precio_mensual|clp }}<span class="font-sans text-base font-normal">/mes</span></p>
+        <p class="mt-1 min-h-[1rem] text-xs">
+          {% if plan.precio_primer_mes %}Primer mes {{ plan.precio_primer_mes|clp }}{% else %}Cobro mensual{% endif %}
+        </p>
+      </div>
+
+      <ul class="mb-8 mt-6 space-y-2.5 border-t pt-6 text-sm {% if plan.destacado %}border-white/15{% else %}border-gris-borde{% endif %}">
+        {% for item in plan.incluye %}
+        <li class="flex gap-2.5">
+          <svg class="mt-0.5 h-4 w-4 shrink-0 text-rosa" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          <span class="{% if plan.destacado %}text-white{% endif %}">{{ item|capfirst }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <a href="{% url 'website:cotizacion' %}?plan={{ plan.slug }}"
+         class="mt-auto rounded-full px-6 py-3 text-center font-semibold {% if plan.destacado %}bg-rosa text-vino-oscuro hover:bg-white{% else %}border border-vino text-vino hover:bg-fondo-suave{% endif %}">
+        Cotizar este plan
+      </a>
+    </article>
+    {% empty %}
+    <p class="col-span-full rounded-2xl border border-gris-borde bg-white p-8 text-center">Pronto publicaremos nuestros planes. Mientras, <a href="{% url 'website:cotizacion' %}" class="font-semibold text-vino underline">pide una cotización</a>.</p>
+    {% endfor %}
+  </div>
+</section>
+
+{# ── Tabla comparativa ──────────────────────────────────────────────── #}
+{% if comparativa %}
+<section class="pb-16 lg:pb-24">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <h2 class="font-serif text-3xl text-vino">Compara los planes</h2>
+    <div class="relative mt-8 overflow-x-auto rounded-2xl border border-gris-borde">
+      <table class="w-full min-w-[720px] text-left text-sm">
+        <thead>
+          <tr class="border-b border-gris-borde">
+            <th scope="col" class="px-5 py-4 font-medium text-malva">Incluye</th>
+            {% for plan in planes %}
+            <th scope="col" class="px-5 py-4 text-center font-serif text-lg text-vino {% if plan.destacado %}bg-fondo-suave{% endif %}">{{ plan.nombre }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gris-borde">
+          {% for fila in comparativa %}
+          <tr>
+            <th scope="row" class="px-5 py-3.5 font-medium text-vino">{{ fila.caracteristica }}</th>
+            {% for celda in fila.celdas %}
+            <td class="px-5 py-3.5 text-center tabular-nums {% if celda.destacado %}bg-fondo-suave{% endif %}">
+              {% if celda.valor is True %}
+                <svg class="mx-auto h-5 w-5 text-rosa" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" role="img" aria-label="Incluido"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              {% elif celda.valor is False %}
+                <span class="text-lila" role="img" aria-label="No incluido">—</span>
+              {% else %}
+                <span class="font-semibold text-vino">{{ celda.valor }}</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+          <tr class="bg-fondo-suave/60">
+            <th scope="row" class="px-5 py-3.5 font-semibold text-vino">Precio mensual</th>
+            {% for plan in planes %}
+            <td class="px-5 py-3.5 text-center font-semibold tabular-nums text-vino">{{ plan.precio_mensual|clp }}</td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-4 text-xs">Valores en pesos chilenos, cobro mensual.</p>
+  </div>
+</section>
+{% endif %}
+
+{# ── Servicios sueltos ──────────────────────────────────────────────── #}
+{# Desde la base: catalog.Service #}
+{% if servicios %}
+<section class="bg-fondo-suave py-16 lg:py-20">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <h2 class="font-serif text-3xl text-vino">Servicios sueltos</h2>
+    <p class="mt-2">Para necesidades puntuales, sin contratar un plan.</p>
+    <ul class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {% for s in servicios %}
+      <li class="flex items-baseline justify-between gap-4 rounded-2xl border border-gris-borde bg-white px-5 py-4">
+        <span class="font-medium text-vino">{{ s.nombre }}</span>
+        <span class="whitespace-nowrap text-sm"><strong class="text-vino">{{ s.precio|clp }}</strong>{{ s.sufijo_precio }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <a href="{% url 'website:cotizacion' %}" class="mt-8 inline-block rounded-full bg-vino px-6 py-3 font-semibold text-white hover:bg-vino-oscuro">Cotizar servicios</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

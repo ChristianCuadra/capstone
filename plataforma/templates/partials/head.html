@@ -1,0 +1,61 @@
+{# Recursos comunes a sitio público, panel y portal: paleta, tipografía y Tailwind (CDN). #}
+{# Identidad según el Manual de marca AC: #522136 · #F47FB1 · #E18BA6, Cormorant Garamond + Cocomat Pro. #}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23522136'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='15' font-weight='bold' text-anchor='middle'%3E%3Ctspan fill='%23F47FB1'%3EA%3C/tspan%3E%3Ctspan fill='%23fff'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E">
+{# Cocomat Pro es una fuente comercial: mientras no tengamos los archivos web con licencia, se usa Jost (geométrica similar). #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Jost:wght@300;400;500;600;700&display=swap">
+<style>
+  :root {
+    /* Colores del manual de marca */
+    --vino: #522136;
+    --rosa: #F47FB1;
+    --rosa-viejo: #E18BA6;
+    --rubor: #F2E4EA;
+    /* Tonos de apoyo (texto, bordes y fondos) */
+    --malva: #8A5A72;
+    --lila: #C9A8BC;
+    --fondo: #FFFFFF;
+    --gris-txt: #5A5A63;
+    --gris-borde: #E3D5DC;
+    --fondo-suave: #FBF6F8;
+  }
+  body { background: var(--fondo); color: var(--gris-txt); }
+  /* Cormorant tiene trazo fino: los títulos van en semibold para mantener presencia.
+     Sus números por defecto son de estilo antiguo (descienden); en KPIs y precios se usan alineados.
+     --tw-numeric-figure mantiene el ajuste aunque el elemento también use tabular-nums. */
+  .font-serif { font-weight: 600; font-variant-numeric: lining-nums; --tw-numeric-figure: lining-nums; }
+  /* Relleno de imágenes y videos aún sin cargar */
+  .placeholder-rayado {
+    background: repeating-linear-gradient(135deg, var(--fondo-suave) 0 14px, var(--gris-borde) 14px 15px);
+  }
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Mantener sincronizado con las variables de :root
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          vino: '#522136',
+          'vino-oscuro': '#3D1828',
+          rosa: '#F47FB1',
+          'rosa-viejo': '#E18BA6',
+          rubor: '#F2E4EA',
+          malva: '#8A5A72',
+          lila: '#C9A8BC',
+          fondo: '#FFFFFF',
+          'gris-txt': '#5A5A63',
+          'gris-borde': '#E3D5DC',
+          'fondo-suave': '#FBF6F8',
+        },
+        fontFamily: {
+          serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+          sans: ['"Cocomat Pro"', 'Jost', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>

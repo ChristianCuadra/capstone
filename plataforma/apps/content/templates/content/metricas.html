@@ -1,0 +1,19 @@
+{% extends "content/base_portal.html" %}
+
+{% block page_title %}Métricas{% endblock %}
+
+{% block content %}
+{# Métricas desde metrics_data (importación por archivo o integración) y reporte mensual (pendiente: Alcance 5.8 y 5.9). #}
+<h1 class="font-serif text-3xl text-vino lg:text-4xl">Métricas</h1>
+<p class="mt-1 text-sm">Alcance, interacciones, seguidores y resultados de campañas de tu marca, mes a mes.</p>
+
+{% if not hay_datos %}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white px-6 py-14 text-center">
+  <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rosa/15 text-vino">
+    <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  </span>
+  <h2 class="mt-4 font-serif text-2xl text-vino">Aún no hay métricas</h2>
+  <p class="mx-auto mt-2 max-w-md text-sm">Aparecerán cuando la agencia cargue los datos de tus redes y campañas. Con ellos también recibirás tu reporte mensual.</p>
+</section>
+{% endif %}
+{% endblock %}

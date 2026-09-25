@@ -1,0 +1,32 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Nueva cotización{% endblock %}
+
+{% block content %}
+<nav aria-label="Ruta" class="text-sm">
+  <ol class="flex items-center gap-2">
+    <li><a href="{% url 'crm:cotizaciones' %}" class="hover:text-vino">Cotizaciones</a></li>
+    <li aria-hidden="true" class="text-lila">›</li>
+    <li aria-current="page" class="font-medium text-vino">Nueva</li>
+  </ol>
+</nav>
+<h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">Nueva cotización</h1>
+
+<section class="mt-6 max-w-xl rounded-2xl border border-gris-borde bg-white p-6">
+  {% if prospectos_opciones %}
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <label class="block text-sm font-medium text-vino">¿Para qué prospecto?
+      <select name="prospecto" required class="mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-3 py-2.5 text-sm">
+        {% for p in prospectos_opciones %}<option value="{{ p.pk }}" {% if p.pk|stringformat:"s" == prospecto_inicial %}selected{% endif %}>{{ p.empresa }} · {{ p.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <p class="text-sm">El borrador parte con el plan sugerido (o el de interés) por 6 meses, los servicios que marcó en el formulario y su diagnóstico con IA, si ya lo tiene. Todo se puede editar.</p>
+    <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Crear borrador</button>
+  </form>
+  {% else %}
+  <p class="text-sm">No hay prospectos activos para cotizar. Cuando llegue una solicitud por el formulario del sitio (o la ingreses con «+ Nuevo prospecto»), podrás crear su cotización aquí.</p>
+  <a href="{% url 'crm:prospectos' %}" class="mt-4 inline-block rounded-full border border-vino px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Ir a prospectos</a>
+  {% endif %}
+</section>
+{% endblock %}
