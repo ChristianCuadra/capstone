@@ -138,6 +138,9 @@ ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+# Aviso por correo (sin incluir los codigos) cuando se activa/desactiva 2FA
+# o se generan nuevos codigos de recuperacion (PC-AUT-02).
+ACCOUNT_EMAIL_NOTIFICATIONS = True
 # Sin registro público y con redirección según rol (equipo → panel, cliente → portal).
 ACCOUNT_ADAPTER = "apps.accounts.adapter.CuentaAdapter"
 LOGIN_URL = "account_login"
