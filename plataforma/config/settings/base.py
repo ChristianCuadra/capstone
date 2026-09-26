@@ -80,6 +80,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.website.context_processors.agencia",
+                "apps.website.context_processors.analitica",
             ],
         },
     },
@@ -150,6 +151,12 @@ LOGIN_REDIRECT_URL = "/"
 # Sin webauthn/passkeys por ahora para no depender de esas librerías extra.
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 MFA_TOTP_ISSUER = "Cosmopolitan"
+
+# Analitica con consentimiento (PC-SEO-02, Alcance 4.5): IDs reales via variables de
+# entorno (Esteban los confirma con la agencia). Vacio = esa herramienta no se carga.
+GA4_MEASUREMENT_ID = config("GA4_MEASUREMENT_ID", default="")
+GTM_CONTAINER_ID = config("GTM_CONTAINER_ID", default="")
+META_PIXEL_ID = config("META_PIXEL_ID", default="")
 
 
 # --- Internacionalización ----------------------------------------------------

@@ -1,0 +1,131 @@
+{# Analitica con consentimiento (PC-SEO-02, Alcance 4.5). #}
+{# Nada de GA4/GTM/Meta Pixel se carga hasta que la persona visitante acepta. Los IDs salen #}
+{# de variables de entorno (ver context_processors.analitica); si estan vacios, esa #}
+{# herramienta especifica simplemente no se inyecta aunque haya consentimiento. #}
+<div id="ac-banner-cookies"
+     class="fixed inset-x-0 bottom-0 z-50 hidden border-t border-gris-borde bg-white px-4 py-4 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:px-6"
+     role="dialog" aria-live="polite" aria-label="Preferencias de cookies">
+  <div class="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <p class="text-sm text-gris-txt">
+      Usamos cookies de analitica para entender que paginas y canales traen visitas y cotizaciones.
+      Solo se activan si aceptas.
+    </p>
+    <div class="flex shrink-0 gap-2">
+      <button type="button" id="ac-btn-rechazar" class="rounded-full border border-gris-borde px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">Rechazar</button>
+      <button type="button" id="ac-btn-aceptar" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+{{ ga4_id|json_script:"ac-ga4-id" }}
+{{ gtm_id|json_script:"ac-gtm-id" }}
+{{ meta_pixel_id|json_script:"ac-meta-pixel-id" }}
+
+<script>
+(function () {
+  "use strict";
+  var CLAVE = "ac_consentimiento"; // "granted" | "denied"
+  var CLAVE_UTM = "ac_utm_origen"; // primer touch de la sesion, se guarda una sola vez
+
+  function leerId(elId) {
+    var el = document.getElementById(elId);
+    if (!el) return "";
+    try { return JSON.parse(el.textContent) || ""; } catch (e) { return ""; }
+  }
+
+  var ga4Id = leerId("ac-ga4-id");
+  var gtmId = leerId("ac-gtm-id");
+  var metaPixelId = leerId("ac-meta-pixel-id");
+
+  function capturarUtm() {
+    if (sessionStorage.getItem(CLAVE_UTM)) return JSON.parse(sessionStorage.getItem(CLAVE_UTM));
+    var params = new URLSearchParams(window.location.search);
+    var claves = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+    var utm = {};
+    var hayUtm = false;
+    claves.forEach(function (c) {
+      var v = params.get(c);
+      if (v) { utm[c] = v; hayUtm = true; }
+    });
+    if (hayUtm) sessionStorage.setItem(CLAVE_UTM, JSON.stringify(utm));
+    return hayUtm ? utm : null;
+  }
+
+  function cargarScript(src, attrs) {
+    var s = document.createElement("script");
+    s.async = true;
+    s.src = src;
+    if (attrs) Object.keys(attrs).forEach(function (k) { s.setAttribute(k, attrs[k]); });
+    document.head.appendChild(s);
+  }
+
+  function cargarAnalitica() {
+    var utm = capturarUtm();
+
+    if (ga4Id) {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+      cargarScript("https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(ga4Id));
+      gtag("js", new Date());
+      gtag("config", ga4Id, utm || {});
+    }
+
+    if (gtmId) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+      cargarScript("https://www.googletagmanager.com/gtm.js?id=" + encodeURIComponent(gtmId));
+    }
+
+    if (metaPixelId) {
+      (function (f, b, e, v, n, t, s) {
+        if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+        if (!f._fbq) f._fbq = n; n.push = n; n.loaded = true; n.version = "2.0"; n.queue = [];
+        t = b.createElement(e); t.async = true; t.src = v;
+        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+      })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
+      window.fbq("init", metaPixelId);
+      window.fbq("track", "PageView");
+    }
+
+    window.acAnaliticaActiva = true;
+    document.dispatchEvent(new CustomEvent("ac:analitica-cargada"));
+  }
+
+  function ocultarBanner() {
+    var banner = document.getElementById("ac-banner-cookies");
+    if (banner) banner.classList.add("hidden");
+  }
+
+  function mostrarBanner() {
+    var banner = document.getElementById("ac-banner-cookies");
+    if (banner) banner.classList.remove("hidden");
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var eleccion = localStorage.getItem(CLAVE);
+    if (eleccion === "granted") {
+      cargarAnalitica();
+    } else if (eleccion === "denied") {
+      // ya eligio no aceptar: no se carga nada ni se vuelve a mostrar el banner
+    } else {
+      mostrarBanner();
+    }
+
+    var btnAceptar = document.getElementById("ac-btn-aceptar");
+    var btnRechazar = document.getElementById("ac-btn-rechazar");
+    if (btnAceptar) {
+      btnAceptar.addEventListener("click", function () {
+        localStorage.setItem(CLAVE, "granted");
+        ocultarBanner();
+        cargarAnalitica();
+      });
+    }
+    if (btnRechazar) {
+      btnRechazar.addEventListener("click", function () {
+        localStorage.setItem(CLAVE, "denied");
+        ocultarBanner();
+      });
+    }
+  });
+})();
+</script>

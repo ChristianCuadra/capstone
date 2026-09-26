@@ -232,3 +232,25 @@
   </div>
 </section>
 {% endblock %}
+
+{% if enviado %}
+{% block scripts %}
+<script>
+  // Conversion "generar_lead" para GA4/GTM (PC-SEO-02, criterio 2): solo si hubo consentimiento
+  // y alguna herramienta de analitica quedo cargada (ver website/_analitica.html).
+  (function empujarConversion() {
+    if (window.acAnaliticaActiva) {
+      if (window.gtag) { gtag("event", "generar_lead"); }
+      if (window.dataLayer) { window.dataLayer.push({ event: "generar_lead" }); }
+      if (window.fbq) { fbq("track", "Lead"); }
+    } else {
+      document.addEventListener("ac:analitica-cargada", function () {
+        if (window.gtag) { gtag("event", "generar_lead"); }
+        if (window.dataLayer) { window.dataLayer.push({ event: "generar_lead" }); }
+        if (window.fbq) { fbq("track", "Lead"); }
+      }, { once: true });
+    }
+  })();
+</script>
+{% endblock %}
+{% endif %}
