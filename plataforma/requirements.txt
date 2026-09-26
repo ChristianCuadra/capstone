@@ -1,7 +1,7 @@
 django==5.1.*
 psycopg[binary]==3.2.*
 pgvector==0.3.*
-django-allauth==65.0.*
+django-allauth[mfa]==65.0.*
 celery==5.4.*
 redis==5.0.*
 django-storages[boto3]==1.14.*

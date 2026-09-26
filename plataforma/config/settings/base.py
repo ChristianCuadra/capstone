@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     # Terceros
     "allauth",
     "allauth.account",
+    "allauth.mfa",
     "django_htmx",
     "storages",
     *LOCAL_APPS,
@@ -141,6 +142,11 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 ACCOUNT_ADAPTER = "apps.accounts.adapter.CuentaAdapter"
 LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "/"
+
+# 2FA (PC-AUT-02, Alcance 4.3): TOTP con app autenticadora + códigos de recuperación.
+# Sin webauthn/passkeys por ahora para no depender de esas librerías extra.
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
+MFA_TOTP_ISSUER = "Cosmopolitan"
 
 
 # --- Internacionalización ----------------------------------------------------
