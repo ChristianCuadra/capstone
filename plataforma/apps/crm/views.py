@@ -25,6 +25,7 @@ from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotiz
 from apps.catalog.models import Plan, Servicio
 from apps.clients.models import Cliente
 from apps.core.models import RegistroAuditoria
+from allauth.mfa.models import Authenticator
 
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
@@ -657,12 +658,17 @@ def usuarios(request):
             | Q(email__icontains=busqueda)
         )
 
+    con_2fa = set(
+        Authenticator.objects.filter(user__in=lista, type=Authenticator.Type.TOTP).values_list("user_id", flat=True)
+    )
+
     return render(
         request,
         "crm/usuarios.html",
         contexto_panel(
             request, "usuarios",
             usuarios=lista, roles=Rol.choices, rol_activo=rol_activo, busqueda=busqueda,
+            con_2fa=con_2fa,
         ),
     )
 
@@ -734,6 +740,31 @@ def usuario_alternar_activo(request, pk):
         detalle=f"{usuario_obj.username} · {'activado' if usuario_obj.is_active else 'desactivado'}",
     )
     messages.success(request, f"Usuario «{usuario_obj.username}» {'activado' if usuario_obj.is_active else 'desactivado'}.")
+    return _volver(request, "crm:usuarios")
+
+
+@requiere_administradora
+@require_POST
+def usuario_restablecer_2fa(request, pk):
+    usuario_obj = get_object_or_404(get_user_model(), pk=pk)
+    autenticadores = Authenticator.objects.filter(user=usuario_obj)
+    if not autenticadores.exists():
+        messages.info(request, f"«{usuario_obj.username}» no tiene 2FA activado.")
+        return _volver(request, "crm:usuarios")
+
+    autenticadores.delete()
+    RegistroAuditoria.registrar(
+        usuario=request.user,
+        accion=RegistroAuditoria.Accion.EDITAR,
+        entidad="usuario",
+        entidad_id=usuario_obj.pk,
+        detalle=f"{usuario_obj.username} · 2FA restablecido (admin)",
+    )
+    messages.success(
+        request,
+        f"2FA de «{usuario_obj.username}» restablecido. Podrá iniciar sesión sin código "
+        "y configurar la app autenticadora nuevamente desde su panel de Seguridad.",
+    )
     return _volver(request, "crm:usuarios")
 
 

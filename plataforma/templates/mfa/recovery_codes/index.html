@@ -1,0 +1,31 @@
+{% extends "mfa/recovery_codes/base.html" %}
+{% load i18n %}
+{% load allauth %}
+{# Override del template de allauth: los botones "Descargar códigos" / "Generar nuevos #}
+{# códigos" venían sin separación visual (dos <a> sin clases, pegados). Se reemplaza el #}
+{# bloque final por markup propio, con el mismo estilo de botones usado en el resto del sitio. #}
+{% block content %}
+    {% element h1 %}
+        {% translate "Recovery Codes" %}
+    {% endelement %}
+    {% element p %}
+        {% blocktranslate count unused_count=unused_codes|length %}There is {{ unused_count }} out of {{ total_count }} recovery codes available.{% plural %}There are {{ unused_count }} out of {{ total_count }} recovery codes available.{% endblocktranslate %}
+    {% endelement %}
+    {% element field id="recovery_codes" type="textarea" disabled=True rows=unused_codes|length readonly=True %}
+        {% slot label %}
+            {% translate "Unused codes" %}
+        {% endslot %}
+        {% comment %} djlint:off {% endcomment %}
+    {% slot value %}{% for code in unused_codes %}{% if forloop.counter0 %}
+{% endif %}{{ code }}{% endfor %}{% endslot %}
+{% comment %} djlint:on {% endcomment %}
+    {% endelement %}
+    <div class="mt-5 flex flex-wrap gap-3">
+      {% if unused_codes %}
+      {% url 'mfa_download_recovery_codes' as download_url %}
+      <a href="{{ download_url }}" class="rounded-full px-4 py-2.5 text-center text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">{% translate "Download codes" %}</a>
+      {% endif %}
+      {% url 'mfa_generate_recovery_codes' as generate_url %}
+      <a href="{{ generate_url }}" class="rounded-full bg-vino px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-vino-oscuro">{% translate "Generate new codes" %}</a>
+    </div>
+{% endblock content %}

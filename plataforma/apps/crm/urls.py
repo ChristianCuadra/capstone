@@ -20,6 +20,7 @@ urlpatterns = [
     path("usuarios/nuevo/", views.usuario_nuevo, name="usuario_nuevo"),
     path("usuarios/<int:pk>/", views.usuario_editar, name="usuario_editar"),
     path("usuarios/<int:pk>/alternar/", views.usuario_alternar_activo, name="usuario_alternar_activo"),
+    path("usuarios/<int:pk>/restablecer-2fa/", views.usuario_restablecer_2fa, name="usuario_restablecer_2fa"),
     path("usuarios/<int:pk>/eliminar/", views.usuario_eliminar, name="usuario_eliminar"),
     path("auditoria/", views.auditoria, name="auditoria"),
 ]

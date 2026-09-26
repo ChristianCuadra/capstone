@@ -51,6 +51,13 @@
           <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Activar</button>
           {% endif %}
         </form>
+        {% if u.pk in con_2fa %}
+        <form method="post" action="{% url 'crm:usuario_restablecer_2fa' u.pk %}" onsubmit="return confirm('¿Restablecer el 2FA de «{{ u.username }}»? Perderá su código y sus códigos de recuperación actuales, y deberá volver a configurarlo.');">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Restablecer 2FA</button>
+        </form>
+        {% endif %}
         <button type="button" onclick="document.getElementById('dlg-eliminar-{{ u.pk }}').showModal()" class="rounded-full px-3 py-1.5 font-medium text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50">Eliminar</button>
         <dialog id="dlg-eliminar-{{ u.pk }}" class="w-[90vw] max-w-md rounded-2xl border border-gris-borde bg-white p-6 backdrop:bg-black/40">
           <h2 class="font-serif text-xl text-vino">¿Eliminar a «{{ u.username }}»?</h2>
