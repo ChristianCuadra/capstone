@@ -1,0 +1,72 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Usuarios{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Usuarios</h1>
+    <p class="mt-1 text-sm">Alta y edición de cuentas con rol (Administradora, Colaboradora, Cliente aprobador, Cliente lector).</p>
+  </div>
+  <a href="{% url 'crm:usuario_nuevo' %}" class="rounded-full bg-vino px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo usuario</a>
+</header>
+
+<form method="get" class="mt-6 flex flex-wrap items-center gap-2">
+  {% if rol_activo %}<input type="hidden" name="rol" value="{{ rol_activo }}">{% endif %}
+  <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar por nombre, usuario o correo…"
+         class="w-full max-w-xs rounded-full border border-gris-borde bg-white px-4 py-2 text-sm focus:border-lila focus:outline-none sm:w-72">
+  <button type="submit" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Buscar</button>
+  {% if busqueda %}<a href="?{% if rol_activo %}rol={{ rol_activo }}{% endif %}" class="text-sm font-medium text-vino underline decoration-rosa underline-offset-2">Quitar búsqueda</a>{% endif %}
+</form>
+
+<nav class="relative mt-4 overflow-x-auto" aria-label="Filtrar por rol">
+  <ul class="flex gap-2 text-sm">
+    <li><a href="?{% if busqueda %}q={{ busqueda }}{% endif %}" class="block rounded-full px-3.5 py-1.5 {% if not rol_activo %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">Todos</a></li>
+    {% for clave, nombre in roles %}
+    <li><a href="?rol={{ clave }}{% if busqueda %}&q={{ busqueda }}{% endif %}" class="block rounded-full px-3.5 py-1.5 {% if clave == rol_activo %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ nombre }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white">
+  {% if not usuarios %}
+  <p class="px-5 py-14 text-center text-sm">{% if busqueda %}No hay usuarios que coincidan con «{{ busqueda }}».{% elif rol_activo %}No hay usuarios con ese rol.{% else %}Aún no hay usuarios.{% endif %}</p>
+  {% else %}
+  <ul class="divide-y divide-gris-borde">
+    {% for u in usuarios %}
+    <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div>
+        <p class="font-semibold text-vino">{{ u.username }}{% if not u.is_active %} · <span class="text-xs font-normal">inactivo</span>{% endif %}</p>
+        <p class="text-xs">{{ u.email }} · {{ u.get_rol_display|default:"sin rol" }}{% if u.cliente %} · {{ u.cliente.nombre }}{% endif %}{% if u.is_staff %} · equipo agencia{% endif %}{% if u.is_superuser %} · superusuario{% endif %}</p>
+      </div>
+      <div class="flex gap-2 text-sm">
+        <a href="{% url 'crm:usuario_editar' u.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
+        {% if u.pk != request.user.pk %}
+        <form method="post" action="{% url 'crm:usuario_alternar_activo' u.pk %}" onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% if u.is_active %}
+          <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Desactivar</button>
+          {% else %}
+          <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Activar</button>
+          {% endif %}
+        </form>
+        <button type="button" onclick="document.getElementById('dlg-eliminar-{{ u.pk }}').showModal()" class="rounded-full px-3 py-1.5 font-medium text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50">Eliminar</button>
+        <dialog id="dlg-eliminar-{{ u.pk }}" class="w-[90vw] max-w-md rounded-2xl border border-gris-borde bg-white p-6 backdrop:bg-black/40">
+          <h2 class="font-serif text-xl text-vino">¿Eliminar a «{{ u.username }}»?</h2>
+          <p class="mt-2 text-sm">{{ u.email }} · {{ u.get_rol_display|default:"sin rol" }}{% if u.cliente %} · {{ u.cliente.nombre }}{% endif %}</p>
+          <p class="mt-3 text-sm">Esta acción no se puede deshacer. Sus cotizaciones, tareas e interacciones se conservan, pero quedarán sin autor asignado.</p>
+          <form method="post" action="{% url 'crm:usuario_eliminar' u.pk %}" class="mt-5 flex gap-3" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').textContent = 'Eliminando…';">
+            {% csrf_token %}
+            <button type="submit" class="rounded-full bg-red-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-800">Sí, eliminar</button>
+            <button type="button" onclick="document.getElementById('dlg-eliminar-{{ u.pk }}').close()" class="rounded-full border border-gris-borde px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Cancelar</button>
+          </form>
+        </dialog>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

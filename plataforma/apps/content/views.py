@@ -8,7 +8,7 @@ El cliente activo vendrá de request.client_id (apps.core.middleware.TenantMiddl
 import calendar
 from datetime import date, timedelta
 
-from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import requiere_rol_cliente
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -30,8 +30,9 @@ def contexto_portal(request, seccion, **context):
         "nombre": nombre,
         "iniciales": "".join(p[0] for p in nombre.replace("@", " ").split()[:2]).upper(),
     }
-    # TODO: cliente y plan del usuario (relación usuario ↔ cliente, Alcance 4.3)
-    context["portal_cliente"] = None
+    # Cliente del usuario (relación usuario ↔ cliente, Alcance 4.3). El plan contratado
+    # se agrega cuando exista el modelo de contrato/plan del cliente.
+    context["portal_cliente"] = u.cliente
     # TODO: count de content_pieces del cliente con estado = 'en_revision'
     context["portal_badges"] = {"aprobaciones": 0}
     context["seccion_portal"] = seccion
@@ -46,7 +47,7 @@ def _mes_desde_parametro(valor, hoy):
         return hoy.replace(day=1)
 
 
-@login_required
+@requiere_rol_cliente
 def calendario(request):
     hoy = timezone.localdate()
     primero = _mes_desde_parametro(request.GET.get("mes"), hoy)
@@ -85,14 +86,14 @@ def calendario(request):
     return render(request, "content/calendario.html", context)
 
 
-@login_required
+@requiere_rol_cliente
 def aprobacion(request):
     # TODO: content_pieces en revisión + versiones + comentarios (Alcance 5.7). Aprobar es exclusivo del cliente aprobador.
     context = contexto_portal(request, "aprobaciones", pendientes=[], revisadas=[])
     return render(request, "content/aprobacion.html", context)
 
 
-@login_required
+@requiere_rol_cliente
 def metricas(request):
     # TODO: metrics_data del cliente (importación por archivo o integración, Alcance 5.8) y reporte mensual (5.9).
     context = contexto_portal(request, "metricas", hay_datos=False)

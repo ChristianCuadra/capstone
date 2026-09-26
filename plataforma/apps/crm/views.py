@@ -9,6 +9,7 @@ from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib import messages
+from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
@@ -17,9 +18,13 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from apps.accounts.decorators import requiere_administradora
+from apps.accounts.forms import UsuarioForm
+from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
 from apps.clients.models import Cliente
+from apps.core.models import RegistroAuditoria
 
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
@@ -85,7 +90,7 @@ def contexto_panel(request, seccion, **context):
     u = request.user
     context["panel_usuario"] = {
         "nombre": _nombre(u),
-        "cargo": "Administradora" if u.is_superuser else "Equipo",  # TODO: roles del Alcance 4.3
+        "cargo": u.get_rol_display() if u.rol else ("Administradora" if u.is_superuser else "Equipo"),
         "iniciales": _iniciales(u),
     }
     context["panel_badges"] = {"prospectos": Prospecto.objects.filter(etapa=Prospecto.Etapa.NUEVO).count()}
@@ -632,3 +637,165 @@ def cotizacion_imprimir(request, pk):
 def clientes(request):
     lista = Cliente.objects.select_related("prospecto").order_by("-creado_en")
     return render(request, "crm/clientes.html", contexto_panel(request, "clientes", clientes=lista))
+
+
+# ── Usuarios (CU-08, Alcance 4.3 / 9.3) ────────────────────────────────────────
+
+@requiere_administradora
+def usuarios(request):
+    lista = get_user_model().objects.select_related("cliente").order_by("username")
+    rol_activo = request.GET.get("rol", "")
+    if rol_activo in Rol.values:
+        lista = lista.filter(rol=rol_activo)
+
+    busqueda = request.GET.get("q", "").strip()
+    if busqueda:
+        lista = lista.filter(
+            Q(username__icontains=busqueda)
+            | Q(first_name__icontains=busqueda)
+            | Q(last_name__icontains=busqueda)
+            | Q(email__icontains=busqueda)
+        )
+
+    return render(
+        request,
+        "crm/usuarios.html",
+        contexto_panel(
+            request, "usuarios",
+            usuarios=lista, roles=Rol.choices, rol_activo=rol_activo, busqueda=busqueda,
+        ),
+    )
+
+
+@requiere_administradora
+def usuario_nuevo(request):
+    if request.method == "POST":
+        form = UsuarioForm(request.POST, es_nuevo=True)
+        if form.is_valid():
+            usuario = form.save()
+            RegistroAuditoria.registrar(
+                usuario=request.user,
+                accion=RegistroAuditoria.Accion.CREAR,
+                entidad="usuario",
+                entidad_id=usuario.pk,
+                detalle=f"{usuario.username} · {usuario.get_rol_display() or 'sin rol'}",
+            )
+            messages.success(request, f"Usuario «{usuario.username}» creado.")
+            return redirect("crm:usuarios")
+    else:
+        form = UsuarioForm(es_nuevo=True)
+    return render(
+        request,
+        "crm/usuario_form.html",
+        contexto_panel(request, "usuarios", form=form, es_nuevo=True),
+    )
+
+
+@requiere_administradora
+def usuario_editar(request, pk):
+    usuario_obj = get_object_or_404(get_user_model(), pk=pk)
+    if request.method == "POST":
+        form = UsuarioForm(request.POST, instance=usuario_obj)
+        if form.is_valid():
+            form.save()
+            RegistroAuditoria.registrar(
+                usuario=request.user,
+                accion=RegistroAuditoria.Accion.EDITAR,
+                entidad="usuario",
+                entidad_id=usuario_obj.pk,
+                detalle=f"{usuario_obj.username} · {usuario_obj.get_rol_display() or 'sin rol'}",
+            )
+            messages.success(request, f"Usuario «{usuario_obj.username}» actualizado.")
+            return redirect("crm:usuarios")
+    else:
+        form = UsuarioForm(instance=usuario_obj)
+    return render(
+        request,
+        "crm/usuario_form.html",
+        contexto_panel(request, "usuarios", form=form, usuario_editado=usuario_obj),
+    )
+
+
+@requiere_administradora
+@require_POST
+def usuario_alternar_activo(request, pk):
+    usuario_obj = get_object_or_404(get_user_model(), pk=pk)
+    if usuario_obj.pk == request.user.pk:
+        messages.error(request, "No puedes desactivar tu propia cuenta.")
+        return _volver(request, "crm:usuarios")
+
+    usuario_obj.is_active = not usuario_obj.is_active
+    usuario_obj.save(update_fields=["is_active"])
+    RegistroAuditoria.registrar(
+        usuario=request.user,
+        accion=RegistroAuditoria.Accion.EDITAR,
+        entidad="usuario",
+        entidad_id=usuario_obj.pk,
+        detalle=f"{usuario_obj.username} · {'activado' if usuario_obj.is_active else 'desactivado'}",
+    )
+    messages.success(request, f"Usuario «{usuario_obj.username}» {'activado' if usuario_obj.is_active else 'desactivado'}.")
+    return _volver(request, "crm:usuarios")
+
+
+@requiere_administradora
+def usuario_eliminar(request, pk):
+    usuario_obj = get_user_model().objects.filter(pk=pk).first()
+    if usuario_obj is None:
+        # Ya fue eliminado (doble clic, otra pestaña, etc.): no es un error, solo avisamos.
+        messages.info(request, "Ese usuario ya había sido eliminado.")
+        return redirect("crm:usuarios")
+
+    if usuario_obj.pk == request.user.pk:
+        messages.error(request, "No puedes eliminar tu propia cuenta.")
+        return redirect("crm:usuarios")
+
+    if request.method == "POST":
+        nombre, rol_mostrado = usuario_obj.username, usuario_obj.get_rol_display() or "sin rol"
+        usuario_obj.delete()
+        RegistroAuditoria.registrar(
+            usuario=request.user,
+            accion=RegistroAuditoria.Accion.ELIMINAR,
+            entidad="usuario",
+            entidad_id=pk,
+            detalle=f"{nombre} · {rol_mostrado}",
+        )
+        messages.success(request, f"Usuario «{nombre}» eliminado.")
+        return redirect("crm:usuarios")
+
+    return render(
+        request,
+        "crm/usuario_confirmar_eliminar.html",
+        contexto_panel(request, "usuarios", usuario_a_eliminar=usuario_obj),
+    )
+
+
+# ── Registro de auditoría (solo lectura) ────────────────────────────────────
+
+@requiere_administradora
+def auditoria(request):
+    registros = RegistroAuditoria.objects.select_related("usuario").order_by("-creado_en")
+
+    accion_activa = request.GET.get("accion", "")
+    if accion_activa in RegistroAuditoria.Accion.values:
+        registros = registros.filter(accion=accion_activa)
+
+    busqueda = request.GET.get("q", "").strip()
+    if busqueda:
+        registros = registros.filter(
+            Q(detalle__icontains=busqueda)
+            | Q(entidad__icontains=busqueda)
+            | Q(usuario__username__icontains=busqueda)
+        )
+
+    # Se muestran los últimos 300 movimientos; es un registro de solo lectura, no necesita paginación por ahora.
+    registros = registros[:300]
+
+    return render(
+        request,
+        "crm/auditoria.html",
+        contexto_panel(
+            request, "auditoria",
+            registros=registros, acciones=RegistroAuditoria.Accion.choices,
+            accion_activa=accion_activa, busqueda=busqueda,
+        ),
+    )

@@ -24,7 +24,7 @@
         {% if user.is_authenticated %}
         <a href="{% if user.is_staff %}{% url 'crm:dashboard' %}{% else %}{% url 'content:calendario' %}{% endif %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">{% if user.is_staff %}Ir al panel{% else %}Mi portal{% endif %}</a>
         {% else %}
-        <a href="{% url 'account_login' %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">Acceso clientes</a>
+        <a href="{% url 'account_login' %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">Iniciar sesión</a>
         {% endif %}
         <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Cotizar proyecto</a>
       </div>
@@ -49,7 +49,7 @@
         {% if user.is_authenticated %}
         <a href="{% if user.is_staff %}{% url 'crm:dashboard' %}{% else %}{% url 'content:calendario' %}{% endif %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">{% if user.is_staff %}Ir al panel{% else %}Mi portal{% endif %}</a>
         {% else %}
-        <a href="{% url 'account_login' %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">Acceso clientes</a>
+        <a href="{% url 'account_login' %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">Iniciar sesión</a>
         {% endif %}
       </div>
     </div>
@@ -88,7 +88,7 @@
         <ul class="mt-4 space-y-2 text-sm">
           <li><a href="{% url 'website:planes' %}" class="hover:text-white">Planes y precios</a></li>
           <li><a href="{% url 'website:cotizacion' %}" class="hover:text-white">Solicitar cotización</a></li>
-          <li><a href="{% url 'account_login' %}" class="hover:text-white">Acceso clientes</a></li>
+          <li><a href="{% url 'account_login' %}" class="hover:text-white">Iniciar sesión</a></li>
         </ul>
       </div>
       {% endif %}

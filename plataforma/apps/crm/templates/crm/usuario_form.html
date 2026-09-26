@@ -1,0 +1,72 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}{% if es_nuevo %}Nuevo usuario{% else %}Editar usuario{% endif %}{% endblock %}
+
+{% block content %}
+<nav aria-label="Ruta" class="text-sm">
+  <ol class="flex items-center gap-2">
+    <li><a href="{% url 'crm:usuarios' %}" class="hover:text-vino">Usuarios</a></li>
+    <li aria-hidden="true" class="text-lila">›</li>
+    <li aria-current="page" class="font-medium text-vino">{% if es_nuevo %}Nuevo{% else %}{{ usuario_editado.username }}{% endif %}</li>
+  </ol>
+</nav>
+<h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">{% if es_nuevo %}Nuevo usuario{% else %}Editar «{{ usuario_editado.username }}»{% endif %}</h1>
+
+<section class="mt-6 max-w-2xl rounded-2xl border border-gris-borde bg-white p-6">
+  <form method="post" class="space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').textContent = 'Guardando…';">
+    {% csrf_token %}
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="block text-sm font-medium text-vino">Usuario
+        {{ form.username }}
+        {% for e in form.username.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Correo electrónico
+        {{ form.email }}
+        {% for e in form.email.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Nombre
+        {{ form.first_name }}
+      </label>
+      <label class="block text-sm font-medium text-vino">Apellido
+        {{ form.last_name }}
+      </label>
+    </div>
+
+    <label class="block text-sm font-medium text-vino">{{ form.password.label }}
+      {{ form.password }}
+      <p class="mt-1 text-xs">{{ form.password.help_text }}</p>
+      {% for e in form.password.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+    </label>
+
+    <label class="block text-sm font-medium text-vino">Rol
+      {{ form.rol }}
+      {% for e in form.rol.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+    </label>
+
+    <label class="block text-sm font-medium text-vino">{{ form.cliente.label }}
+      {{ form.cliente }}
+      {% for e in form.cliente.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+    </label>
+
+    <div>
+      <p class="text-sm font-medium text-vino">{{ form.clientes_asignados.label }}</p>
+      <div class="mt-1.5 max-h-40 space-y-1.5 overflow-y-auto rounded-xl border border-gris-borde p-3">
+        {% for opcion in form.clientes_asignados %}
+        <label class="flex items-center gap-2 text-sm">{{ opcion.tag }} {{ opcion.choice_label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2 sm:flex-row sm:gap-6">
+      <label class="flex items-center gap-2 text-sm">{{ form.is_staff }} {{ form.is_staff.label }}</label>
+      <label class="flex items-center gap-2 text-sm">{{ form.is_active }} {{ form.is_active.label }}</label>
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Guardar</button>
+      <a href="{% url 'crm:usuarios' %}" class="rounded-full border border-gris-borde px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

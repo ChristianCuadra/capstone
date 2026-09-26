@@ -21,6 +21,10 @@
       {% url 'crm:prospectos' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Prospectos" clave="prospectos" icono="M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 19v-1a4 4 0 00-3-3.87M16 3.13a3.5 3.5 0 010 6.74" badge=panel_badges.prospectos %}
       {% url 'crm:cotizaciones' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Cotizaciones" clave="cotizaciones" icono="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" %}
       {% url 'crm:clientes' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Clientes" clave="clientes" icono="M4 21V8l8-5 8 5v13M9 21v-6h6v6" %}
+      {% if request.user.rol == "administradora" or request.user.is_superuser %}
+      {% url 'crm:usuarios' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Usuarios" clave="usuarios" icono="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" %}
+      {% url 'crm:auditoria' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Auditoría" clave="auditoria" icono="M9 12l2 2 4-4M12 3l7 4v5c0 5-3 7.5-7 9-4-1.5-7-4-7-9V7z" %}
+      {% endif %}
       {% url 'admin:app_list' 'catalog' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Planes y servicios" icono="M3 5h18v14H3zM3 9h18M7 13h6M7 16h10" %}
       {% url 'admin:index' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Configuración" icono="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" %}
     </ul>

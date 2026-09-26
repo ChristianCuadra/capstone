@@ -1,0 +1,48 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Registro de auditoría{% endblock %}
+
+{% block content %}
+<header>
+  <h1 class="font-serif text-3xl text-vino lg:text-4xl">Registro de auditoría</h1>
+  <p class="mt-1 text-sm">Historial de creación, edición y eliminación de usuarios. Es de solo lectura: se genera automáticamente y no se puede modificar.</p>
+</header>
+
+<form method="get" class="mt-6 flex flex-wrap items-center gap-2">
+  {% if accion_activa %}<input type="hidden" name="accion" value="{{ accion_activa }}">{% endif %}
+  <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar por usuario, entidad o detalle…"
+         class="w-full max-w-xs rounded-full border border-gris-borde bg-white px-4 py-2 text-sm focus:border-lila focus:outline-none sm:w-72">
+  <button type="submit" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Buscar</button>
+  {% if busqueda %}<a href="?{% if accion_activa %}accion={{ accion_activa }}{% endif %}" class="text-sm font-medium text-vino underline decoration-rosa underline-offset-2">Quitar búsqueda</a>{% endif %}
+</form>
+
+<nav class="relative mt-4 overflow-x-auto" aria-label="Filtrar por acción">
+  <ul class="flex gap-2 text-sm">
+    <li><a href="?{% if busqueda %}q={{ busqueda }}{% endif %}" class="block rounded-full px-3.5 py-1.5 {% if not accion_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">Todas</a></li>
+    {% for clave, nombre in acciones %}
+    <li><a href="?accion={{ clave }}{% if busqueda %}&q={{ busqueda }}{% endif %}" class="block rounded-full px-3.5 py-1.5 {% if clave == accion_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ nombre }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white">
+  {% if not registros %}
+  <p class="px-5 py-14 text-center text-sm">{% if busqueda %}No hay movimientos que coincidan con «{{ busqueda }}».{% elif accion_activa %}No hay movimientos de ese tipo.{% else %}Aún no hay movimientos registrados.{% endif %}</p>
+  {% else %}
+  <ul class="divide-y divide-gris-borde">
+    {% for r in registros %}
+    <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div>
+        <p class="text-sm">
+          <span class="font-semibold text-vino">{{ r.usuario|default:"(cuenta eliminada)" }}</span>
+          {% if r.accion == "crear" %}creó{% elif r.accion == "editar" %}editó{% else %}eliminó{% endif %}
+          un {{ r.entidad }}{% if r.detalle %} — {{ r.detalle }}{% endif %}
+        </p>
+        <p class="mt-0.5 text-xs">{{ r.creado_en|date:"d-m-Y H:i" }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}
