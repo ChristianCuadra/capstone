@@ -1,0 +1,130 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}Planes y servicios{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Planes y servicios</h1>
+    <p class="mt-1 text-sm">Lo que se ofrece a los clientes. Para crear o editar, usa el admin.</p>
+  </div>
+</header>
+
+{# ── Planes ─────────────────────────────────────────────────────────── #}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  <div class="flex items-center justify-between gap-4 p-5 lg:px-6">
+    <h2 class="font-serif text-xl text-vino">Planes</h2>
+    <a href="{% url 'crm:plan_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo plan</a>
+  </div>
+  {% if not planes %}
+  <p class="border-t border-gris-borde px-5 py-14 text-center text-sm lg:px-6">Aún no hay planes cargados.</p>
+  {% else %}
+  <div class="relative overflow-x-auto border-t border-gris-borde">
+    <table class="w-full min-w-[820px] text-left text-sm">
+      <thead class="border-b border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr>
+          <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Plan</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Incluye</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Precio mensual</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for plan in planes %}
+        <tr class="hover:bg-fondo-suave/60 {% if not plan.activo %}opacity-60{% endif %}">
+          <td class="px-5 py-3.5 lg:px-6">
+                        <p class="font-semibold {% if plan.activo %}text-vino{% else %}text-gris-txt line-through decoration-2{% endif %}">{{ plan.nombre }}{% if plan.destacado %} <span class="ml-1 rounded-full bg-rosa/20 px-2 py-0.5 text-[10px] font-bold text-vino">{{ plan.etiqueta|default:"Destacado" }}</span>{% endif %}</p>
+            {% if plan.descripcion %}<p class="mt-0.5 text-xs">{{ plan.descripcion|truncatechars:80 }}</p>{% endif %}
+          </td>
+          <td class="px-5 py-3.5">
+            <div class="flex flex-wrap gap-1.5">
+              {% for entregable in plan.entregables.all %}
+              <span class="rounded-full bg-lila/30 px-2.5 py-0.5 text-xs font-medium text-vino">{{ entregable.texto }}</span>
+              {% empty %}<span class="text-xs">Sin entregables cargados.</span>{% endfor %}
+            </div>
+          </td>
+          <td class="px-5 py-3.5 text-right tabular-nums text-vino">
+            {{ plan.precio_mensual|clp }}
+            {% if plan.precio_primer_mes and plan.precio_primer_mes != plan.precio_mensual %}<span class="block text-xs text-gris-txt">1er mes {{ plan.precio_primer_mes|clp }}</span>{% endif %}
+          </td>
+          <td class="px-5 py-3.5">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if plan.activo %}bg-vino/10 text-vino{% else %}bg-fondo-suave text-gris-txt{% endif %}">{% if plan.activo %}Activo{% else %}Inactivo{% endif %}</span>
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if plan.visible_en_sitio %}bg-lila/30 text-vino{% else %}bg-fondo-suave text-gris-txt{% endif %}">{% if plan.visible_en_sitio %}Visible en sitio{% else %}Oculto en sitio{% endif %}</span>
+            </div>
+          </td>
+        <td class="px-5 py-3.5 text-right lg:px-6">
+            <div class="flex justify-end gap-2">
+              <a href="{% url 'crm:plan_editar' plan.pk %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
+              <form method="post" action="{% url 'crm:plan_alternar_activo' plan.pk %}" onsubmit="return confirm('{% if plan.activo %}¿Desactivar {{ plan.nombre|escapejs }}? Dejará de mostrarse en el sitio y el cotizador.{% else %}¿Reactivar {{ plan.nombre|escapejs }}?{% endif %}')">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if plan.activo %}text-[#B3261E]{% else %}text-vino{% endif %}">
+                  {% if plan.activo %}Desactivar{% else %}Activar{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+{# ── Servicios ──────────────────────────────────────────────────────── #}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  <div class="flex items-center justify-between gap-4 p-5 lg:px-6">
+    <h2 class="font-serif text-xl text-vino">Servicios sueltos</h2>
+    <a href="{% url 'crm:servicio_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo servicio</a>
+  </div>
+  {% if not servicios %}
+  <p class="border-t border-gris-borde px-5 py-14 text-center text-sm lg:px-6">Aún no hay servicios cargados.</p>
+  {% else %}
+  <div class="relative overflow-x-auto border-t border-gris-borde">
+    <table class="w-full min-w-[680px] text-left text-sm">
+      <thead class="border-b border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr>
+          <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Servicio</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Modalidad</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Precio</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for servicio in servicios %}
+        <tr class="hover:bg-fondo-suave/60 {% if not servicio.activo %}opacity-60{% endif %}">
+          <td class="px-5 py-3.5 lg:px-6">
+            <p class="font-semibold {% if servicio.activo %}text-vino{% else %}text-gris-txt line-through decoration-2{% endif %}">{{ servicio.nombre }}</p>
+            {% if servicio.descripcion %}<p class="mt-0.5 text-xs">{{ servicio.descripcion|truncatechars:80 }}</p>{% endif %}
+          </td>
+          <td class="px-5 py-3.5">{{ servicio.get_modalidad_cobro_display }}</td>
+          <td class="px-5 py-3.5 text-right tabular-nums text-vino">{{ servicio.precio|clp }}</td>
+          <td class="px-5 py-3.5">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if servicio.activo %}bg-vino/10 text-vino{% else %}bg-fondo-suave text-gris-txt{% endif %}">{% if servicio.activo %}Activo{% else %}Inactivo{% endif %}</span>
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if servicio.visible_en_sitio %}bg-lila/30 text-vino{% else %}bg-fondo-suave text-gris-txt{% endif %}">{% if servicio.visible_en_sitio %}Visible en sitio{% else %}Oculto en sitio{% endif %}</span>
+            </div>
+          </td>
+          <td class="px-5 py-3.5 text-right lg:px-6">
+            <div class="flex justify-end gap-2">
+              <a href="{% url 'crm:servicio_editar' servicio.pk %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
+              <form method="post" action="{% url 'crm:servicio_alternar_activo' servicio.pk %}" onsubmit="return confirm('{% if servicio.activo %}¿Desactivar {{ servicio.nombre|escapejs }}? Dejará de mostrarse en el sitio.{% else %}¿Reactivar {{ servicio.nombre|escapejs }}?{% endif %}')">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if servicio.activo %}text-[#B3261E]{% else %}text-vino{% endif %}">
+                  {% if servicio.activo %}Desactivar{% else %}Activar{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

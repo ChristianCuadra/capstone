@@ -17,6 +17,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
+from django.db import transaction
+from django.utils.text import slugify
 
 from apps.accounts.decorators import requiere_administradora
 from apps.accounts.forms import UsuarioForm
@@ -27,6 +29,8 @@ from apps.clients.models import Cliente
 from apps.core.models import RegistroAuditoria
 
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
+
+from .froms import PlanEntregableFormSet, PlanForm, ServicioForm
 
 ETAPAS_EMBUDO = [
     Prospecto.Etapa.NUEVO,
@@ -638,6 +642,14 @@ def clientes(request):
     lista = Cliente.objects.select_related("prospecto").order_by("-creado_en")
     return render(request, "crm/clientes.html", contexto_panel(request, "clientes", clientes=lista))
 
+# ── Planes y servicios ─────────────────────────────────────────────────────────
+
+@solo_equipo
+def planes_servicios(request):
+    planes = Plan.objects.prefetch_related("entregables__tipo_entregable").order_by("orden", "precio_mensual")
+    servicios = Servicio.objects.order_by("orden", "nombre")
+    context = contexto_panel(request, "planes_servicios", planes=planes, servicios=servicios)
+    return render(request, "crm/planes_servicios.html", context)
 
 # ── Usuarios (CU-08, Alcance 4.3 / 9.3) ────────────────────────────────────────
 
@@ -799,3 +811,72 @@ def auditoria(request):
             accion_activa=accion_activa, busqueda=busqueda,
         ),
     )
+
+def _slug_unico(modelo, nombre, pk_actual=None):
+    base = slugify(nombre)[:50] or "item"
+    slug = base
+    n = 2
+    qs = modelo.objects.exclude(pk=pk_actual) if pk_actual else modelo.objects.all()
+    while qs.filter(slug=slug).exists():
+        slug = f"{base}-{n}"
+        n += 1
+    return slug
+
+
+@solo_equipo
+def servicio_form(request, pk=None):
+    servicio = get_object_or_404(Servicio, pk=pk) if pk else None
+    if request.method == "POST":
+        form = ServicioForm(request.POST, instance=servicio)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            if not obj.slug:
+                obj.slug = _slug_unico(Servicio, obj.nombre, obj.pk)
+            obj.save()
+            messages.success(request, "Servicio guardado.")
+            return redirect("crm:planes_servicios")
+    else:
+        form = ServicioForm(instance=servicio)
+    context = contexto_panel(request, "planes_servicios", form=form, servicio=servicio)
+    return render(request, "crm/servicio_formulario.html", context)
+
+
+@solo_equipo
+def plan_form(request, pk=None):
+    plan = get_object_or_404(Plan, pk=pk) if pk else None
+    if request.method == "POST":
+        form = PlanForm(request.POST, instance=plan)
+        formset = PlanEntregableFormSet(request.POST, instance=plan if plan else Plan(), prefix="entregables")
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                obj = form.save(commit=False)
+                if not obj.slug:
+                    obj.slug = _slug_unico(Plan, obj.nombre, obj.pk)
+                obj.save()
+                formset.instance = obj
+                formset.save()
+            messages.success(request, "Plan guardado.")
+            return redirect("crm:planes_servicios")
+    else:
+        form = PlanForm(instance=plan)
+        formset = PlanEntregableFormSet(instance=plan, prefix="entregables")
+    context = contexto_panel(request, "planes_servicios", form=form, formset=formset, plan=plan)
+    return render(request, "crm/plan_formulario.html", context)
+
+@solo_equipo
+@require_POST
+def plan_alternar_activo(request, pk):
+    plan = get_object_or_404(Plan, pk=pk)
+    plan.activo = not plan.activo
+    plan.save(update_fields=["activo"])
+    messages.success(request, f"Plan {'activado' if plan.activo else 'desactivado'}.")
+    return redirect("crm:planes_servicios")
+
+@solo_equipo
+@require_POST
+def servicio_alternar_activo(request, pk):
+    servicio = get_object_or_404(Servicio, pk=pk)
+    servicio.activo = not servicio.activo
+    servicio.save(update_fields=["activo"])
+    messages.success(request, f"Servicio {'activado' if servicio.activo else 'desactivado'}.")
+    return redirect("crm:planes_servicios")
