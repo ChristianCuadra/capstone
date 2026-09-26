@@ -23,4 +23,11 @@ urlpatterns = [
     path("usuarios/<int:pk>/restablecer-2fa/", views.usuario_restablecer_2fa, name="usuario_restablecer_2fa"),
     path("usuarios/<int:pk>/eliminar/", views.usuario_eliminar, name="usuario_eliminar"),
     path("auditoria/", views.auditoria, name="auditoria"),
+    path("planes-servicios/", views.planes_servicios, name="planes_servicios"),
+    path("planes-servicios/planes/nuevo/", views.plan_form, name="plan_nuevo"),
+    path("planes-servicios/planes/<int:pk>/", views.plan_form, name="plan_editar"),
+    path("planes-servicios/servicios/nuevo/", views.servicio_form, name="servicio_nuevo"),
+    path("planes-servicios/servicios/<int:pk>/", views.servicio_form, name="servicio_editar"),
+        path("planes-servicios/planes/<int:pk>/alternar/", views.plan_alternar_activo, name="plan_alternar_activo"),
+    path("planes-servicios/servicios/<int:pk>/alternar/", views.servicio_alternar_activo, name="servicio_alternar_activo"),
 ]

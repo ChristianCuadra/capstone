@@ -1,0 +1,141 @@
+{% extends "crm/base_panel.html" %}
+
+{% block head %}
+<style type="text/tailwindcss">
+  .campo { @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40; }
+</style>
+{% endblock %}
+
+{% block page_title %}{% if plan %}Editar {{ plan.nombre }}{% else %}Nuevo plan{% endif %}{% endblock %}
+
+{% block content %}
+<nav aria-label="Ruta" class="text-sm">
+  <ol class="flex items-center gap-2">
+    <li><a href="{% url 'crm:planes_servicios' %}" class="hover:text-vino">Planes y servicios</a></li>
+    <li aria-hidden="true" class="text-lila">›</li>
+    <li aria-current="page" class="font-medium text-vino">{% if plan %}{{ plan.nombre }}{% else %}Nuevo plan{% endif %}</li>
+  </ol>
+</nav>
+<h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">{% if plan %}Editar plan{% else %}Nuevo plan{% endif %}</h1>
+
+{% if form.errors or formset.errors|length %}
+<div class="mt-6 max-w-2xl rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">
+  No se pudo guardar: revisa los campos marcados en rojo más abajo.
+</div>
+{% endif %}
+
+<form method="post" class="mt-6 max-w-2xl space-y-6">
+  {% csrf_token %}
+
+  <section class="rounded-2xl border border-gris-borde bg-white p-6 space-y-4">
+    <h2 class="font-serif text-xl text-vino">Datos del plan</h2>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="block text-sm font-medium text-vino sm:col-span-2">Nombre
+        {{ form.nombre }}
+        {% for error in form.nombre.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino sm:col-span-2">Descripción
+        {{ form.descripcion }}
+        {% for error in form.descripcion.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Precio mensual (CLP)
+        {{ form.precio_mensual }}
+        {% for error in form.precio_mensual.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Precio primer mes (opcional)
+        {{ form.precio_primer_mes }}
+        {% for error in form.precio_primer_mes.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Etiqueta (ej. «MÁS CONTRATADO»)
+        {{ form.etiqueta }}
+        {% for error in form.etiqueta.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Orden
+        {{ form.orden }}
+        {% for error in form.orden.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      </label>
+      <label class="flex items-center gap-2 text-sm font-medium text-vino">{{ form.destacado }} Destacado en el sitio</label>
+      <label class="flex items-center gap-2 text-sm font-medium text-vino">{{ form.visible_en_sitio }} Visible en el sitio</label>
+      <label class="flex items-center gap-2 text-sm font-medium text-vino">{{ form.activo }} Activo</label>
+    </div>
+    {% for error in form.non_field_errors %}<p class="text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+  </section>
+
+  <section class="rounded-2xl border border-gris-borde bg-white p-6">
+    <h2 class="font-serif text-xl text-vino">Entregables incluidos</h2>
+    <p class="mt-1 text-sm">Elige de la lista fija de entregables (historia, carrusel, reel, etc.).</p>
+    {{ formset.management_form }}
+    {% for error in formset.non_form_errors %}<p class="mt-2 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+
+    <div id="entregables-filas" class="mt-4 space-y-4">
+      {% for f in formset %}
+      <div class="fila-entregable grid grid-cols-[1fr_160px_auto] items-start gap-3 border-t border-gris-borde pt-3 first:border-t-0 first:pt-0">
+        {{ f.id }}
+        <div>
+          {{ f.tipo_entregable }}
+          {% for error in f.tipo_entregable.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+          {{ f.cantidad_mensual }}
+          <p class="mt-1 text-[11px] leading-snug text-gris-txt">Cuánto se entrega al mes (ej. 16 para «16 historias»). Déjalo vacío si el entregable no tiene cuota mensual, como Branding.</p>
+          {% for error in f.cantidad_mensual.errors %}<p class="mt-1 text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="pt-2.5">
+          {% if f.instance.pk %}
+          <label class="flex items-center gap-1.5 text-xs font-medium text-[#B3261E]">{{ f.DELETE }} Quitar</label>
+          {% else %}
+          <button type="button" class="quitar-fila text-xs font-medium text-[#B3261E] underline">Quitar</button>
+          {% endif %}
+        </div>
+      </div>
+      {% for error in f.non_field_errors %}<p class="text-xs font-medium text-[#B3261E]">{{ error }}</p>{% endfor %}
+      {% endfor %}
+    </div>
+
+    <button type="button" id="agregar-entregable" class="mt-5 rounded-full border border-vino px-4 py-2 text-sm font-semibold text-vino hover:bg-fondo-suave">+ Agregar entregable</button>
+  </section>
+
+  {# Plantilla oculta para las filas que se agregan con JS. Usa el mismo estilo que las filas normales. #}
+  <template id="plantilla-entregable">
+    <div class="fila-entregable grid grid-cols-[1fr_160px_auto] items-start gap-3 border-t border-gris-borde pt-3">
+      <div>{{ formset.empty_form.tipo_entregable }}</div>
+      <div>
+        {{ formset.empty_form.cantidad_mensual }}
+        <p class="mt-1 text-[11px] leading-snug text-gris-txt">Cuánto se entrega al mes. Déjalo vacío si no tiene cuota mensual.</p>
+      </div>
+      <div class="pt-2.5"><button type="button" class="quitar-fila text-xs font-medium text-[#B3261E] underline">Quitar</button></div>
+    </div>
+  </template>
+
+  <div class="flex gap-3">
+    <button type="submit" class="rounded-full bg-vino px-6 py-3 font-semibold text-white hover:bg-vino-oscuro">Guardar</button>
+    <a href="{% url 'crm:planes_servicios' %}" class="rounded-full border border-gris-borde px-6 py-3 font-medium text-vino hover:bg-fondo-suave">Cancelar</a>
+  </div>
+</form>
+
+<script>
+  (function () {
+    const contenedor = document.getElementById('entregables-filas');
+    const totalInput = document.getElementById('id_entregables-TOTAL_FORMS');
+    const plantilla = document.getElementById('plantilla-entregable');
+
+    function activarQuitar(fila) {
+      fila.querySelector('.quitar-fila')?.addEventListener('click', () => fila.remove());
+    }
+
+    document.getElementById('agregar-entregable').addEventListener('click', () => {
+      const indice = parseInt(totalInput.value, 10);
+      const html = plantilla.innerHTML.trim().replaceAll('__prefix__', indice);
+      const envoltorio = document.createElement('div');
+      envoltorio.innerHTML = html;
+      const fila = envoltorio.firstElementChild;
+      activarQuitar(fila);
+      contenedor.appendChild(fila);
+      totalInput.value = indice + 1;
+    });
+
+    contenedor.querySelectorAll('.fila-entregable').forEach(activarQuitar);
+  })();
+</script>
+
+{% endblock %}
