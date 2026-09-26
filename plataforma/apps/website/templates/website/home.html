@@ -1,6 +1,8 @@
 {% extends "website/base.html" %}
 {% load formato %}
 
+{% block meta_description %}{{ hero.subtitulo }} {{ agencia.nombre }}: {{ agencia.descriptor }} en {{ agencia.ciudad }}.{% endblock %}
+
 {% block content %}
 
 {# ── Hero ───────────────────────────────────────────────────────────── #}

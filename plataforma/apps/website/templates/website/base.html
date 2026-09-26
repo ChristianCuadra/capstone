@@ -3,6 +3,30 @@
 <head>
   {% include "partials/head.html" %}
   <title>{% block title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}{{ agencia.nombre }}: {{ agencia.descriptor }} para pymes, marcas personales y emprendedoras en {{ agencia.ciudad }}.{% endblock %}">
+  <link rel="canonical" href="{{ request.scheme }}://{{ agencia.dominio }}{{ request.path }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ agencia.nombre }}">
+  <meta property="og:title" content="{% block og_title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ agencia.nombre }}: {{ agencia.descriptor }} para pymes, marcas personales y emprendedoras en {{ agencia.ciudad }}.{% endblock %}">
+  <meta property="og:url" content="{{ request.scheme }}://{{ agencia.dominio }}{{ request.path }}">
+  {% block structured_data %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "{{ agencia.nombre }}",
+    "description": "{{ agencia.descriptor }}",
+    "url": "{{ request.scheme }}://{{ agencia.dominio }}/",
+    "email": "{{ agencia.correo }}",
+    "telephone": "{{ agencia.telefono }}",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "{{ agencia.ciudad }}"
+    }
+  }
+  </script>
+  {% endblock %}
   {% block head %}{% endblock %}
 </head>
 <body class="font-sans antialiased">
