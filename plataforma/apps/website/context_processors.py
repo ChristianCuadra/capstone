@@ -17,3 +17,18 @@ def agencia(request):
             "mostrar_casos": False,
         }
     }
+
+
+def analitica(request):
+    """IDs de analitica (GA4/GTM/Meta Pixel), leidos desde variables de entorno (PC-SEO-02).
+
+    Vacios por defecto: mientras la agencia no confirme sus cuentas, el sitio no carga
+    ninguna etiqueta de seguimiento (ver _analitica.html, que solo las inyecta si hay consentimiento).
+    """
+    from django.conf import settings
+
+    return {
+        "ga4_id": settings.GA4_MEASUREMENT_ID,
+        "gtm_id": settings.GTM_CONTAINER_ID,
+        "meta_pixel_id": settings.META_PIXEL_ID,
+    }

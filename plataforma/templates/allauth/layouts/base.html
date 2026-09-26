@@ -31,7 +31,9 @@
       {% endif %}
       {% block content %}{% endblock content %}
     </div>
-    <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" class="text-malva hover:text-vino">← Volver al sitio</a></p>
+    {# "Volver al sitio": si se llego aqui desde otra pagina del mismo sitio (ej. el panel), #}
+    {# vuelve a esa pagina anterior en vez de mandar siempre al inicio publico. #}
+    <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }" class="text-malva hover:text-vino">← Volver al sitio</a></p>
   </main>
   {% endblock body %}
   {% block extra_body %}{% endblock extra_body %}

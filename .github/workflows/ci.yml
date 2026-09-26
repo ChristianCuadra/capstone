@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plataforma
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: plataforma/requirements.txt
+
+      # WeasyPrint (generación de PDFs) necesita Pango/Cairo instalados a nivel de sistema.
+      - name: Dependencias de sistema (WeasyPrint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
+            libcairo2 libffi-dev shared-mime-info fonts-liberation
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+
+      - name: Tests
+        env:
+          # Solo para el entorno de pruebas: manage.py test usa config.settings.test
+          # (SQLite en memoria), nunca toca Supabase. No es un secreto real.
+          SECRET_KEY: "clave-de-pruebas-ci-no-usar-en-produccion"
+        run: python manage.py test apps

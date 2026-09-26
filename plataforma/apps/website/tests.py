@@ -27,6 +27,19 @@ class SitioPublicoTests(TestCase):
     def setUp(self):
         cache.clear()
 
+    def test_sitemap_responde(self):
+        respuesta = self.client.get("/sitemap.xml")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta["Content-Type"], "application/xml")
+        for nombre in (reverse("website:home"), reverse("website:planes"), reverse("website:cotizacion")):
+            self.assertContains(respuesta, nombre)
+
+    def test_meta_descripcion_por_pagina(self):
+        for nombre in ("website:home", "website:planes", "website:cotizacion"):
+            with self.subTest(nombre=nombre):
+                respuesta = self.client.get(reverse(nombre))
+                self.assertContains(respuesta, '<meta name="description"')
+
     def test_paginas_responden(self):
         for nombre in ("website:home", "website:planes", "website:cotizacion"):
             with self.subTest(nombre=nombre):

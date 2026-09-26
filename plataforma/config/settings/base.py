@@ -39,11 +39,13 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sitemaps",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     # Terceros
     "allauth",
     "allauth.account",
+    "allauth.mfa",
     "django_htmx",
     "storages",
     *LOCAL_APPS,
@@ -79,6 +81,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.website.context_processors.agencia",
+                "apps.website.context_processors.analitica",
             ],
         },
     },
@@ -137,10 +140,24 @@ ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+# Aviso por correo (sin incluir los codigos) cuando se activa/desactiva 2FA
+# o se generan nuevos codigos de recuperacion (PC-AUT-02).
+ACCOUNT_EMAIL_NOTIFICATIONS = True
 # Sin registro público y con redirección según rol (equipo → panel, cliente → portal).
 ACCOUNT_ADAPTER = "apps.accounts.adapter.CuentaAdapter"
 LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "/"
+
+# 2FA (PC-AUT-02, Alcance 4.3): TOTP con app autenticadora + códigos de recuperación.
+# Sin webauthn/passkeys por ahora para no depender de esas librerías extra.
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
+MFA_TOTP_ISSUER = "Cosmopolitan"
+
+# Analitica con consentimiento (PC-SEO-02, Alcance 4.5): IDs reales via variables de
+# entorno (Esteban los confirma con la agencia). Vacio = esa herramienta no se carga.
+GA4_MEASUREMENT_ID = config("GA4_MEASUREMENT_ID", default="")
+GTM_CONTAINER_ID = config("GTM_CONTAINER_ID", default="")
+META_PIXEL_ID = config("META_PIXEL_ID", default="")
 
 
 # --- Internacionalización ----------------------------------------------------
