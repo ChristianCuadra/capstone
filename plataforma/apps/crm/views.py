@@ -32,6 +32,8 @@ from allauth.mfa.models import Authenticator
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
 from .froms import PlanEntregableFormSet, PlanForm, ServicioForm
+from apps.website.models import Contenido
+from apps.website.forms import ContenidoForm
 
 ETAPAS_EMBUDO = [
     Prospecto.Etapa.NUEVO,
@@ -911,3 +913,68 @@ def servicio_alternar_activo(request, pk):
     servicio.save(update_fields=["activo"])
     messages.success(request, f"Servicio {'activado' if servicio.activo else 'desactivado'}.")
     return redirect("crm:planes_servicios")
+
+
+# ── Contenido del sitio / CMS (PC-WEB-02) ───────────────────────────────────
+
+@requiere_administradora
+def contenidos(request):
+    lista = Contenido.objects.all()
+    seccion_activa = request.GET.get("seccion", "")
+    if seccion_activa in Contenido.Seccion.values:
+        lista = lista.filter(seccion=seccion_activa)
+    estado_activo = request.GET.get("estado", "")
+    if estado_activo in Contenido.Estado.values:
+        lista = lista.filter(estado=estado_activo)
+    context = contexto_panel(
+        request, "contenidos",
+        contenidos=lista, secciones=Contenido.Seccion.choices, estados=Contenido.Estado.choices,
+        seccion_activa=seccion_activa, estado_activo=estado_activo,
+    )
+    return render(request, "crm/contenidos.html", context)
+
+
+@requiere_administradora
+def contenido_form(request, pk=None):
+    contenido = get_object_or_404(Contenido, pk=pk) if pk else None
+    if request.method == "POST":
+        form = ContenidoForm(request.POST, request.FILES, instance=contenido)
+        if form.is_valid():
+            es_nuevo = contenido is None
+            obj = form.save(commit=False)
+            if es_nuevo:
+                obj.creado_por = request.user
+            obj.save()
+            RegistroAuditoria.registrar(
+                usuario=request.user,
+                accion=RegistroAuditoria.Accion.CREAR if es_nuevo else RegistroAuditoria.Accion.EDITAR,
+                entidad="contenido del sitio",
+                entidad_id=obj.pk,
+                detalle=f"{obj.titulo} · {obj.get_estado_display()}",
+            )
+            messages.success(request, f"Contenido «{obj.titulo}» guardado como {obj.get_estado_display().lower()}.")
+            return redirect("crm:contenidos")
+    else:
+        form = ContenidoForm(instance=contenido)
+    context = contexto_panel(request, "contenidos", form=form, contenido=contenido)
+    return render(request, "crm/contenido_formulario.html", context)
+
+
+@requiere_administradora
+@require_POST
+def contenido_alternar_publicado(request, pk):
+    contenido = get_object_or_404(Contenido, pk=pk)
+    if contenido.estado == Contenido.Estado.PUBLICADO:
+        contenido.estado = Contenido.Estado.BORRADOR
+    else:
+        contenido.estado = Contenido.Estado.PUBLICADO
+    contenido.save()
+    RegistroAuditoria.registrar(
+        usuario=request.user,
+        accion=RegistroAuditoria.Accion.EDITAR,
+        entidad="contenido del sitio",
+        entidad_id=contenido.pk,
+        detalle=f"{contenido.titulo} · {contenido.get_estado_display()}",
+    )
+    messages.success(request, f"«{contenido.titulo}» ahora está {contenido.get_estado_display().lower()}.")
+    return _volver(request, "crm:contenidos")

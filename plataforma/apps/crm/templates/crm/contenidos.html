@@ -1,0 +1,66 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Contenido del sitio{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Contenido del sitio</h1>
+    <p class="mt-1 text-sm">Novedades y recursos del sitio público. Un borrador no se ve en el sitio hasta publicarlo.</p>
+  </div>
+  <a href="{% url 'crm:contenido_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo contenido</a>
+</header>
+
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  <div class="flex flex-wrap gap-2 border-b border-gris-borde p-4">
+    <a href="?" class="rounded-full px-3 py-1.5 text-xs font-medium {% if not seccion_activa %}bg-vino text-white{% else %}ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">Todas las secciones</a>
+    {% for valor, etiqueta in secciones %}
+    <a href="?seccion={{ valor }}" class="rounded-full px-3 py-1.5 text-xs font-medium {% if seccion_activa == valor %}bg-vino text-white{% else %}ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ etiqueta }}</a>
+    {% endfor %}
+  </div>
+
+  {% if not contenidos %}
+  <p class="px-5 py-14 text-center text-sm lg:px-6">Aún no hay contenidos cargados.</p>
+  {% else %}
+  <div class="relative overflow-x-auto">
+    <table class="w-full min-w-[720px] text-left text-sm">
+      <thead class="border-b border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr>
+          <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Título</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Sección</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Actualizado</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for c in contenidos %}
+        <tr class="hover:bg-fondo-suave/60">
+          <td class="px-5 py-3.5 lg:px-6">
+            <p class="font-semibold text-vino">{{ c.titulo }}</p>
+            {% if c.resumen %}<p class="mt-0.5 text-xs">{{ c.resumen|truncatechars:80 }}</p>{% endif %}
+          </td>
+          <td class="px-5 py-3.5">{{ c.get_seccion_display }}</td>
+          <td class="px-5 py-3.5">
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if c.publicado %}bg-vino/10 text-vino{% else %}bg-fondo-suave text-gris-txt{% endif %}">{{ c.get_estado_display }}</span>
+          </td>
+          <td class="px-5 py-3.5 text-xs">{{ c.actualizado_en|date:"d-m-Y H:i" }}</td>
+          <td class="px-5 py-3.5 text-right lg:px-6">
+            <div class="flex justify-end gap-2">
+              <a href="{% url 'crm:contenido_editar' c.pk %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
+              <form method="post" action="{% url 'crm:contenido_alternar_publicado' c.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if c.publicado %}text-[#B3261E]{% else %}text-vino{% endif %}">
+                  {% if c.publicado %}Despublicar{% else %}Publicar{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

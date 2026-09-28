@@ -1,0 +1,16 @@
+{% extends "website/base.html" %}
+
+{% block title %}{{ contenido.meta_titulo|default:contenido.titulo }} · {{ agencia.nombre }}{% endblock %}
+{% block meta_description %}{{ contenido.meta_descripcion|default:contenido.resumen }}{% endblock %}
+
+{% block content %}
+<article class="bg-white pb-16 pt-14 lg:pb-24 lg:pt-20">
+  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <a href="{% url 'website:novedades' %}" class="text-sm font-medium text-vino hover:underline">← Novedades</a>
+    <p class="mt-4 text-xs uppercase tracking-[0.12em] text-rosa">{{ contenido.publicado_en|date:"d \d\e F, Y" }}</p>
+    <h1 class="mt-2 font-serif text-4xl leading-tight text-vino">{{ contenido.titulo }}</h1>
+    {% if contenido.imagen %}<img src="{{ contenido.imagen.url }}" alt="" class="mt-8 w-full rounded-2xl object-cover">{% endif %}
+    <div class="prose prose-vino mt-8 max-w-none text-base leading-relaxed">{{ contenido.cuerpo|linebreaks }}</div>
+  </div>
+</article>
+{% endblock %}

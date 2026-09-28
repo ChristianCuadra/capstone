@@ -27,6 +27,7 @@
       {% url 'mfa_index' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Seguridad (2FA)" clave="seguridad" icono="M12 2l7 4v5c0 5.2-3.4 8.6-7 11-3.6-2.4-7-5.8-7-11V6z" %}
       {% endif %}
       {% url 'crm:planes_servicios' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Planes y servicios" clave="planes_servicios" icono="M3 5h18v14H3zM3 9h18M7 13h6M7 16h10" %}
+      {% if request.user.rol == "administradora" or request.user.is_superuser %}{% url 'crm:contenidos' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Contenido del sitio" clave="contenidos" icono="M4 5h16v14H4zM4 9h16M9 13h6M9 16h6" %}{% endif %}
       {% url 'admin:index' as u %}{% include "crm/_nav_item.html" with url=u etiqueta="Configuración" icono="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" %}
     </ul>
   </nav>

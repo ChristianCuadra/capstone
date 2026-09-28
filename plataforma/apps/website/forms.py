@@ -3,6 +3,8 @@ from django import forms
 from apps.catalog.models import Servicio
 from apps.crm.models import OBJETIVOS, REDES, Prospecto
 
+from .models import Contenido
+
 
 class SolicitudCotizacionForm(forms.ModelForm):
     """Formulario público de cotización: crea un Prospecto y alimenta el diagnóstico con IA."""
@@ -50,3 +52,25 @@ class SolicitudCotizacionForm(forms.ModelForm):
 
     def es_spam(self):
         return bool(self.cleaned_data.get("sitio_empresa"))
+
+
+class ContenidoForm(forms.ModelForm):
+    """Formulario del CMS (PC-WEB-02). El slug se genera solo si se deja vacío."""
+
+    class Meta:
+        model = Contenido
+        fields = ["titulo", "seccion", "resumen", "cuerpo", "imagen", "meta_titulo", "meta_descripcion", "estado", "orden"]
+        widgets = {
+            "resumen": forms.Textarea(attrs={"rows": 2}),
+            "cuerpo": forms.Textarea(attrs={"rows": 10}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nombre, campo in self.fields.items():
+            if nombre == "imagen":
+                continue
+            if isinstance(campo.widget, forms.CheckboxInput):
+                continue
+            campo.widget.attrs["class"] = "campo"
+            campo.widget.attrs.setdefault("autocomplete", "off")

@@ -1,0 +1,35 @@
+{% extends "website/base.html" %}
+
+{% block title %}Novedades · {{ agencia.nombre }}{% endblock %}
+{% block meta_description %}Novedades y recursos de {{ agencia.nombre }}.{% endblock %}
+
+{% block content %}
+<section class="bg-fondo-suave">
+  <div class="mx-auto max-w-5xl px-4 pb-12 pt-14 text-center sm:px-6 lg:px-8 lg:pt-20">
+    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Novedades</p>
+    <h1 class="mx-auto mt-3 max-w-2xl font-serif text-4xl leading-tight text-vino sm:text-5xl">Lo último de la agencia</h1>
+  </div>
+</section>
+
+<section class="bg-white pb-16 lg:pb-24">
+  <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+    {% if not novedades %}
+    <p class="rounded-2xl border border-gris-borde bg-fondo-suave px-6 py-14 text-center text-sm">Todavía no hay novedades publicadas.</p>
+    {% else %}
+    <div class="grid gap-8 sm:grid-cols-2">
+      {% for n in novedades %}
+      <article class="flex flex-col overflow-hidden rounded-2xl border border-gris-borde bg-white">
+        {% if n.imagen %}<img src="{{ n.imagen.url }}" alt="" class="h-44 w-full object-cover">{% endif %}
+        <div class="flex flex-1 flex-col gap-2 p-5">
+          <p class="text-xs uppercase tracking-[0.12em] text-rosa">{{ n.publicado_en|date:"d \d\e F, Y" }}</p>
+          <h2 class="font-serif text-xl text-vino"><a href="{% url 'website:novedad_detalle' n.slug %}">{{ n.titulo }}</a></h2>
+          {% if n.resumen %}<p class="text-sm">{{ n.resumen }}</p>{% endif %}
+          <a href="{% url 'website:novedad_detalle' n.slug %}" class="mt-auto pt-2 text-sm font-semibold text-vino hover:underline">Leer más →</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

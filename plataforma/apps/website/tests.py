@@ -107,3 +107,76 @@ class CuentasTests(TestCase):
     def test_registro_publico_cerrado(self):
         respuesta = self.client.get(reverse("account_signup"))
         self.assertNotContains(respuesta, 'name="password1"')
+
+
+class ContenidoCMSTests(TestCase):
+    """CP-005 a CP-008 del Plan de Pruebas (PC-WEB-02)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from apps.accounts.models import Rol
+
+        User = get_user_model()
+        self.admin = User.objects.create_user(
+            "admin_cms", "admin_cms@agenciacosmopolitan.cl", "x", is_staff=True, rol=Rol.ADMINISTRADORA,
+        )
+
+    def test_cp005_borrador_no_visible_y_publicado_si(self):
+        """Crear una entrada, guardarla como borrador y luego publicarla."""
+        from .models import Contenido
+
+        contenido = Contenido.objects.create(titulo="Nueva alianza", cuerpo="Texto de la novedad.", estado=Contenido.Estado.BORRADOR)
+        self.assertIsNone(contenido.publicado_en)
+
+        respuesta = self.client.get(reverse("website:novedades"))
+        self.assertNotContains(respuesta, "Nueva alianza")
+        self.assertEqual(self.client.get(reverse("website:novedad_detalle", args=[contenido.slug])).status_code, 404)
+
+        contenido.estado = Contenido.Estado.PUBLICADO
+        contenido.save()
+        self.assertIsNotNone(contenido.publicado_en)
+
+        respuesta = self.client.get(reverse("website:novedades"))
+        self.assertContains(respuesta, "Nueva alianza")
+        self.assertEqual(self.client.get(reverse("website:novedad_detalle", args=[contenido.slug])).status_code, 200)
+
+    def test_cp006_edicion_y_despublicacion(self):
+        from .models import Contenido
+
+        contenido = Contenido.objects.create(titulo="Original", cuerpo="Texto", estado=Contenido.Estado.PUBLICADO)
+        self.client.force_login(self.admin)
+
+        self.client.post(
+            reverse("crm:contenido_editar", args=[contenido.pk]),
+            {"titulo": "Editado", "seccion": "novedades", "cuerpo": "Texto editado", "estado": "publicado", "orden": 0},
+        )
+        contenido.refresh_from_db()
+        self.assertEqual(contenido.titulo, "Editado")
+        self.assertContains(self.client.get(reverse("website:novedades")), "Editado")
+
+        self.client.post(reverse("crm:contenido_alternar_publicado", args=[contenido.pk]))
+        contenido.refresh_from_db()
+        self.assertEqual(contenido.estado, Contenido.Estado.BORRADOR)
+        self.assertEqual(self.client.get(reverse("website:novedad_detalle", args=[contenido.slug])).status_code, 404)
+
+    def test_cp007_cms_sin_sesion_redirige_a_login(self):
+        respuesta = self.client.get(reverse("crm:contenidos"))
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertIn(reverse("account_login"), respuesta.url)
+        self.assertNotContains(respuesta, "Contenido del sitio", status_code=302)
+
+    def test_cp008_sanitiza_html_y_scripts(self):
+        from .models import Contenido
+
+        contenido = Contenido.objects.create(
+            titulo="<script>alert(1)</script>Aviso",
+            cuerpo="Texto <b>malicioso</b> con <script>alert('x')</script> incrustado.",
+            estado=Contenido.Estado.PUBLICADO,
+        )
+        self.assertNotIn("<script>", contenido.titulo)
+        self.assertNotIn("<script>", contenido.cuerpo)
+        self.assertNotIn("<b>", contenido.cuerpo)
+
+        respuesta = self.client.get(reverse("website:novedad_detalle", args=[contenido.slug]))
+        self.assertNotContains(respuesta, "<script>alert")

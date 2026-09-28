@@ -14,7 +14,10 @@ from apps.catalog.services import comparativa_de_planes, planes_del_sitio, servi
 from apps.crm.models import Prospecto
 from apps.crm.services import registrar_solicitud
 
+from django.shortcuts import get_object_or_404
+
 from .forms import SolicitudCotizacionForm
+from .models import Contenido
 
 
 def home(request):
@@ -118,3 +121,16 @@ def cotizacion(request):
         ],
     }
     return render(request, "website/cotizacion.html", context)
+
+
+# ── Novedades (CMS, PC-WEB-02) ──────────────────────────────────────────────
+
+def novedades(request):
+    """Listado público. Solo se muestra lo publicado (CP-005, CP-006)."""
+    lista = Contenido.objects.filter(estado=Contenido.Estado.PUBLICADO, seccion=Contenido.Seccion.NOVEDADES)
+    return render(request, "website/novedades.html", {"novedades": lista})
+
+
+def novedad_detalle(request, slug):
+    contenido = get_object_or_404(Contenido, slug=slug, estado=Contenido.Estado.PUBLICADO)
+    return render(request, "website/novedad_detalle.html", {"contenido": contenido})
