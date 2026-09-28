@@ -1,5 +1,11 @@
 {% extends "crm/base_panel.html" %}
 
+{% block head %}
+<style type="text/tailwindcss">
+  .campo { @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40; }
+</style>
+{% endblock %}
+
 {% block page_title %}{% if contenido %}Editar contenido{% else %}Nuevo contenido{% endif %}{% endblock %}
 
 {% block content %}

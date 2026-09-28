@@ -31,9 +31,17 @@
       {% endif %}
       {% block content %}{% endblock content %}
     </div>
-    {# "Volver al sitio": si se llego aqui desde otra pagina del mismo sitio (ej. el panel), #}
-    {# vuelve a esa pagina anterior en vez de mandar siempre al inicio publico. #}
+    {# "Volver": el equipo (staff) siempre vuelve al panel, sin importar cuantos pasos tenga #}
+    {# el flujo en el que esta (p. ej. activar/desactivar 2FA, ver codigos de recuperacion). #}
+    {# Usar history.back() ahi se rompe: cada paso del flujo es una entrada de historial distinta, #}
+    {# asi que un solo clic no vuelve al panel sino al paso anterior del mismo flujo. #}
+    {# Para el resto (paginas publicas de cuenta: login, registro, recuperar clave), se mantiene #}
+    {# el history.back() a la pagina de origen si vino del mismo sitio. #}
+    {% if user.is_authenticated and user.is_staff %}
+    <p class="mt-6 text-center text-sm"><a href="{% url 'crm:dashboard' %}" class="text-malva hover:text-vino">← Volver al panel</a></p>
+    {% else %}
     <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }" class="text-malva hover:text-vino">← Volver al sitio</a></p>
+    {% endif %}
   </main>
   {% endblock body %}
   {% block extra_body %}{% endblock extra_body %}
