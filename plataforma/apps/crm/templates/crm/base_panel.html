@@ -38,9 +38,9 @@
       <p class="truncate text-sm font-semibold text-white">{{ panel_usuario.nombre }}</p>
       <p class="truncate text-xs text-lila">{{ panel_usuario.cargo }}</p>
     </div>
-    {# "Ver sitio": si se llego al panel desde otra pagina del mismo sitio, vuelve a esa #}
-    {# pagina anterior (atras en el historial) en vez de abrir una pestana nueva. #}
-    <a href="{% url 'website:home' %}" onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }" class="grid h-9 w-9 place-items-center rounded-md text-lila hover:bg-white/10 hover:text-white" title="Ver sitio público" aria-label="Ver sitio público">
+    {# "Ver sitio": siempre lleva directo al sitio publico en un clic (sin history.back(), #}
+    {# para que funcione igual sin importar cuantas paginas del panel se hayan visitado). #}
+    <a href="{% url 'website:home' %}" class="grid h-9 w-9 place-items-center rounded-md text-lila hover:bg-white/10 hover:text-white" title="Ver sitio público" aria-label="Ver sitio público">
       <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 6l-6 6 6 6"/></svg>
     </a>
     <form method="post" action="{% url 'account_logout' %}">
