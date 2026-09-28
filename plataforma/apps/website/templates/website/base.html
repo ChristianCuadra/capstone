@@ -46,6 +46,7 @@
 
       <div class="hidden items-center gap-3 lg:flex">
         {% if user.is_authenticated %}
+        <span class="max-w-[14rem] truncate text-xs text-vino/70" title="Sesión iniciada como {{ user.email }}">{{ user.email }}</span>
         <a href="{% if user.is_staff %}{% url 'crm:dashboard' %}{% else %}{% url 'content:calendario' %}{% endif %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">{% if user.is_staff %}Ir al panel{% else %}Mi portal{% endif %}</a>
         {% else %}
         <a href="{% url 'account_login' %}" class="rounded-full px-4 py-2 text-sm font-medium text-vino hover:bg-fondo-suave">Iniciar sesión</a>
@@ -71,6 +72,7 @@
       <div class="mt-4 grid gap-3">
         <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-5 py-3 text-center font-semibold text-white">Cotizar proyecto</a>
         {% if user.is_authenticated %}
+        <p class="text-center text-xs text-vino/70">Sesión iniciada como {{ user.email }}</p>
         <a href="{% if user.is_staff %}{% url 'crm:dashboard' %}{% else %}{% url 'content:calendario' %}{% endif %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">{% if user.is_staff %}Ir al panel{% else %}Mi portal{% endif %}</a>
         {% else %}
         <a href="{% url 'account_login' %}" class="rounded-full border border-gris-borde px-5 py-3 text-center font-medium text-vino">Iniciar sesión</a>
