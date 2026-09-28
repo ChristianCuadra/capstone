@@ -180,3 +180,23 @@ class ContenidoCMSTests(TestCase):
 
         respuesta = self.client.get(reverse("website:novedad_detalle", args=[contenido.slug]))
         self.assertNotContains(respuesta, "<script>alert")
+
+
+class MensajesSitioPublicoTests(TestCase):
+    """Bug reportado por Felipe: el mensaje de 'cerrado sesión' quedaba pegado hasta
+    la próxima vez que se abría el login, porque el sitio público no mostraba
+    los mensajes de Django (solo el panel interno y las páginas de cuenta lo hacían)."""
+
+    def test_mensaje_de_logout_se_muestra_de_inmediato_en_el_sitio(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        User.objects.create_user("proba", "proba@x.cl", "Mine1234@", is_active=True)
+        self.client.login(username="proba", password="Mine1234@")
+
+        respuesta = self.client.post(reverse("account_logout"), follow=True)
+        self.assertContains(respuesta, "Ha cerrado sesión")
+
+        # Al volver a visitar el sitio, el mensaje ya no debe reaparecer.
+        respuesta2 = self.client.get(reverse("website:home"))
+        self.assertNotContains(respuesta2, "Ha cerrado sesión")

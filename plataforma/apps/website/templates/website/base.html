@@ -80,6 +80,16 @@
   </header>
   {% endwith %}
 
+  {% if messages %}
+  <div class="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+    <ul class="space-y-2" role="status">
+      {% for message in messages %}
+      <li class="rounded-xl border border-gris-borde bg-fondo-suave px-4 py-3 text-sm text-vino">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <main>{% block content %}{% endblock %}</main>
 
   <footer id="contacto" class="bg-vino text-lila">
