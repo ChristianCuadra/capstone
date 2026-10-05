@@ -27,8 +27,10 @@
   </div>
   <div class="flex flex-wrap gap-2">
     <a href="{% url 'crm:cotizacion_imprimir' cotizacion.pk %}" target="_blank" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Vista para imprimir / PDF</a>
-    {% if editable %}
-    <button type="submit" form="form-cotizacion" name="accion" value="enviar" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Marcar como enviada</button>
+    {% if editable and puede_aprobar %}
+    <button type="submit" form="form-cotizacion" name="accion" value="enviar" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Aprobar y marcar como enviada</button>
+    {% elif editable %}
+    <span class="rounded-full bg-fondo-suave px-4 py-2 text-sm text-malva ring-1 ring-inset ring-gris-borde">Pendiente de aprobación de la administradora</span>
     {% elif cotizacion.estado == 'enviada' %}
     <form method="post" class="flex flex-wrap gap-2">
       {% csrf_token %}
@@ -209,9 +211,11 @@
         </li>
         {% endfor %}
       </ul>
-      {% if editable %}
-      <button type="submit" name="accion" value="enviar" class="mt-6 w-full rounded-full bg-vino px-4 py-3 text-sm font-semibold text-white hover:bg-vino-oscuro">Marcar como enviada</button>
+      {% if editable and puede_aprobar %}
+      <button type="submit" name="accion" value="enviar" class="mt-6 w-full rounded-full bg-vino px-4 py-3 text-sm font-semibold text-white hover:bg-vino-oscuro">Aprobar y marcar como enviada</button>
       <p class="mt-2 text-xs">El envío automático por correo se activa al configurar el servicio de correo.</p>
+      {% elif editable %}
+      <p class="mt-6 text-xs">Solo la administradora puede aprobar y enviar la cotización. Déjala lista como borrador.</p>
       {% endif %}
     </section>
   </aside>

@@ -27,6 +27,17 @@ def ids_permitidos(user):
     return frozenset()
 
 
+def puede_aprobar(user):
+    """Quién puede aprobar y enviar una cotización: la administradora (PC-COT-02).
+
+    Se mantiene el acceso del personal sin rol asignado, igual que en ids_permitidos, hasta que
+    todas las cuentas del equipo tengan su rol.
+    """
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        return False
+    return bool(user.is_superuser or user.rol == Rol.ADMINISTRADORA or (user.is_staff and not user.rol))
+
+
 def clientes_visibles(user):
     """Queryset de clientes que el usuario puede ver."""
     from apps.clients.models import Cliente

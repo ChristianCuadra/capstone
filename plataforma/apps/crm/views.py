@@ -26,7 +26,7 @@ from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
 from apps.clients.models import Cliente
-from apps.core.access import clientes_visibles, obtener_cliente_visible
+from apps.core.access import clientes_visibles, obtener_cliente_visible, puede_aprobar
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
 from allauth.mfa.models import Authenticator
@@ -588,6 +588,12 @@ def _agregar_servicio(cotizacion, servicio):
     )
 
 
+# Rangos permitidos al editar una cotización (provisorios hasta validarlos con la agencia).
+CANTIDAD_MIN, CANTIDAD_MAX = 1, 999
+MESES_MIN, MESES_MAX = 1, 36
+DESCUENTO_MAX = 50
+
+
 def _guardar_campos(request, cotizacion):
     """Guarda lo editado en el formulario (se ejecuta antes de cualquier otra acción para no perder cambios)."""
     cotizacion.contacto = request.POST.get("contacto", cotizacion.contacto)[:200]
@@ -599,16 +605,26 @@ def _guardar_campos(request, cotizacion):
     if request.POST.get("forma_pago") in Cotizacion.FormaPago.values:
         cotizacion.forma_pago = request.POST["forma_pago"]
     if request.POST.get("descuento_pct", "").isdigit():
-        cotizacion.descuento_pct = min(int(request.POST["descuento_pct"]), 50)
+        descuento = int(request.POST["descuento_pct"])
+        if descuento <= DESCUENTO_MAX:
+            cotizacion.descuento_pct = descuento
+        else:
+            messages.error(request, f"El descuento debe estar entre 0 y {DESCUENTO_MAX}%. Se mantuvo {cotizacion.descuento_pct}%.")
     cotizacion.diagnostico = request.POST.get("diagnostico", cotizacion.diagnostico).strip()
     cotizacion.save()
     for item in cotizacion.items.all():
-        cantidad = request.POST.get(f"cantidad_{item.pk}", "")
-        meses = request.POST.get(f"meses_{item.pk}", "")
-        if cantidad.isdigit() and int(cantidad) > 0:
-            item.cantidad = int(cantidad)
-        if item.meses and meses.isdigit() and int(meses) > 0:
-            item.meses = int(meses)
+        cantidad = request.POST.get(f"cantidad_{item.pk}", "").strip()
+        meses = request.POST.get(f"meses_{item.pk}", "").strip()
+        if cantidad:
+            if cantidad.isdigit() and CANTIDAD_MIN <= int(cantidad) <= CANTIDAD_MAX:
+                item.cantidad = int(cantidad)
+            else:
+                messages.error(request, f"«{item.descripcion}»: la cantidad debe ser un número entero entre {CANTIDAD_MIN} y {CANTIDAD_MAX}. Se mantuvo {item.cantidad}.")
+        if item.meses and meses:
+            if meses.isdigit() and MESES_MIN <= int(meses) <= MESES_MAX:
+                item.meses = int(meses)
+            else:
+                messages.error(request, f"«{item.descripcion}»: los meses deben ser un número entero entre {MESES_MIN} y {MESES_MAX}. Se mantuvo {item.meses}.")
         item.save(update_fields=["cantidad", "meses"])
 
 
@@ -648,7 +664,9 @@ def cotizacion_editar(request, pk):
         elif accion in ("ia_regenerar", "ia_acortar", "ia_formal") and es_borrador:
             _accion_ia_cotizacion(request, cotizacion, accion)
         elif accion == "enviar" and es_borrador:
-            if not cotizacion.items.exists():
+            if not puede_aprobar(request.user):
+                messages.error(request, "Solo la administradora puede aprobar y enviar una cotización.")
+            elif not cotizacion.items.exists():
                 messages.error(request, "Agrega al menos un servicio antes de marcarla como enviada.")
             else:
                 cotizacion.estado = Cotizacion.Estado.ENVIADA
@@ -697,6 +715,7 @@ def cotizacion_editar(request, pk):
         items=items,
         totales=totales,
         editable=cotizacion.estado == Cotizacion.Estado.BORRADOR,
+        puede_aprobar=puede_aprobar(request.user),
         planes_disponibles=Plan.objects.filter(activo=True).exclude(pk__in=en_items_planes),
         servicios_disponibles=Servicio.objects.filter(activo=True).exclude(pk__in=en_items_servicios),
         formas_pago=Cotizacion.FormaPago.choices,

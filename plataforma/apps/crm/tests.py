@@ -399,3 +399,84 @@ class ClientesAsignadosPanelTests(TestCase):
         self.client.force_login(usuario)
         self.assertEqual(self.client.get(reverse("crm:clientes")).status_code, 302)
         self.assertEqual(self.client.post(reverse("crm:cliente_activo"), {"cliente": self.a.pk}).status_code, 302)
+
+
+class AprobacionYValidacionDeCotizacionTests(TestCase):
+    """PC-COT-01 y PC-COT-02: nada se envía sin aprobación de la administradora y se rechazan datos inválidos."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+        self.prospecto = crear_prospecto()
+        self.client.force_login(self.admin)
+        self.client.post(reverse("crm:cotizacion_nueva"), {"prospecto": self.prospecto.pk})
+        self.cot = Cotizacion.objects.get()
+        self.url = reverse("crm:cotizacion_editar", args=[self.cot.pk])
+        self.item = self.cot.items.get()
+
+    def test_colaboradora_no_puede_enviar_la_cotizacion(self):
+        self.client.force_login(self.colab)
+        pagina = self.client.get(self.url)
+        self.assertContains(pagina, "Pendiente de aprobación de la administradora")
+        self.assertNotContains(pagina, "Aprobar y marcar como enviada")
+        respuesta = self.client.post(self.url, {"accion": "enviar"}, follow=True)
+        self.assertContains(respuesta, "Solo la administradora puede aprobar y enviar")
+        self.cot.refresh_from_db()
+        self.prospecto.refresh_from_db()
+        self.assertEqual(self.cot.estado, "borrador")
+        self.assertIsNone(self.cot.enviada_en)
+        self.assertEqual(self.prospecto.etapa, "nuevo")
+
+    def test_administradora_aprueba_y_queda_registrado(self):
+        self.client.post(self.url, {"accion": "enviar"})
+        self.cot.refresh_from_db()
+        self.assertEqual(self.cot.estado, "enviada")
+        self.assertIsNotNone(self.cot.enviada_en)
+        self.assertTrue(self.prospecto.interacciones.filter(titulo__contains=f"{self.cot.numero} enviada", autor=self.admin).exists())
+
+    def test_no_se_envia_una_cotizacion_vacia(self):
+        self.cot.items.all().delete()
+        respuesta = self.client.post(self.url, {"accion": "enviar"}, follow=True)
+        self.assertContains(respuesta, "Agrega al menos un servicio")
+        self.cot.refresh_from_db()
+        self.assertEqual(self.cot.estado, "borrador")
+
+    def test_estados_aceptada_y_rechazada_quedan_con_fecha_e_historial(self):
+        self.client.post(self.url, {"accion": "enviar"})
+        self.client.post(self.url, {"accion": "rechazada"})
+        self.cot.refresh_from_db()
+        self.assertEqual(self.cot.estado, "rechazada")
+        self.assertIsNotNone(self.cot.respondida_en)
+        self.assertTrue(self.prospecto.interacciones.filter(titulo__contains="rechazada").exists())
+        # una cotización ya respondida no vuelve a cambiar de estado
+        self.client.post(self.url, {"accion": "aceptada"})
+        self.cot.refresh_from_db()
+        self.assertEqual(self.cot.estado, "rechazada")
+
+    def test_cantidades_invalidas_se_rechazan_y_el_total_no_cambia(self):
+        total_antes = self.cot.totales()["total"]
+        cantidad_antes = self.item.cantidad
+        for valor in ("0", "-3", "abc", "1000", "2.5"):
+            with self.subTest(valor=valor):
+                respuesta = self.client.post(self.url, {"accion": "guardar", f"cantidad_{self.item.pk}": valor}, follow=True)
+                self.assertContains(respuesta, "la cantidad debe ser un número entero entre 1 y 999")
+                self.item.refresh_from_db()
+                self.assertEqual(self.item.cantidad, cantidad_antes)
+                self.assertEqual(self.cot.totales()["total"], total_antes)
+
+    def test_meses_y_descuento_fuera_de_rango_se_rechazan(self):
+        respuesta = self.client.post(self.url, {"accion": "guardar", f"meses_{self.item.pk}": "99", "descuento_pct": "80"}, follow=True)
+        self.assertContains(respuesta, "los meses deben ser un número entero entre 1 y 36")
+        self.assertContains(respuesta, "El descuento debe estar entre 0 y 50%")
+        self.item.refresh_from_db()
+        self.cot.refresh_from_db()
+        self.assertEqual(self.item.meses, 6)
+        self.assertEqual(self.cot.descuento_pct, 0)
+
+    def test_total_con_descuento_e_iva(self):
+        self.client.post(self.url, {"accion": "guardar", f"cantidad_{self.item.pk}": "3", "descuento_pct": "10"})
+        self.cot.refresh_from_db()
+        t = self.cot.totales()
+        # Posicionamiento $200.000 × 3 × 6 meses = 3.600.000; 10% de descuento = 360.000; neto 3.240.000; IVA 19%
+        self.assertEqual((t["recurrentes"], t["descuento"], t["neto"], t["iva"], t["total"]), (3600000, 360000, 3240000, 615600, 3855600))
