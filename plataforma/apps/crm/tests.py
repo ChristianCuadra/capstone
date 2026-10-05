@@ -71,6 +71,16 @@ class PanelTests(TestCase):
         self.assertEqual(p.cliente.nombre, "Café Prueba")
         self.assertEqual(p.etapa, "ganado")
 
+    def test_convertir_en_cliente_copia_los_datos_del_prospecto(self):
+        p = crear_prospecto(rut="12.345.678-5", telefono="+56 9 1111 2222", plan_interes=Plan.objects.get(slug="crecimiento"))
+        self.client.post(reverse("crm:prospecto_detalle", args=[p.pk]), {"accion": "convertir_cliente"})
+        p.refresh_from_db()
+        c = p.cliente
+        self.assertEqual((c.rut, c.rubro, c.region), ("12.345.678-5", p.rubro, p.region))
+        self.assertEqual((c.contacto_nombre, c.contacto_correo, c.contacto_telefono), ("Ana Pérez", "ana@cafeprueba.cl", "+56 9 1111 2222"))
+        self.assertEqual(c.plan.slug, "crecimiento")
+        self.assertEqual(c.objetivos, "Vender más online")
+
     def test_diagnostico_sin_ia_configurada_avisa(self):
         p = crear_prospecto()
         respuesta = self.client.post(reverse("crm:prospecto_detalle", args=[p.pk]), {"accion": "generar_diagnostico"}, follow=True)

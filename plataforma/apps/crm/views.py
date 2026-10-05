@@ -487,7 +487,18 @@ def _accion_prospecto(request, prospecto):
         if prospecto.cliente:
             messages.info(request, "Este prospecto ya es cliente.")
         else:
-            prospecto.cliente = Cliente.objects.create(nombre=prospecto.empresa)
+            objetivos = prospecto.objetivos if isinstance(prospecto.objetivos, list) else []
+            prospecto.cliente = Cliente.objects.create(
+                nombre=prospecto.empresa,
+                rut=prospecto.rut,
+                rubro=prospecto.rubro,
+                region=prospecto.region,
+                contacto_nombre=prospecto.nombre,
+                contacto_correo=prospecto.correo,
+                contacto_telefono=prospecto.telefono,
+                plan=prospecto.plan_interes or prospecto.plan_sugerido,
+                objetivos="\n".join(str(o) for o in objetivos),
+            )
             prospecto.save(update_fields=["cliente", "actualizado_en"])
             _mover_etapa(prospecto, Prospecto.Etapa.GANADO, usuario)
             _registrar(prospecto, usuario, "Convertido en cliente")
