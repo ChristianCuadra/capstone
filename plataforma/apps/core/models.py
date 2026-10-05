@@ -1,6 +1,8 @@
 from django.db import models
 
-from .context import get_current_client_id
+from django.core.exceptions import PermissionDenied
+
+from .context import get_allowed_client_ids, get_current_client_id
 
 
 class TenantQuerySet(models.QuerySet):
@@ -17,6 +19,9 @@ class TenantManager(models.Manager.from_queryset(TenantQuerySet)):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        permitidos = get_allowed_client_ids()
+        if permitidos is not None:
+            queryset = queryset.filter(cliente_id__in=permitidos)
         cliente_id = get_current_client_id()
         if cliente_id is not None:
             queryset = queryset.filter(cliente_id=cliente_id)
@@ -43,6 +48,9 @@ class TenantModel(models.Model):
     def save(self, *args, **kwargs):
         if self.cliente_id is None:
             self.cliente_id = get_current_client_id()
+        permitidos = get_allowed_client_ids()
+        if permitidos is not None and self.cliente_id not in permitidos:
+            raise PermissionDenied("No tienes acceso a este cliente.")
         super().save(*args, **kwargs)
 
 

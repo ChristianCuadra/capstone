@@ -304,3 +304,62 @@ class KanbanProspectosTests(TestCase):
         self.assertEqual(self.client.post(url, {"etapa": "ganado"}).status_code, 302)
         self.ana.refresh_from_db()
         self.assertEqual(self.ana.etapa, "nuevo")
+
+
+class ClientesAsignadosPanelTests(TestCase):
+    """PC-AUT-04: la colaboradora solo ve en el panel los clientes que tiene asignados."""
+
+    def setUp(self):
+        from apps.clients.models import Cliente
+
+        User = get_user_model()
+        self.a = Cliente.objects.create(nombre="Panadería A")
+        self.b = Cliente.objects.create(nombre="Clínica B")
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+        self.colab.clientes_asignados.set([self.a])
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+
+    def test_colaboradora_ve_solo_sus_clientes_en_la_lista(self):
+        self.client.force_login(self.colab)
+        respuesta = self.client.get(reverse("crm:clientes"))
+        self.assertContains(respuesta, "Panadería A")
+        self.assertNotContains(respuesta, "Clínica B")
+
+    def test_al_quitarle_el_cliente_deja_de_verlo(self):
+        self.client.force_login(self.colab)
+        self.colab.clientes_asignados.clear()
+        self.assertNotContains(self.client.get(reverse("crm:clientes")), "Panadería A")
+
+    def test_administradora_ve_todos(self):
+        self.client.force_login(self.admin)
+        respuesta = self.client.get(reverse("crm:clientes"))
+        self.assertContains(respuesta, "Panadería A")
+        self.assertContains(respuesta, "Clínica B")
+
+    def test_selector_ofrece_solo_clientes_visibles(self):
+        self.client.force_login(self.colab)
+        respuesta = self.client.get(reverse("crm:dashboard"))
+        self.assertContains(respuesta, 'id="cliente-activo"')
+        self.assertContains(respuesta, "Panadería A")
+        self.assertNotContains(respuesta, "Clínica B")
+
+    def test_elegir_un_cliente_asignado_lo_deja_activo(self):
+        self.client.force_login(self.colab)
+        self.client.post(reverse("crm:cliente_activo"), {"cliente": self.a.pk})
+        self.assertEqual(self.client.session["client_id"], self.a.pk)
+        self.client.post(reverse("crm:cliente_activo"), {"cliente": ""})
+        self.assertNotIn("client_id", self.client.session)
+
+    def test_elegir_un_cliente_no_asignado_se_niega_por_url(self):
+        self.client.force_login(self.colab)
+        respuesta = self.client.post(reverse("crm:cliente_activo"), {"cliente": self.b.pk})
+        self.assertEqual(respuesta.status_code, 404)
+        self.assertNotIn("client_id", self.client.session)
+
+    def test_cliente_de_la_agencia_no_entra_al_panel(self):
+        from apps.clients.models import Cliente  # noqa: F401
+
+        usuario = get_user_model().objects.create_user("cli", "cli@x.cl", "x", rol="cliente_aprobador", cliente=self.a)
+        self.client.force_login(usuario)
+        self.assertEqual(self.client.get(reverse("crm:clientes")).status_code, 302)
+        self.assertEqual(self.client.post(reverse("crm:cliente_activo"), {"cliente": self.a.pk}).status_code, 302)

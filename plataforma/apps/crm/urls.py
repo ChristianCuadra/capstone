@@ -18,6 +18,7 @@ urlpatterns = [
     path("tareas/nueva/", views.tarea_crear, name="tarea_crear"),
     path("tareas/<int:pk>/alternar/", views.tarea_alternar, name="tarea_alternar"),
     path("clientes/", views.clientes, name="clientes"),
+    path("cliente-activo/", views.cliente_activo, name="cliente_activo"),
     path("usuarios/", views.usuarios, name="usuarios"),
     path("usuarios/nuevo/", views.usuario_nuevo, name="usuario_nuevo"),
     path("usuarios/<int:pk>/", views.usuario_editar, name="usuario_editar"),

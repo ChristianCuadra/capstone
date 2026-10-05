@@ -32,6 +32,18 @@
     </ul>
   </nav>
 
+  {% if panel_clientes %}
+  <form method="post" action="{% url 'crm:cliente_activo' %}" class="border-t border-white/10 px-5 py-3">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <label for="cliente-activo" class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-lila">Cliente activo</label>
+    <select id="cliente-activo" name="cliente" onchange="this.form.submit()" class="mt-1.5 w-full rounded-lg border border-white/20 bg-vino-oscuro px-2 py-1.5 text-sm text-white">
+      <option value="">{% if request.user.rol == "colaboradora" %}Todos mis clientes{% else %}Todos los clientes{% endif %}</option>
+      {% for c in panel_clientes %}<option value="{{ c.pk }}"{% if c.pk == panel_cliente_activo %} selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+    </select>
+  </form>
+  {% endif %}
+
   <div class="flex items-center gap-3 border-t border-white/10 px-5 py-4">
     <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rosa text-sm font-bold text-vino-oscuro">{{ panel_usuario.iniciales }}</span>
     <div class="min-w-0 flex-1 leading-tight">

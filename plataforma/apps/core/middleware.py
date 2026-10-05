@@ -1,19 +1,26 @@
-from .context import reset_current_client_id, set_current_client_id
+from .access import ids_permitidos
+from .context import (
+    reset_allowed_client_ids,
+    reset_current_client_id,
+    set_allowed_client_ids,
+    set_current_client_id,
+)
 
 SESSION_CLIENT_KEY = "client_id"
 
 
 class TenantMiddleware:
-    """Publica el cliente activo de la sesión en un ContextVar durante la petición.
+    """Publica, durante la petición, qué clientes puede ver el usuario y cuál es el cliente activo.
 
-    Para un usuario de rol Cliente (aprobador o lector), el cliente activo es siempre
-    el suyo propio (User.cliente) — no se elige ni se guarda en sesión, así se evita
-    que alguien cambie de cliente manipulando la sesión.
+    - Cliente aprobador / lector: solo su empresa, que además es siempre la activa. No se guarda
+      en sesión, así nadie puede cambiar de cliente manipulándola.
+    - Colaboradora: solo sus clientes asignados. El cliente activo es el que eligió en el selector
+      del panel (se guarda en sesión) y se descarta si ya no está entre sus asignados.
+    - Administradora y personal sin rol: ven todos los clientes. El activo es el elegido en el
+      selector, o ninguno (sin filtrar).
+    - Sesión sin iniciar u otro rol: ningún cliente.
 
-    Para Colaboradora (que puede tener varios clientes asignados) o Administradora,
-    se usa el que esté guardado en la sesión (selector de cliente activo, aún no
-    implementado en la interfaz; por ahora queda en None => sin filtrar).
-
+    Los modelos que heredan de TenantModel se filtran solos con esta información.
     Debe ir después de SessionMiddleware y AuthenticationMiddleware.
     """
 
@@ -21,15 +28,26 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        client_id = None
-        if request.user.is_authenticated:
-            client_id = getattr(request.user, "cliente_id", None)
-            if client_id is None:
-                client_id = request.session.get(SESSION_CLIENT_KEY)
-        request.client_id = client_id
+        user = request.user
+        permitidos = ids_permitidos(user)
 
-        token = set_current_client_id(client_id)
+        client_id = None
+        if user.is_authenticated:
+            if user.es_cliente:
+                client_id = user.cliente_id
+            else:
+                elegido = request.session.get(SESSION_CLIENT_KEY)
+                if elegido is not None and (permitidos is None or elegido in permitidos):
+                    client_id = elegido
+                elif elegido is not None:
+                    request.session.pop(SESSION_CLIENT_KEY, None)
+        request.client_id = client_id
+        request.clientes_permitidos = permitidos
+
+        token_cliente = set_current_client_id(client_id)
+        token_permitidos = set_allowed_client_ids(permitidos)
         try:
             return self.get_response(request)
         finally:
-            reset_current_client_id(token)
+            reset_allowed_client_ids(token_permitidos)
+            reset_current_client_id(token_cliente)

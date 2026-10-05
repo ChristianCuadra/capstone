@@ -26,6 +26,8 @@ from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
 from apps.clients.models import Cliente
+from apps.core.access import clientes_visibles, obtener_cliente_visible
+from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
 from allauth.mfa.models import Authenticator
 
@@ -101,6 +103,8 @@ def contexto_panel(request, seccion, **context):
         "iniciales": _iniciales(u),
     }
     context["panel_badges"] = {"prospectos": Prospecto.objects.filter(etapa=Prospecto.Etapa.NUEVO).count()}
+    context["panel_clientes"] = list(clientes_visibles(u).filter(activo=True).values("pk", "nombre"))
+    context["panel_cliente_activo"] = getattr(request, "client_id", None)
     context["seccion_panel"] = seccion
     return context
 
@@ -720,8 +724,23 @@ def cotizacion_imprimir(request, pk):
 
 @solo_equipo
 def clientes(request):
-    lista = Cliente.objects.select_related("prospecto").order_by("-creado_en")
+    lista = clientes_visibles(request.user).select_related("prospecto").order_by("-creado_en")
     return render(request, "crm/clientes.html", contexto_panel(request, "clientes", clientes=lista))
+
+
+@solo_equipo
+@require_POST
+def cliente_activo(request):
+    """Selector de cliente activo del panel. Solo acepta clientes que el usuario puede ver."""
+    elegido = request.POST.get("cliente", "").strip()
+    if elegido:
+        cliente = obtener_cliente_visible(request.user, elegido)
+        request.session[SESSION_CLIENT_KEY] = cliente.pk
+        messages.success(request, f"Cliente activo: {cliente.nombre}.")
+    else:
+        request.session.pop(SESSION_CLIENT_KEY, None)
+        messages.success(request, "Ahora ves todos tus clientes.")
+    return _volver(request, "crm:dashboard")
 
 # ── Planes y servicios ─────────────────────────────────────────────────────────
 
