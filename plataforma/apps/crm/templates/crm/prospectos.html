@@ -82,7 +82,7 @@
 <form id="kanban-csrf" class="hidden">{% csrf_token %}</form>
 <p class="mt-5 text-sm">Arrastra una tarjeta a otra columna para cambiar su etapa. También puedes usar el selector «Mover a» de cada tarjeta.</p>
 <p id="kanban-aviso" role="status" class="sr-only"></p>
-<section class="mt-3 overflow-x-auto pb-4" aria-label="Tablero de prospectos por etapa">
+<section class="mt-3 w-full max-w-full overflow-x-auto overscroll-x-contain pb-4" aria-label="Tablero de prospectos por etapa">
   <div class="grid grid-flow-col auto-cols-[minmax(21rem,1fr)] gap-4">
     {% for col in columnas %}
     <div class="flex min-h-[32rem] flex-col rounded-2xl border border-gris-borde bg-rubor/70 p-2" data-columna="{{ col.clave }}">
