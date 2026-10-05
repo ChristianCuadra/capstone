@@ -88,6 +88,7 @@ class Prospecto(models.Model):
     # Contacto
     nombre = models.CharField(max_length=120)
     empresa = models.CharField(max_length=160)
+    rut = models.CharField("RUT", max_length=12, blank=True, help_text="Formato 12.345.678-5. Se pide solo en el registro manual.")
     correo = models.EmailField()
     telefono = models.CharField("teléfono", max_length=30, blank=True)
 

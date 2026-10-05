@@ -11,7 +11,7 @@
   </div>
   <div class="flex flex-wrap gap-2">
     <a href="{% url 'crm:prospectos_exportar' %}{% if etapa_activa %}?etapa={{ etapa_activa }}{% endif %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Exportar CSV</a>
-    <a href="{% url 'admin:crm_prospecto_add' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
+    <a href="{% url 'crm:prospecto_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
   </div>
 </header>
 

@@ -153,3 +153,71 @@ class SugerenciaDePlanTests(TestCase):
         # Pide influencers (Crecimiento, $300.000) pero declara hasta $250.000 → el más completo que cabe.
         self.assertEqual(sugerir_plan("150_250", [], ["marketing-de-influencers"]).slug, "posicionamiento")
         self.assertIsNone(sugerir_plan("menos_150", ["Posicionar la marca"], []))
+
+
+class RegistroManualProspectoTests(TestCase):
+    """PC-PRO-02: registro manual con validación de RUT, obligatorios y alerta de duplicados."""
+
+    def setUp(self):
+        self.equipo = get_user_model().objects.create_user("pia", "pia@agenciacosmopolitan.cl", "x", is_staff=True)
+        self.client.force_login(self.equipo)
+        self.url = reverse("crm:prospecto_nuevo")
+        self.datos = {
+            "nombre": "Luis Soto", "empresa": "Ferretería Soto", "correo": "Luis@Soto.cl", "telefono": "",
+            "rut": "12.345.678-5", "como_nos_conocio": "recomendacion",
+            "rubro": "Retail y moda", "region": "Valparaíso",
+        }
+
+    def test_formulario_responde_y_los_botones_apuntan_a_el(self):
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+        for nombre in ("crm:prospectos", "crm:dashboard"):
+            with self.subTest(nombre=nombre):
+                self.assertContains(self.client.get(reverse(nombre)), self.url)
+                self.assertNotContains(self.client.get(reverse(nombre)), "/admin/crm/prospecto/add")
+
+    def test_registro_valido_crea_prospecto_manual(self):
+        respuesta = self.client.post(self.url, self.datos)
+        prospecto = Prospecto.objects.get()
+        self.assertRedirects(respuesta, reverse("crm:prospecto_detalle", args=[prospecto.pk]))
+        self.assertEqual(prospecto.canal, Prospecto.Canal.MANUAL)
+        self.assertEqual(prospecto.etapa, Prospecto.Etapa.NUEVO)
+        self.assertEqual(prospecto.responsable, self.equipo)
+        self.assertEqual(prospecto.correo, "luis@soto.cl")
+        self.assertEqual(prospecto.rut, "12.345.678-5")
+        self.assertTrue(prospecto.interacciones.filter(titulo="Prospecto registrado manualmente").exists())
+
+    def test_rut_invalido_no_guarda(self):
+        respuesta = self.client.post(self.url, {**self.datos, "rut": "12.345.678-9"})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "dígito verificador")
+        self.assertFalse(Prospecto.objects.exists())
+
+    def test_rut_es_opcional(self):
+        self.client.post(self.url, {**self.datos, "rut": ""})
+        self.assertEqual(Prospecto.objects.get().rut, "")
+
+    def test_campos_obligatorios(self):
+        for campo in ("nombre", "empresa", "correo", "como_nos_conocio", "rubro", "region"):
+            with self.subTest(campo=campo):
+                respuesta = self.client.post(self.url, {**self.datos, campo: ""})
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertTrue(respuesta.context["form"].errors.get(campo))
+                self.assertFalse(Prospecto.objects.exists())
+
+    def test_alerta_si_el_correo_ya_existe_y_permite_registrar_igual(self):
+        crear_prospecto(correo="luis@soto.cl")
+        respuesta = self.client.post(self.url, self.datos)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "Ya existe un prospecto")
+        self.assertEqual(Prospecto.objects.count(), 1)
+        self.client.post(self.url, {**self.datos, "confirmar_duplicado": "1"})
+        self.assertEqual(Prospecto.objects.count(), 2)
+
+    def test_alerta_si_el_rut_ya_existe(self):
+        crear_prospecto(correo="otro@x.cl", rut="12.345.678-5")
+        respuesta = self.client.post(self.url, self.datos)
+        self.assertContains(respuesta, "Ya existe un prospecto")
+
+    def test_exige_equipo(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(self.url).status_code, 302)

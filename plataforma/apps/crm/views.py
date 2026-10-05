@@ -31,7 +31,7 @@ from allauth.mfa.models import Authenticator
 
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
-from .froms import PlanEntregableFormSet, PlanForm, ServicioForm
+from .froms import PlanEntregableFormSet, PlanForm, ProspectoManualForm, ServicioForm
 from apps.website.models import Contenido
 from apps.website.forms import ContenidoForm
 
@@ -308,6 +308,31 @@ def prospectos_exportar(request):
             timezone.localtime(p.creado_en).strftime("%d-%m-%Y %H:%M"),
         ])
     return respuesta
+
+
+@solo_equipo
+def prospecto_nuevo(request):
+    """Registro manual de un prospecto que llegó por otro canal (PC-PRO-02)."""
+    duplicados = []
+    if request.method == "POST":
+        form = ProspectoManualForm(request.POST)
+        if form.is_valid():
+            duplicados = form.buscar_duplicados()
+            if not duplicados or request.POST.get("confirmar_duplicado"):
+                prospecto = form.save(commit=False)
+                prospecto.canal = Prospecto.Canal.MANUAL
+                prospecto.responsable = request.user
+                prospecto.save()
+                _registrar(
+                    prospecto, request.user, "Prospecto registrado manualmente",
+                    descripcion=f"Canal de origen: {prospecto.get_como_nos_conocio_display()}",
+                )
+                messages.success(request, f"Prospecto «{prospecto.empresa}» registrado.")
+                return redirect("crm:prospecto_detalle", pk=prospecto.pk)
+    else:
+        form = ProspectoManualForm()
+    context = contexto_panel(request, "prospectos", form=form, duplicados=duplicados)
+    return render(request, "crm/prospecto_formulario.html", context)
 
 
 @solo_equipo

@@ -1,0 +1,105 @@
+{% extends "crm/base_panel.html" %}
+
+{% block head %}
+<style type="text/tailwindcss">
+  .campo { @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40; }
+</style>
+{% endblock %}
+
+{% block page_title %}Nuevo prospecto{% endblock %}
+
+{% block content %}
+<nav aria-label="Ruta" class="text-sm">
+  <ol class="flex items-center gap-2">
+    <li><a href="{% url 'crm:prospectos' %}" class="hover:text-vino">Prospectos</a></li>
+    <li aria-hidden="true" class="text-lila">›</li>
+    <li aria-current="page" class="font-medium text-vino">Nuevo</li>
+  </ol>
+</nav>
+<h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">Nuevo prospecto</h1>
+<p class="mt-1 text-sm">Para contactos que llegaron por recomendación, Instagram u otro canal y no por el formulario del sitio.</p>
+
+{% if form.errors %}
+<div class="mt-6 max-w-2xl rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">
+  No se pudo guardar: revisa los campos marcados en rojo más abajo.
+</div>
+{% endif %}
+
+{% if duplicados %}
+<div class="mt-6 max-w-2xl rounded-2xl border border-[#B26A00]/40 bg-[#B26A00]/5 px-4 py-3 text-sm text-vino" role="alert">
+  <p class="font-semibold">Ya existe un prospecto con el mismo correo o RUT:</p>
+  <ul class="mt-2 list-disc space-y-1 pl-5">
+    {% for d in duplicados %}
+    <li><a href="{% url 'crm:prospecto_detalle' d.pk %}" target="_blank" class="font-semibold underline decoration-rosa underline-offset-2">{{ d.empresa }}</a> · {{ d.nombre }} · {{ d.correo }}{% if d.rut %} · {{ d.rut }}{% endif %} · {{ d.get_etapa_display }}</li>
+    {% endfor %}
+  </ul>
+  <p class="mt-2">Revisa si es la misma persona. Si no lo es, puedes registrarlo de todos modos.</p>
+</div>
+{% endif %}
+
+<section class="mt-6 max-w-2xl rounded-2xl border border-gris-borde bg-white p-6">
+  <form method="post" class="space-y-4" novalidate>
+    {% csrf_token %}
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="block text-sm font-medium text-vino">Nombre del contacto *
+        {{ form.nombre }}
+        {% for e in form.nombre.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Empresa o marca *
+        {{ form.empresa }}
+        {% for e in form.empresa.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Correo *
+        {{ form.correo }}
+        {% for e in form.correo.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Teléfono
+        {{ form.telefono }}
+        {% for e in form.telefono.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">{{ form.rut.label }}
+        {{ form.rut }}
+        <p class="mt-1 text-xs font-normal">Opcional. Si lo ingresas, se valida el dígito verificador.</p>
+        {% for e in form.rut.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">{{ form.como_nos_conocio.label }} *
+        {{ form.como_nos_conocio }}
+        {% for e in form.como_nos_conocio.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Rubro *
+        {{ form.rubro }}
+        {% for e in form.rubro.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Región *
+        {{ form.region }}
+        {% for e in form.region.errors %}<p class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+      </label>
+      <label class="block text-sm font-medium text-vino">Tamaño
+        {{ form.tamano }}
+      </label>
+      <label class="block text-sm font-medium text-vino">¿Trabaja con agencia?
+        {{ form.agencia_actual }}
+      </label>
+      <label class="block text-sm font-medium text-vino sm:col-span-2">Presupuesto mensual
+        {{ form.presupuesto }}
+      </label>
+    </div>
+
+    <label class="block text-sm font-medium text-vino">Situación actual
+      {{ form.situacion_actual }}
+    </label>
+
+    <p class="text-xs">Los campos con * son obligatorios.</p>
+
+    <div class="flex flex-wrap gap-3 pt-2">
+      {% if duplicados %}
+      <button type="submit" name="confirmar_duplicado" value="1" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Registrar de todos modos</button>
+      {% else %}
+      <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Registrar prospecto</button>
+      {% endif %}
+      <a href="{% url 'crm:prospectos' %}" class="rounded-full border border-gris-borde px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
