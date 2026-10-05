@@ -39,6 +39,22 @@
   </div>
 </section>
 
+{# ── Asesoría gratuita (destacado) ─────────────────────────────────── #}
+{# TODO: el botón "Más información" aún no se conecta; falta definir el contenido y el flujo de la asesoría con la agencia. #}
+<section id="asesoria-gratis" aria-labelledby="asesoria-titulo" class="border-y border-gris-borde bg-vino">
+  <div class="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8 lg:py-10">
+    <div class="flex items-start gap-4">
+      <span class="mt-1 grid h-12 w-12 shrink-0 place-items-center rounded-full bg-rosa font-serif text-xl text-vino" aria-hidden="true">★</span>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Sin costo</p>
+        <h2 id="asesoria-titulo" class="mt-1 font-serif text-2xl text-white sm:text-3xl">Asesoría gratuita para tu marca</h2>
+        <p class="mt-2 max-w-xl text-lila">Conversa con nosotras y descubre cómo potenciar tu marca, sin compromiso.</p>
+      </div>
+    </div>
+    <button type="button" id="asesoria-mas-info" class="shrink-0 rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Más información</button>
+  </div>
+</section>
+
 {# ── Stats (solo con cifras reales) ─────────────────────────────────── #}
 {# TODO: Supabase - sitio_stats #}
 {% if stats %}

@@ -200,3 +200,10 @@ class MensajesSitioPublicoTests(TestCase):
         # Al volver a visitar el sitio, el mensaje ya no debe reaparecer.
         respuesta2 = self.client.get(reverse("website:home"))
         self.assertNotContains(respuesta2, "Ha cerrado sesión")
+
+
+class AsesoriaGratuitaHomeTests(TestCase):
+    def test_home_destaca_la_asesoria_gratuita_con_boton(self):
+        respuesta = self.client.get(reverse("website:home"))
+        self.assertContains(respuesta, "Asesoría gratuita")
+        self.assertContains(respuesta, 'id="asesoria-mas-info"')
