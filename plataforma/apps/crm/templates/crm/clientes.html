@@ -23,7 +23,7 @@
       </div>
       <div class="flex gap-2 text-sm">
         {% if c.prospecto %}<a href="{% url 'crm:prospecto_detalle' c.prospecto.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Ver ficha comercial</a>{% endif %}
-        <a href="{% url 'admin:clients_cliente_change' c.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
+        <a href="{% url 'crm:cliente_ficha' c.pk %}" class="rounded-full bg-vino px-3 py-1.5 font-medium text-white hover:bg-vino-oscuro">Abrir ficha</a>
       </div>
     </li>
     {% endfor %}

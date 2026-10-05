@@ -480,3 +480,103 @@ class AprobacionYValidacionDeCotizacionTests(TestCase):
         t = self.cot.totales()
         # Posicionamiento $200.000 × 3 × 6 meses = 3.600.000; 10% de descuento = 360.000; neto 3.240.000; IVA 19%
         self.assertEqual((t["recurrentes"], t["descuento"], t["neto"], t["iva"], t["total"]), (3600000, 360000, 3240000, 615600, 3855600))
+
+
+class FichaClienteTests(TestCase):
+    """PC-CLI-02: ficha del cliente con contrato, marca, objetivos, KPIs y documentos descargables."""
+
+    def setUp(self):
+        from apps.clients.models import Cliente
+
+        User = get_user_model()
+        self.a = Cliente.objects.create(nombre="Panadería A", objetivos="Subir ventas")
+        self.b = Cliente.objects.create(nombre="Clínica B")
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+        self.colab.clientes_asignados.set([self.a])
+        self.lector = User.objects.create_user("cli", "cli@x.cl", "x", rol="cliente_lector")
+        self.url = reverse("crm:cliente_ficha", args=[self.a.pk])
+
+    def _subir(self, usuario, nombre="contrato.pdf", contenido=b"%PDF-1.4 prueba"):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.client.force_login(usuario)
+        return self.client.post(
+            reverse("crm:cliente_documento_subir", args=[self.a.pk]),
+            {"nombre": "Contrato 2026", "tipo": "contrato", "archivo": SimpleUploadedFile(nombre, contenido)},
+        )
+
+    def test_ficha_muestra_secciones(self):
+        self.client.force_login(self.admin)
+        r = self.client.get(self.url)
+        for texto in ("Contrato", "Directrices de marca", "KPIs", "Documentos", "Subir ventas"):
+            self.assertContains(r, texto)
+
+    def test_administradora_edita_la_ficha(self):
+        self.client.force_login(self.admin)
+        datos = {"nombre": "Panadería A", "directrices_marca": "Tono cercano", "objetivos": "Más pedidos", "activo": "on"}
+        self.client.post(self.url, datos)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.directrices_marca, "Tono cercano")
+        self.assertEqual(self.a.objetivos, "Más pedidos")
+
+    def test_colaboradora_ve_pero_no_edita(self):
+        self.client.force_login(self.colab)
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+        self.client.post(self.url, {"nombre": "Hackeado", "objetivos": "x"})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.nombre, "Panadería A")
+
+    def test_colaboradora_no_ve_ficha_de_cliente_no_asignado(self):
+        self.client.force_login(self.colab)
+        self.assertEqual(self.client.get(reverse("crm:cliente_ficha", args=[self.b.pk])).status_code, 404)
+
+    def test_usuario_cliente_no_entra_al_panel(self):
+        self.client.force_login(self.lector)
+        self.assertNotEqual(self.client.get(self.url).status_code, 200)
+
+    def test_subir_y_descargar_documento(self):
+        from apps.clients.models import DocumentoCliente
+
+        self._subir(self.admin)
+        doc = DocumentoCliente.all_objects.get(cliente=self.a)
+        self.assertEqual(doc.subido_por, self.admin)
+        r = self.client.get(reverse("crm:cliente_documento_descargar", args=[self.a.pk, doc.pk]))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("attachment", r["Content-Disposition"])
+        self.assertEqual(b"".join(r.streaming_content), b"%PDF-1.4 prueba")
+
+    def test_colaboradora_descarga_pero_no_sube(self):
+        from apps.clients.models import DocumentoCliente
+
+        self._subir(self.admin)
+        doc = DocumentoCliente.all_objects.get(cliente=self.a)
+        self._subir(self.colab, nombre="otro.pdf")
+        self.assertEqual(DocumentoCliente.all_objects.filter(cliente=self.a).count(), 1)
+        self.assertEqual(self.client.get(reverse("crm:cliente_documento_descargar", args=[self.a.pk, doc.pk])).status_code, 200)
+
+    def test_no_se_descarga_documento_de_otro_cliente(self):
+        from django.core.files.base import ContentFile
+
+        from apps.clients.models import DocumentoCliente
+
+        doc = DocumentoCliente.all_objects.create(cliente=self.b, nombre="Secreto", archivo=ContentFile(b"x", name="s.pdf"))
+        self.client.force_login(self.colab)
+        # Ni por la ficha del cliente propio ni por la del ajeno
+        self.assertEqual(self.client.get(reverse("crm:cliente_documento_descargar", args=[self.a.pk, doc.pk])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("crm:cliente_documento_descargar", args=[self.b.pk, doc.pk])).status_code, 404)
+
+    def test_rechaza_formato_y_tamano_invalidos(self):
+        from apps.clients.models import DocumentoCliente
+
+        self._subir(self.admin, nombre="virus.exe")
+        self._subir(self.admin, nombre="enorme.pdf", contenido=b"0" * (10 * 1024 * 1024 + 1))
+        self.assertEqual(DocumentoCliente.all_objects.count(), 0)
+
+    def test_eliminar_documento(self):
+        from apps.clients.models import DocumentoCliente
+
+        self._subir(self.admin)
+        doc = DocumentoCliente.all_objects.get(cliente=self.a)
+        self.client.post(reverse("crm:cliente_documento_eliminar", args=[self.a.pk, doc.pk]))
+        self.assertEqual(DocumentoCliente.all_objects.count(), 0)

@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -25,7 +25,8 @@ from apps.accounts.forms import UsuarioForm
 from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
-from apps.clients.models import Cliente
+from apps.clients.forms import ClienteFichaForm, DocumentoClienteForm
+from apps.clients.models import Cliente, DocumentoCliente
 from apps.core.access import clientes_visibles, obtener_cliente_visible, puede_aprobar
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
@@ -760,6 +761,84 @@ def cotizacion_imprimir(request, pk):
 def clientes(request):
     lista = clientes_visibles(request.user).select_related("prospecto", "plan").order_by("-creado_en")
     return render(request, "crm/clientes.html", contexto_panel(request, "clientes", clientes=lista))
+
+
+def _documentos_del_cliente(cliente):
+    # all_objects: el filtro por tenant lo aplica ya obtener_cliente_visible sobre el cliente.
+    return DocumentoCliente.all_objects.filter(cliente=cliente).select_related("subido_por")
+
+
+@solo_equipo
+def cliente_ficha(request, pk):
+    """Ficha única del cliente: contrato, marca, objetivos, KPIs y documentos (PC-CLI-02)."""
+    cliente = obtener_cliente_visible(request.user, pk)
+    puede_editar = puede_aprobar(request.user)
+    form = ClienteFichaForm(instance=cliente)
+    if request.method == "POST":
+        if not puede_editar:
+            messages.error(request, "Solo la administradora puede editar la ficha del cliente.")
+            return redirect("crm:cliente_ficha", pk=cliente.pk)
+        form = ClienteFichaForm(request.POST, instance=cliente)
+        if form.is_valid():
+            form.save()
+            RegistroAuditoria.registrar(
+                usuario=request.user, accion=RegistroAuditoria.Accion.EDITAR, entidad="cliente",
+                entidad_id=cliente.pk, detalle=f"Ficha de {cliente.nombre}",
+            )
+            messages.success(request, "Ficha del cliente actualizada.")
+            return redirect("crm:cliente_ficha", pk=cliente.pk)
+    return render(request, "crm/cliente_ficha.html", contexto_panel(
+        request, "clientes",
+        cliente=cliente, form=form, puede_editar=puede_editar,
+        documentos=_documentos_del_cliente(cliente), doc_form=DocumentoClienteForm(),
+    ))
+
+
+@solo_equipo
+@require_POST
+def cliente_documento_subir(request, pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not puede_aprobar(request.user):
+        messages.error(request, "Solo la administradora puede subir documentos a la ficha.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    form = DocumentoClienteForm(request.POST, request.FILES)
+    if form.is_valid():
+        documento = form.save(commit=False)
+        documento.cliente = cliente
+        documento.subido_por = request.user
+        documento.save()
+        messages.success(request, f"Documento «{documento.nombre}» subido.")
+    else:
+        for errores in form.errors.values():
+            for error in errores:
+                messages.error(request, error)
+    return redirect("crm:cliente_ficha", pk=cliente.pk)
+
+
+@solo_equipo
+def cliente_documento_descargar(request, pk, doc_pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    documento = get_object_or_404(_documentos_del_cliente(cliente), pk=doc_pk)
+    try:
+        archivo = documento.archivo.open("rb")
+    except (FileNotFoundError, ValueError):
+        raise Http404("El archivo ya no está disponible.")
+    return FileResponse(archivo, as_attachment=True, filename=documento.archivo.name.rsplit("/", 1)[-1])
+
+
+@solo_equipo
+@require_POST
+def cliente_documento_eliminar(request, pk, doc_pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not puede_aprobar(request.user):
+        messages.error(request, "Solo la administradora puede eliminar documentos de la ficha.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    documento = get_object_or_404(_documentos_del_cliente(cliente), pk=doc_pk)
+    nombre = documento.nombre
+    documento.archivo.delete(save=False)
+    documento.delete()
+    messages.success(request, f"Documento «{nombre}» eliminado.")
+    return redirect("crm:cliente_ficha", pk=cliente.pk)
 
 
 @solo_equipo

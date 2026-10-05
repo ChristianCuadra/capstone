@@ -1,5 +1,6 @@
 from django.db import models
 
+from apps.core.models import TenantModel
 from apps.crm.models import REGIONES, RUBROS
 
 
@@ -46,3 +47,34 @@ class Cliente(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+def ruta_documento(instance, filename):
+    return f"clientes/{instance.cliente_id}/documentos/{filename}"
+
+
+class DocumentoCliente(TenantModel):
+    """Documento adjunto a la ficha del cliente (contrato, directrices, propuestas). PC-CLI-02."""
+
+    class Tipo(models.TextChoices):
+        CONTRATO = "contrato", "Contrato"
+        DIRECTRICES = "directrices", "Directrices de marca"
+        PROPUESTA = "propuesta", "Propuesta o cotización"
+        OTRO = "otro", "Otro"
+
+    nombre = models.CharField(max_length=150)
+    tipo = models.CharField(max_length=15, choices=Tipo.choices, default=Tipo.OTRO)
+    archivo = models.FileField(upload_to=ruta_documento)
+    subido_por = models.ForeignKey(
+        "accounts.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+", verbose_name="subido por"
+    )
+
+    class Meta:
+        db_table = "clientes_documentos"
+        verbose_name = "documento del cliente"
+        verbose_name_plural = "documentos del cliente"
+        ordering = ["-creado_en"]
+
+    def __str__(self):
+        return self.nombre
+

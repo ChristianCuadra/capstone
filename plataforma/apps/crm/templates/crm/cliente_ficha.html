@@ -1,0 +1,128 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}{{ cliente.nombre }}{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <a href="{% url 'crm:clientes' %}" class="text-sm text-malva hover:underline">← Clientes</a>
+    <h1 class="mt-1 font-serif text-3xl text-vino lg:text-4xl">{{ cliente.nombre }}</h1>
+    <p class="mt-1 text-sm">{% if cliente.plan %}Plan {{ cliente.plan.nombre }} · {% endif %}Cliente desde {{ cliente.creado_en|date:"j M Y" }}{% if not cliente.activo %} · inactivo{% endif %}</p>
+  </div>
+  {% if cliente.prospecto %}
+  <a href="{% url 'crm:prospecto_detalle' cliente.prospecto.pk %}" class="w-fit rounded-full px-4 py-2 text-sm font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Ver ficha comercial</a>
+  {% endif %}
+</header>
+
+{% if not puede_editar %}
+<p class="mt-4 rounded-xl bg-fondo-suave px-4 py-3 text-sm">Solo la administradora puede editar esta ficha. Tú puedes consultarla y descargar sus documentos.</p>
+{% endif %}
+
+<div class="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+  <div class="space-y-6">
+    {% if puede_editar %}
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      {% if form.errors %}<p class="rounded-xl bg-rubor px-4 py-3 text-sm text-vino">Revisa los campos marcados.</p>{% endif %}
+
+      <section class="rounded-2xl border border-gris-borde bg-white p-5">
+        <h2 class="font-serif text-xl text-vino">Datos y contacto</h2>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          {% for campo in form %}{% if campo.name in "nombre rut rubro region contacto_nombre contacto_correo contacto_telefono" %}
+          <label class="block text-sm font-medium text-vino">{{ campo.label }}{{ campo }}{% for e in campo.errors %}<span class="mt-1 block text-xs text-red-700">{{ e }}</span>{% endfor %}</label>
+          {% endif %}{% endfor %}
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-gris-borde bg-white p-5">
+        <h2 class="font-serif text-xl text-vino">Contrato</h2>
+        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+          {% for campo in form %}{% if campo.name in "plan fecha_inicio_contrato forma_pago" %}
+          <label class="block text-sm font-medium text-vino">{{ campo.label }}{{ campo }}{% for e in campo.errors %}<span class="mt-1 block text-xs text-red-700">{{ e }}</span>{% endfor %}</label>
+          {% endif %}{% endfor %}
+        </div>
+        <label class="mt-4 flex items-center gap-2 text-sm">{{ form.activo }} Cliente activo</label>
+      </section>
+
+      <section class="rounded-2xl border border-gris-borde bg-white p-5">
+        <h2 class="font-serif text-xl text-vino">Directrices de marca y objetivos</h2>
+        <label class="mt-4 block text-sm font-medium text-vino">{{ form.directrices_marca.label }}{{ form.directrices_marca }}</label>
+        <label class="mt-4 block text-sm font-medium text-vino">{{ form.objetivos.label|capfirst }}{{ form.objetivos }}</label>
+      </section>
+
+      <button type="submit" class="rounded-full bg-vino px-6 py-3 text-sm font-semibold text-white hover:bg-vino-oscuro">Guardar ficha</button>
+    </form>
+    {% else %}
+    <section class="rounded-2xl border border-gris-borde bg-white p-5">
+      <h2 class="font-serif text-xl text-vino">Datos y contacto</h2>
+      <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+        <div><dt class="text-xs uppercase tracking-widest text-malva">RUT</dt><dd>{{ cliente.rut|default:"—" }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-widest text-malva">Rubro</dt><dd>{{ cliente.rubro|default:"—" }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-widest text-malva">Región</dt><dd>{{ cliente.region|default:"—" }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-widest text-malva">Contacto</dt><dd>{{ cliente.contacto_nombre|default:"—" }}{% if cliente.contacto_correo %}<br>{{ cliente.contacto_correo }}{% endif %}{% if cliente.contacto_telefono %}<br>{{ cliente.contacto_telefono }}{% endif %}</dd></div>
+      </dl>
+    </section>
+    <section class="rounded-2xl border border-gris-borde bg-white p-5">
+      <h2 class="font-serif text-xl text-vino">Contrato</h2>
+      <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+        <div><dt class="text-xs uppercase tracking-widest text-malva">Plan</dt><dd>{{ cliente.plan.nombre|default:"—" }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-widest text-malva">Inicio</dt><dd>{{ cliente.fecha_inicio_contrato|date:"j M Y"|default:"—" }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-widest text-malva">Forma de pago</dt><dd>{{ cliente.get_forma_pago_display|default:"—" }}</dd></div>
+      </dl>
+    </section>
+    <section class="rounded-2xl border border-gris-borde bg-white p-5">
+      <h2 class="font-serif text-xl text-vino">Directrices de marca y objetivos</h2>
+      <p class="mt-4 whitespace-pre-line text-sm">{{ cliente.directrices_marca|default:"Sin directrices registradas." }}</p>
+      <h3 class="mt-5 text-xs uppercase tracking-widest text-malva">Objetivos</h3>
+      <p class="mt-1 whitespace-pre-line text-sm">{{ cliente.objetivos|default:"Sin objetivos registrados." }}</p>
+    </section>
+    {% endif %}
+  </div>
+
+  <div class="space-y-6">
+    <section class="rounded-2xl border border-gris-borde bg-white p-5" id="kpis">
+      <h2 class="font-serif text-xl text-vino">KPIs</h2>
+      <p class="mt-3 text-sm">Aún no hay KPIs definidos para este cliente.</p>
+    </section>
+
+    <section class="rounded-2xl border border-gris-borde bg-white p-5" id="documentos">
+      <h2 class="font-serif text-xl text-vino">Documentos</h2>
+      {% if documentos %}
+      <ul class="mt-4 divide-y divide-gris-borde">
+        {% for d in documentos %}
+        <li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+          <div>
+            <p class="font-semibold text-vino">{{ d.nombre }}</p>
+            <p class="text-xs">{{ d.get_tipo_display }} · {{ d.creado_en|date:"j M Y" }}{% if d.subido_por %} · {{ d.subido_por.get_full_name|default:d.subido_por.email }}{% endif %}</p>
+          </div>
+          <div class="flex gap-2">
+            <a href="{% url 'crm:cliente_documento_descargar' cliente.pk d.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Descargar</a>
+            {% if puede_editar %}
+            <form method="post" action="{% url 'crm:cliente_documento_eliminar' cliente.pk d.pk %}" onsubmit="return confirm('¿Eliminar este documento?');">
+              {% csrf_token %}
+              <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-red-700 ring-1 ring-inset ring-gris-borde hover:bg-rubor">Eliminar</button>
+            </form>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="mt-3 text-sm">Aún no hay documentos adjuntos.</p>
+      {% endif %}
+
+      {% if puede_editar %}
+      <form method="post" enctype="multipart/form-data" action="{% url 'crm:cliente_documento_subir' cliente.pk %}" class="mt-5 space-y-3 border-t border-gris-borde pt-5">
+        {% csrf_token %}
+        <p class="text-sm font-medium text-vino">Subir documento</p>
+        <label class="block text-sm">Nombre{{ doc_form.nombre }}</label>
+        <label class="block text-sm">Tipo{{ doc_form.tipo }}</label>
+        <label class="block text-sm">Archivo{{ doc_form.archivo }}</label>
+        <p class="text-xs">PDF, Word, Excel, PowerPoint, imagen o texto. Máximo 10 MB.</p>
+        <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Subir</button>
+      </form>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}
