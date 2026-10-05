@@ -34,7 +34,7 @@
     {% if prospecto.cliente %}
     <a href="{% url 'crm:clientes' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Ver cliente</a>
     {% else %}
-    <form method="post" onsubmit="return confirm('¿Convertir {{ prospecto.empresa|escapejs }} en cliente? Quedará en etapa Ganado.')">
+    <form method="post" onsubmit="return confirm('¿Convertir {{ prospecto.empresa|escapejs }} en cliente? Quedará en etapa Cerrado ganado.')">
       {% csrf_token %}<input type="hidden" name="accion" value="convertir_cliente">
       <button type="submit" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Convertir en cliente</button>
     </form>

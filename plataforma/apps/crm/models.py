@@ -50,11 +50,11 @@ REDES = [
 
 class Prospecto(models.Model):
     class Etapa(models.TextChoices):
-        NUEVO = "nuevo", "Nuevo"
-        CONTACTADO = "contactado", "Contactado"
-        REUNION = "reunion", "Reunión"
+        NUEVO = "nuevo", "Nuevo contacto"
+        DIAGNOSTICO = "diagnostico", "Diagnóstico agendado"
         COTIZACION_ENVIADA = "cotizacion_enviada", "Cotización enviada"
-        GANADO = "ganado", "Ganado"
+        NEGOCIACION = "negociacion", "En negociación"
+        GANADO = "ganado", "Cerrado ganado"
         PERDIDO = "perdido", "Perdido"
 
     class Tamano(models.TextChoices):

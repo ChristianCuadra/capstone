@@ -57,11 +57,11 @@ class PanelTests(TestCase):
         self.client.post(url, {"accion": "instagram", "instagram": "@cafeprueba", "seguidores": "3.840"})
         self.assertContains(self.client.get(url), "@cafeprueba · 3.840 seguidores")
 
-        self.client.post(url, {"accion": "cambiar_etapa", "etapa": "contactado"})
+        self.client.post(url, {"accion": "cambiar_etapa", "etapa": "negociacion"})
         self.client.post(url, {"accion": "registrar_interaccion", "tipo": "llamada", "titulo": "Primera llamada"})
         self.client.post(url, {"accion": "asignarme"})
         p.refresh_from_db()
-        self.assertEqual(p.etapa, "contactado")
+        self.assertEqual(p.etapa, "negociacion")
         self.assertEqual(p.responsable, self.equipo)
         llamadas = self.client.get(url, {"tipo": "llamada"}).context["interacciones"]
         self.assertEqual([i.titulo for i in llamadas], ["Primera llamada"])
@@ -240,7 +240,7 @@ class KanbanProspectosTests(TestCase):
         self.equipo = get_user_model().objects.create_user("pia", "pia@agenciacosmopolitan.cl", "x", is_staff=True)
         self.client.force_login(self.equipo)
         self.ana = crear_prospecto()
-        self.luis = crear_prospecto(nombre="Luis Soto", empresa="Ferretería Soto", correo="luis@soto.cl", etapa=Prospecto.Etapa.REUNION)
+        self.luis = crear_prospecto(nombre="Luis Soto", empresa="Ferretería Soto", correo="luis@soto.cl", etapa=Prospecto.Etapa.DIAGNOSTICO)
         self.url = reverse("crm:prospectos")
 
     def columna(self, respuesta, clave):
@@ -250,7 +250,7 @@ class KanbanProspectosTests(TestCase):
         respuesta = self.client.get(self.url, {"vista": "kanban"})
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual([p["id"] for p in self.columna(respuesta, "nuevo")["prospectos"]], [self.ana.pk])
-        self.assertEqual([p["id"] for p in self.columna(respuesta, "reunion")["prospectos"]], [self.luis.pk])
+        self.assertEqual([p["id"] for p in self.columna(respuesta, "diagnostico")["prospectos"]], [self.luis.pk])
         self.assertEqual([c["clave"] for c in respuesta.context["columnas"]], Prospecto.Etapa.values)
 
     def test_lista_sigue_siendo_la_vista_por_defecto(self):
@@ -265,21 +265,21 @@ class KanbanProspectosTests(TestCase):
                 self.assertEqual([p["id"] for p in lista.context["prospectos"]], [self.luis.pk])
                 kanban = self.client.get(self.url, {"q": q, "vista": "kanban"})
                 self.assertEqual(self.columna(kanban, "nuevo")["prospectos"], [])
-                self.assertEqual(len(self.columna(kanban, "reunion")["prospectos"]), 1)
+                self.assertEqual(len(self.columna(kanban, "diagnostico")["prospectos"]), 1)
 
     def test_filtrar_por_etapa_en_la_lista(self):
-        respuesta = self.client.get(self.url, {"etapa": "reunion"})
+        respuesta = self.client.get(self.url, {"etapa": "diagnostico"})
         self.assertEqual([p["id"] for p in respuesta.context["prospectos"]], [self.luis.pk])
 
     def test_mover_guarda_el_cambio_y_se_ve_en_ambas_vistas(self):
-        respuesta = self.client.post(reverse("crm:prospecto_mover", args=[self.ana.pk]), {"etapa": "contactado"})
+        respuesta = self.client.post(reverse("crm:prospecto_mover", args=[self.ana.pk]), {"etapa": "negociacion"})
         self.assertEqual(respuesta.status_code, 302)
         self.ana.refresh_from_db()
-        self.assertEqual(self.ana.etapa, "contactado")
-        self.assertTrue(self.ana.interacciones.filter(titulo__contains="Contactado").exists())
+        self.assertEqual(self.ana.etapa, "negociacion")
+        self.assertTrue(self.ana.interacciones.filter(titulo__contains="negociación").exists())
         kanban = self.client.get(self.url, {"vista": "kanban"})
-        self.assertEqual([p["id"] for p in self.columna(kanban, "contactado")["prospectos"]], [self.ana.pk])
-        lista = self.client.get(self.url, {"etapa": "contactado"})
+        self.assertEqual([p["id"] for p in self.columna(kanban, "negociacion")["prospectos"]], [self.ana.pk])
+        lista = self.client.get(self.url, {"etapa": "negociacion"})
         self.assertEqual([p["id"] for p in lista.context["prospectos"]], [self.ana.pk])
 
     def test_mover_por_fetch_responde_json(self):
@@ -287,7 +287,7 @@ class KanbanProspectosTests(TestCase):
             reverse("crm:prospecto_mover", args=[self.ana.pk]), {"etapa": "ganado"}, headers={"X-Requested-With": "fetch"}
         )
         self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(respuesta.json(), {"ok": True, "etapa": "ganado", "etapa_nombre": "Ganado"})
+        self.assertEqual(respuesta.json(), {"ok": True, "etapa": "ganado", "etapa_nombre": "Cerrado ganado"})
 
     def test_etapa_invalida_no_cambia_nada(self):
         respuesta = self.client.post(

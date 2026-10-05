@@ -37,9 +37,9 @@ from apps.website.forms import ContenidoForm
 
 ETAPAS_EMBUDO = [
     Prospecto.Etapa.NUEVO,
-    Prospecto.Etapa.CONTACTADO,
-    Prospecto.Etapa.REUNION,
+    Prospecto.Etapa.DIAGNOSTICO,
     Prospecto.Etapa.COTIZACION_ENVIADA,
+    Prospecto.Etapa.NEGOCIACION,
     Prospecto.Etapa.GANADO,
 ]
 ETAPAS_ACTIVAS = ETAPAS_EMBUDO[:-1]
@@ -636,7 +636,7 @@ def cotizacion_editar(request, pk):
                 cotizacion.enviada_en = timezone.now()
                 cotizacion.save(update_fields=["estado", "enviada_en", "actualizado_en"])
                 # Solo avanza el embudo: un prospecto en etapa posterior (o perdido) no retrocede.
-                if prospecto.etapa in (Prospecto.Etapa.NUEVO, Prospecto.Etapa.CONTACTADO, Prospecto.Etapa.REUNION):
+                if prospecto.etapa in (Prospecto.Etapa.NUEVO, Prospecto.Etapa.DIAGNOSTICO):
                     _mover_etapa(prospecto, Prospecto.Etapa.COTIZACION_ENVIADA, request.user)
                 _registrar(prospecto, request.user, f"Cotización #{cotizacion.numero} enviada", Interaccion.Tipo.CORREO)
                 messages.success(

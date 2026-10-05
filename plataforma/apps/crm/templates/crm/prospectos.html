@@ -88,9 +88,9 @@
     <div class="flex min-h-[32rem] flex-col rounded-2xl border border-gris-borde bg-rubor/70 p-2" data-columna="{{ col.clave }}">
       <header class="flex items-center justify-between rounded-xl px-4 py-3
         {% if col.clave == 'nuevo' %}bg-malva text-white
-        {% elif col.clave == 'contactado' %}bg-lila text-vino
-        {% elif col.clave == 'reunion' %}bg-rosa-viejo text-vino
+        {% elif col.clave == 'diagnostico' %}bg-lila text-vino
         {% elif col.clave == 'cotizacion_enviada' %}bg-rosa text-vino
+        {% elif col.clave == 'negociacion' %}bg-rosa-viejo text-vino
         {% elif col.clave == 'ganado' %}bg-vino text-white
         {% else %}bg-gris-txt text-white{% endif %}">
         <h2 class="text-base font-semibold">{{ col.nombre }}</h2>
