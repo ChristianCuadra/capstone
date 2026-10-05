@@ -221,3 +221,76 @@ class RegistroManualProspectoTests(TestCase):
     def test_exige_equipo(self):
         self.client.logout()
         self.assertEqual(self.client.get(self.url).status_code, 302)
+
+
+class KanbanProspectosTests(TestCase):
+    """PC-PRO-01: lista y kanban por etapa, buscador y cambio de etapa visible en ambas vistas."""
+
+    def setUp(self):
+        self.equipo = get_user_model().objects.create_user("pia", "pia@agenciacosmopolitan.cl", "x", is_staff=True)
+        self.client.force_login(self.equipo)
+        self.ana = crear_prospecto()
+        self.luis = crear_prospecto(nombre="Luis Soto", empresa="Ferretería Soto", correo="luis@soto.cl", etapa=Prospecto.Etapa.REUNION)
+        self.url = reverse("crm:prospectos")
+
+    def columna(self, respuesta, clave):
+        return next(c for c in respuesta.context["columnas"] if c["clave"] == clave)
+
+    def test_kanban_muestra_cada_prospecto_en_su_etapa(self):
+        respuesta = self.client.get(self.url, {"vista": "kanban"})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual([p["id"] for p in self.columna(respuesta, "nuevo")["prospectos"]], [self.ana.pk])
+        self.assertEqual([p["id"] for p in self.columna(respuesta, "reunion")["prospectos"]], [self.luis.pk])
+        self.assertEqual([c["clave"] for c in respuesta.context["columnas"]], Prospecto.Etapa.values)
+
+    def test_lista_sigue_siendo_la_vista_por_defecto(self):
+        respuesta = self.client.get(self.url)
+        self.assertEqual(respuesta.context["vista"], "lista")
+        self.assertEqual(len(respuesta.context["prospectos"]), 2)
+
+    def test_buscar_por_nombre_empresa_o_correo_en_ambas_vistas(self):
+        for q in ("Soto", "ferretería", "luis@soto"):
+            with self.subTest(q=q):
+                lista = self.client.get(self.url, {"q": q})
+                self.assertEqual([p["id"] for p in lista.context["prospectos"]], [self.luis.pk])
+                kanban = self.client.get(self.url, {"q": q, "vista": "kanban"})
+                self.assertEqual(self.columna(kanban, "nuevo")["prospectos"], [])
+                self.assertEqual(len(self.columna(kanban, "reunion")["prospectos"]), 1)
+
+    def test_filtrar_por_etapa_en_la_lista(self):
+        respuesta = self.client.get(self.url, {"etapa": "reunion"})
+        self.assertEqual([p["id"] for p in respuesta.context["prospectos"]], [self.luis.pk])
+
+    def test_mover_guarda_el_cambio_y_se_ve_en_ambas_vistas(self):
+        respuesta = self.client.post(reverse("crm:prospecto_mover", args=[self.ana.pk]), {"etapa": "contactado"})
+        self.assertEqual(respuesta.status_code, 302)
+        self.ana.refresh_from_db()
+        self.assertEqual(self.ana.etapa, "contactado")
+        self.assertTrue(self.ana.interacciones.filter(titulo__contains="Contactado").exists())
+        kanban = self.client.get(self.url, {"vista": "kanban"})
+        self.assertEqual([p["id"] for p in self.columna(kanban, "contactado")["prospectos"]], [self.ana.pk])
+        lista = self.client.get(self.url, {"etapa": "contactado"})
+        self.assertEqual([p["id"] for p in lista.context["prospectos"]], [self.ana.pk])
+
+    def test_mover_por_fetch_responde_json(self):
+        respuesta = self.client.post(
+            reverse("crm:prospecto_mover", args=[self.ana.pk]), {"etapa": "ganado"}, headers={"X-Requested-With": "fetch"}
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json(), {"ok": True, "etapa": "ganado", "etapa_nombre": "Ganado"})
+
+    def test_etapa_invalida_no_cambia_nada(self):
+        respuesta = self.client.post(
+            reverse("crm:prospecto_mover", args=[self.ana.pk]), {"etapa": "inventada"}, headers={"X-Requested-With": "fetch"}
+        )
+        self.assertEqual(respuesta.status_code, 400)
+        self.ana.refresh_from_db()
+        self.assertEqual(self.ana.etapa, "nuevo")
+
+    def test_mover_exige_post_y_equipo(self):
+        url = reverse("crm:prospecto_mover", args=[self.ana.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.client.post(url, {"etapa": "ganado"}).status_code, 302)
+        self.ana.refresh_from_db()
+        self.assertEqual(self.ana.etapa, "nuevo")

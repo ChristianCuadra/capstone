@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -272,16 +272,32 @@ def _prospectos_filtrados(request):
     etapa = request.GET.get("etapa", "")
     if etapa in Prospecto.Etapa.values:
         lista = lista.filter(etapa=etapa)
-    return lista, etapa
+    q = request.GET.get("q", "").strip()
+    if q:
+        lista = lista.filter(Q(nombre__icontains=q) | Q(empresa__icontains=q) | Q(correo__icontains=q))
+    return lista, etapa, q
 
 
 @solo_equipo
 def prospectos(request):
-    lista, etapa = _prospectos_filtrados(request)
+    lista, etapa, q = _prospectos_filtrados(request)
+    vista = "kanban" if request.GET.get("vista") == "kanban" else "lista"
+    filas = [_fila_prospecto(p) for p in lista]
+    columnas = []
+    if vista == "kanban":
+        # El kanban muestra todas las etapas a la vez; el filtro por etapa solo aplica a la lista.
+        todos = [_fila_prospecto(p) for p in _prospectos_filtrados_sin_etapa(q)]
+        columnas = [
+            {"clave": clave, "nombre": nombre, "prospectos": [f for f in todos if f["etapa"] == clave]}
+            for clave, nombre in Prospecto.Etapa.choices
+        ]
     context = contexto_panel(
         request,
         "prospectos",
-        prospectos=[_fila_prospecto(p) for p in lista],
+        prospectos=filas,
+        columnas=columnas,
+        vista=vista,
+        q=q,
         etapas=Prospecto.Etapa.choices,
         etapa_activa=etapa,
         total=Prospecto.objects.count(),
@@ -289,9 +305,35 @@ def prospectos(request):
     return render(request, "crm/prospectos.html", context)
 
 
+def _prospectos_filtrados_sin_etapa(q):
+    lista = Prospecto.objects.select_related("plan_sugerido", "plan_interes", "responsable")
+    if q:
+        lista = lista.filter(Q(nombre__icontains=q) | Q(empresa__icontains=q) | Q(correo__icontains=q))
+    return lista
+
+
+@solo_equipo
+@require_POST
+def prospecto_mover(request, pk):
+    """Cambia la etapa de un prospecto (kanban: arrastrar y soltar o selector de cada tarjeta)."""
+    prospecto = get_object_or_404(Prospecto, pk=pk)
+    nueva = request.POST.get("etapa")
+    es_ajax = request.headers.get("X-Requested-With") == "fetch"
+    if nueva not in Prospecto.Etapa.values:
+        if es_ajax:
+            return JsonResponse({"ok": False, "error": "Etapa no válida."}, status=400)
+        messages.error(request, "Etapa no válida.")
+        return _volver(request, "crm:prospectos")
+    _mover_etapa(prospecto, nueva, request.user)
+    if es_ajax:
+        return JsonResponse({"ok": True, "etapa": prospecto.etapa, "etapa_nombre": prospecto.get_etapa_display()})
+    messages.success(request, f"«{prospecto.empresa}» movido a {prospecto.get_etapa_display()}.")
+    return _volver(request, "crm:prospectos")
+
+
 @solo_equipo
 def prospectos_exportar(request):
-    lista, etapa = _prospectos_filtrados(request)
+    lista, etapa, _q = _prospectos_filtrados(request)
     respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
     respuesta["Content-Disposition"] = f'attachment; filename="prospectos-{timezone.localdate().isoformat()}.csv"'
     respuesta.write("﻿")  # BOM para que Excel lea bien los acentos

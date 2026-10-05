@@ -10,16 +10,32 @@
     <p class="mt-1 text-sm">{{ total }} en total · llegan desde el formulario de cotización del sitio</p>
   </div>
   <div class="flex flex-wrap gap-2">
-    <a href="{% url 'crm:prospectos_exportar' %}{% if etapa_activa %}?etapa={{ etapa_activa }}{% endif %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Exportar CSV</a>
+    <a href="{% url 'crm:prospectos_exportar' %}?etapa={{ etapa_activa }}&q={{ q|urlencode }}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Exportar CSV</a>
     <a href="{% url 'crm:prospecto_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
   </div>
 </header>
 
+<div class="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+  <form method="get" role="search" class="flex w-full max-w-md gap-2">
+    <input type="hidden" name="vista" value="{{ vista }}">
+    {% if vista == 'lista' and etapa_activa %}<input type="hidden" name="etapa" value="{{ etapa_activa }}">{% endif %}
+    <label class="sr-only" for="buscar-prospecto">Buscar prospecto</label>
+    <input id="buscar-prospecto" type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre, empresa o correo" class="w-full rounded-full border border-gris-borde bg-white px-4 py-2 text-sm outline-none focus:border-malva focus:ring-2 focus:ring-lila/40">
+    <button type="submit" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Buscar</button>
+    {% if q %}<a href="?vista={{ vista }}" class="self-center text-sm underline">Limpiar</a>{% endif %}
+  </form>
+  <div class="flex gap-1 rounded-full bg-white p-1 text-sm ring-1 ring-inset ring-gris-borde" role="group" aria-label="Tipo de vista">
+    <a href="?vista=lista&q={{ q|urlencode }}" {% if vista == 'lista' %}aria-current="true"{% endif %} class="rounded-full px-4 py-1.5 {% if vista == 'lista' %}bg-vino font-semibold text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Lista</a>
+    <a href="?vista=kanban&q={{ q|urlencode }}" {% if vista == 'kanban' %}aria-current="true"{% endif %} class="rounded-full px-4 py-1.5 {% if vista == 'kanban' %}bg-vino font-semibold text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Kanban</a>
+  </div>
+</div>
+
+{% if vista == 'lista' %}
 <nav class="relative mt-6 overflow-x-auto" aria-label="Filtrar por etapa">
   <ul class="flex w-max gap-1.5 text-sm">
-    <li><a href="{% url 'crm:prospectos' %}" class="block rounded-full px-3.5 py-1.5 {% if not etapa_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">Todas</a></li>
+    <li><a href="?vista=lista&q={{ q|urlencode }}" class="block rounded-full px-3.5 py-1.5 {% if not etapa_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">Todas</a></li>
     {% for clave, nombre in etapas %}
-    <li><a href="?etapa={{ clave }}" class="block rounded-full px-3.5 py-1.5 {% if clave == etapa_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ nombre }}</a></li>
+    <li><a href="?vista=lista&etapa={{ clave }}&q={{ q|urlencode }}" class="block rounded-full px-3.5 py-1.5 {% if clave == etapa_activa %}bg-vino font-semibold text-white{% else %}bg-white text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave{% endif %}">{{ nombre }}</a></li>
     {% endfor %}
   </ul>
 </nav>
@@ -27,7 +43,7 @@
 <section class="mt-5 rounded-2xl border border-gris-borde bg-white">
   {% if not prospectos %}
   <p class="px-5 py-14 text-center text-sm">
-    {% if etapa_activa %}No hay prospectos en esta etapa.{% else %}Aún no hay prospectos. Prueba el formulario en <a href="{% url 'website:cotizacion' %}" target="_blank" class="font-semibold text-vino underline decoration-rosa underline-offset-2">/cotizacion/</a> y aparecerá aquí.{% endif %}
+    {% if q %}No hay prospectos que coincidan con «{{ q }}».{% elif etapa_activa %}No hay prospectos en esta etapa.{% else %}Aún no hay prospectos. Prueba el formulario en <a href="{% url 'website:cotizacion' %}" target="_blank" class="font-semibold text-vino underline decoration-rosa underline-offset-2">/cotizacion/</a> y aparecerá aquí.{% endif %}
   </p>
   {% else %}
   <div class="relative overflow-x-auto">
@@ -61,4 +77,73 @@
   </div>
   {% endif %}
 </section>
+
+{% else %}
+<form id="kanban-csrf" class="hidden">{% csrf_token %}</form>
+<p class="mt-5 text-sm">Arrastra una tarjeta a otra columna para cambiar su etapa. También puedes usar el selector «Mover a» de cada tarjeta.</p>
+<p id="kanban-aviso" role="status" class="sr-only"></p>
+<section class="mt-3 overflow-x-auto pb-4" aria-label="Tablero de prospectos por etapa">
+  <div class="flex w-max gap-3">
+    {% for col in columnas %}
+    <div class="w-72 shrink-0 rounded-2xl border border-gris-borde bg-fondo-suave/60" data-columna="{{ col.clave }}">
+      <header class="flex items-center justify-between px-4 pt-3">
+        <h2 class="text-sm font-semibold text-vino">{{ col.nombre }}</h2>
+        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-vino ring-1 ring-inset ring-gris-borde" data-contador>{{ col.prospectos|length }}</span>
+      </header>
+      <ul class="min-h-24 space-y-2 p-3" data-zona="{{ col.clave }}">
+        {% for p in col.prospectos %}
+        <li draggable="true" data-id="{{ p.id }}" class="cursor-grab rounded-xl border border-gris-borde bg-white p-3 text-sm shadow-sm active:cursor-grabbing">
+          <a href="{% url 'crm:prospecto_detalle' p.id %}" class="font-semibold text-vino hover:underline">{{ p.empresa }}</a>
+          <span class="block text-xs">{{ p.nombre }}</span>
+          <span class="mt-1 block text-xs">{{ p.plan|default:"Sin plan" }}{% if p.valor_mensual %} · {{ p.valor_mensual|clp }}/mes{% endif %}</span>
+          <span class="block text-xs">{{ p.responsable|default:"Sin asignar" }}</span>
+          <form method="post" action="{% url 'crm:prospecto_mover' p.id %}" class="mt-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label class="sr-only" for="mover-{{ p.id }}">Mover {{ p.empresa }} a</label>
+            <select id="mover-{{ p.id }}" name="etapa" onchange="this.form.submit()" class="w-full rounded-lg border border-gris-borde bg-white px-2 py-1 text-xs">
+              <option value="">Mover a…</option>
+              {% for clave, nombre in etapas %}{% if clave != col.clave %}<option value="{{ clave }}">{{ nombre }}</option>{% endif %}{% endfor %}
+            </select>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+<script>
+(function () {
+  var token = document.querySelector('#kanban-csrf [name=csrfmiddlewaretoken]').value;
+  var aviso = document.getElementById('kanban-aviso');
+  var arrastrado = null;
+  var base = "{% url 'crm:prospectos' %}";
+  function contar() {
+    document.querySelectorAll('[data-columna]').forEach(function (c) {
+      c.querySelector('[data-contador]').textContent = c.querySelectorAll('[data-id]').length;
+    });
+  }
+  document.querySelectorAll('[data-id]').forEach(function (t) {
+    t.addEventListener('dragstart', function (e) { arrastrado = t; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.dataset.id); t.classList.add('opacity-50'); });
+    t.addEventListener('dragend', function () { t.classList.remove('opacity-50'); });
+  });
+  document.querySelectorAll('[data-zona]').forEach(function (zona) {
+    zona.addEventListener('dragover', function (e) { e.preventDefault(); zona.classList.add('bg-lila/20'); });
+    zona.addEventListener('dragleave', function () { zona.classList.remove('bg-lila/20'); });
+    zona.addEventListener('drop', function (e) {
+      e.preventDefault(); zona.classList.remove('bg-lila/20');
+      var tarjeta = arrastrado; if (!tarjeta || zona.contains(tarjeta)) return;
+      var origen = tarjeta.parentElement;
+      zona.appendChild(tarjeta); contar();
+      var datos = new FormData(); datos.append('etapa', zona.dataset.zona);
+      fetch(base + tarjeta.dataset.id + '/mover/', { method: 'POST', body: datos, headers: { 'X-CSRFToken': token, 'X-Requested-With': 'fetch' } })
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (r) { aviso.textContent = 'Movido a ' + r.etapa_nombre; })
+        .catch(function () { origen.appendChild(tarjeta); contar(); aviso.textContent = 'No se pudo mover el prospecto.'; alert('No se pudo mover el prospecto. Intenta de nuevo.'); });
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}
