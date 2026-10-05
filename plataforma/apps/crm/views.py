@@ -422,6 +422,8 @@ def prospecto_detalle(request, pk):
         etapas=Prospecto.Etapa.choices,
         tipos_interaccion=[t for t in Interaccion.Tipo.choices if t[0] != Interaccion.Tipo.SISTEMA],
         ia_configurada=bool(settings.AI_API_KEY),
+        planes_contratables=Plan.objects.filter(activo=True).order_by("orden", "precio_mensual"),
+        plan_por_defecto=prospecto.plan_interes_id or prospecto.plan_sugerido_id,
     )
     return render(request, "crm/prospecto_detalle.html", context)
 
@@ -491,21 +493,34 @@ def _accion_prospecto(request, prospecto):
         if prospecto.cliente:
             messages.info(request, "Este prospecto ya es cliente.")
         else:
+            plan = Plan.objects.filter(pk=request.POST.get("plan") or None, activo=True).first()
+            if plan is None:
+                messages.error(request, "Elige el plan contratado para convertir al prospecto en cliente.")
+                return
+            inicio_contrato = None
+            if request.POST.get("fecha_inicio_contrato"):
+                try:
+                    inicio_contrato = date.fromisoformat(request.POST["fecha_inicio_contrato"])
+                except ValueError:
+                    messages.error(request, "La fecha de inicio del contrato no es válida.")
+                    return
             objetivos = prospecto.objetivos if isinstance(prospecto.objetivos, list) else []
-            prospecto.cliente = Cliente.objects.create(
-                nombre=prospecto.empresa,
-                rut=prospecto.rut,
-                rubro=prospecto.rubro,
-                region=prospecto.region,
-                contacto_nombre=prospecto.nombre,
-                contacto_correo=prospecto.correo,
-                contacto_telefono=prospecto.telefono,
-                plan=prospecto.plan_interes or prospecto.plan_sugerido,
-                objetivos="\n".join(str(o) for o in objetivos),
-            )
-            prospecto.save(update_fields=["cliente", "actualizado_en"])
-            _mover_etapa(prospecto, Prospecto.Etapa.GANADO, usuario)
-            _registrar(prospecto, usuario, "Convertido en cliente")
+            with transaction.atomic():
+                prospecto.cliente = Cliente.objects.create(
+                    nombre=prospecto.empresa,
+                    rut=prospecto.rut,
+                    rubro=prospecto.rubro,
+                    region=prospecto.region,
+                    contacto_nombre=prospecto.nombre,
+                    contacto_correo=prospecto.correo,
+                    contacto_telefono=prospecto.telefono,
+                    plan=plan,
+                    fecha_inicio_contrato=inicio_contrato,
+                    objetivos="\n".join(str(o) for o in objetivos),
+                )
+                prospecto.save(update_fields=["cliente", "actualizado_en"])
+                _mover_etapa(prospecto, Prospecto.Etapa.GANADO, usuario)
+                _registrar(prospecto, usuario, f"Convertido en cliente con el plan {plan.nombre}")
             messages.success(request, f"{prospecto.empresa} ahora es cliente.")
 
 
@@ -724,7 +739,7 @@ def cotizacion_imprimir(request, pk):
 
 @solo_equipo
 def clientes(request):
-    lista = clientes_visibles(request.user).select_related("prospecto").order_by("-creado_en")
+    lista = clientes_visibles(request.user).select_related("prospecto", "plan").order_by("-creado_en")
     return render(request, "crm/clientes.html", contexto_panel(request, "clientes", clientes=lista))
 
 

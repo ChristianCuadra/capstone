@@ -34,8 +34,15 @@
     {% if prospecto.cliente %}
     <a href="{% url 'crm:clientes' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Ver cliente</a>
     {% else %}
-    <form method="post" onsubmit="return confirm('¿Convertir {{ prospecto.empresa|escapejs }} en cliente? Quedará en etapa Cerrado ganado.')">
+    <form method="post" class="flex flex-wrap items-center gap-2 rounded-2xl border border-gris-borde bg-white p-2" onsubmit="return confirm('¿Convertir {{ prospecto.empresa|escapejs }} en cliente? Quedará en etapa Cerrado ganado.')">
       {% csrf_token %}<input type="hidden" name="accion" value="convertir_cliente">
+      <label class="sr-only" for="conv-plan">Plan contratado</label>
+      <select id="conv-plan" name="plan" required class="rounded-full border border-gris-borde bg-white px-3 py-2 text-sm">
+        <option value="">Plan contratado…</option>
+        {% for p in planes_contratables %}<option value="{{ p.pk }}"{% if p.pk == plan_por_defecto %} selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
+      </select>
+      <label class="sr-only" for="conv-inicio">Inicio del contrato (opcional)</label>
+      <input id="conv-inicio" type="date" name="fecha_inicio_contrato" title="Inicio del contrato (opcional)" class="rounded-full border border-gris-borde bg-white px-3 py-2 text-sm">
       <button type="submit" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Convertir en cliente</button>
     </form>
     {% endif %}

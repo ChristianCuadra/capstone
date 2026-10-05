@@ -19,7 +19,7 @@
     <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
       <div>
         <p class="font-semibold text-vino">{{ c.nombre }}</p>
-        <p class="text-xs">Cliente desde {{ c.creado_en|date:"j M Y" }}{% if not c.activo %} · inactivo{% endif %}</p>
+        <p class="text-xs">{% if c.plan %}Plan {{ c.plan.nombre }} · {% endif %}Cliente desde {{ c.creado_en|date:"j M Y" }}{% if not c.activo %} · inactivo{% endif %}</p>
       </div>
       <div class="flex gap-2 text-sm">
         {% if c.prospecto %}<a href="{% url 'crm:prospecto_detalle' c.prospecto.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Ver ficha comercial</a>{% endif %}

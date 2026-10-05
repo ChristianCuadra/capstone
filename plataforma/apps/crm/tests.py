@@ -66,20 +66,56 @@ class PanelTests(TestCase):
         llamadas = self.client.get(url, {"tipo": "llamada"}).context["interacciones"]
         self.assertEqual([i.titulo for i in llamadas], ["Primera llamada"])
 
-        self.client.post(url, {"accion": "convertir_cliente"})
+        self.client.post(url, {"accion": "convertir_cliente", "plan": Plan.objects.get(slug="posicionamiento").pk})
         p.refresh_from_db()
         self.assertEqual(p.cliente.nombre, "Café Prueba")
         self.assertEqual(p.etapa, "ganado")
 
     def test_convertir_en_cliente_copia_los_datos_del_prospecto(self):
         p = crear_prospecto(rut="12.345.678-5", telefono="+56 9 1111 2222", plan_interes=Plan.objects.get(slug="crecimiento"))
-        self.client.post(reverse("crm:prospecto_detalle", args=[p.pk]), {"accion": "convertir_cliente"})
+        self.client.post(reverse("crm:prospecto_detalle", args=[p.pk]), {"accion": "convertir_cliente", "plan": Plan.objects.get(slug="crecimiento").pk, "fecha_inicio_contrato": "2026-11-02"})
         p.refresh_from_db()
         c = p.cliente
+        self.assertEqual(str(c.fecha_inicio_contrato), "2026-11-02")
         self.assertEqual((c.rut, c.rubro, c.region), ("12.345.678-5", p.rubro, p.region))
         self.assertEqual((c.contacto_nombre, c.contacto_correo, c.contacto_telefono), ("Ana Pérez", "ana@cafeprueba.cl", "+56 9 1111 2222"))
         self.assertEqual(c.plan.slug, "crecimiento")
         self.assertEqual(c.objetivos, "Vender más online")
+
+    def test_convertir_exige_plan_y_no_cambia_nada_si_falta(self):
+        p = crear_prospecto()
+        url = reverse("crm:prospecto_detalle", args=[p.pk])
+        for datos in ({"accion": "convertir_cliente"}, {"accion": "convertir_cliente", "plan": "9999"}):
+            with self.subTest(datos=datos):
+                respuesta = self.client.post(url, datos, follow=True)
+                self.assertContains(respuesta, "Elige el plan contratado")
+                p.refresh_from_db()
+                self.assertIsNone(p.cliente)
+                self.assertEqual(p.etapa, "nuevo")
+        respuesta = self.client.post(url, {"accion": "convertir_cliente", "plan": Plan.objects.get(slug="presencia").pk, "fecha_inicio_contrato": "31-31-2026"}, follow=True)
+        self.assertContains(respuesta, "fecha de inicio del contrato no es válida")
+        p.refresh_from_db()
+        self.assertIsNone(p.cliente)
+
+    def test_convertir_deja_cliente_con_plan_y_prospecto_cerrado_ganado(self):
+        p = crear_prospecto()
+        url = reverse("crm:prospecto_detalle", args=[p.pk])
+        self.client.post(url, {"accion": "convertir_cliente", "plan": Plan.objects.get(slug="expansion").pk})
+        p.refresh_from_db()
+        self.assertEqual(p.cliente.plan.slug, "expansion")
+        self.assertEqual(p.etapa, "ganado")
+        self.assertTrue(p.interacciones.filter(titulo__contains="plan Expansión").exists())
+        # una segunda conversión no crea otro cliente
+        self.client.post(url, {"accion": "convertir_cliente", "plan": Plan.objects.get(slug="presencia").pk})
+        p.refresh_from_db()
+        self.assertEqual(p.cliente.plan.slug, "expansion")
+        self.assertEqual(type(p.cliente).objects.count(), 1)
+
+    def test_formulario_de_conversion_ofrece_los_planes_y_preselecciona_el_de_interes(self):
+        p = crear_prospecto(plan_interes=Plan.objects.get(slug="crecimiento"))
+        respuesta = self.client.get(reverse("crm:prospecto_detalle", args=[p.pk]))
+        self.assertContains(respuesta, 'id="conv-plan"')
+        self.assertContains(respuesta, f'<option value="{Plan.objects.get(slug="crecimiento").pk}" selected>')
 
     def test_diagnostico_sin_ia_configurada_avisa(self):
         p = crear_prospecto()
