@@ -25,8 +25,8 @@ from apps.accounts.forms import UsuarioForm
 from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
-from apps.clients.forms import ClienteFichaForm, DocumentoClienteForm
-from apps.clients.models import Cliente, DocumentoCliente
+from apps.clients.forms import ClienteFichaForm, DocumentoClienteForm, KPIForm, MedicionForm
+from apps.clients.models import Cliente, DocumentoCliente, KPICliente, MedicionKPI
 from apps.core.access import clientes_visibles, obtener_cliente_visible, puede_aprobar
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
@@ -791,6 +791,7 @@ def cliente_ficha(request, pk):
         request, "clientes",
         cliente=cliente, form=form, puede_editar=puede_editar,
         documentos=_documentos_del_cliente(cliente), doc_form=DocumentoClienteForm(),
+        kpis=_kpis_del_cliente(cliente), kpi_form=KPIForm(cliente=cliente), medicion_form=MedicionForm(initial={"fecha": timezone.localdate()}),
     ))
 
 
@@ -812,6 +813,78 @@ def cliente_documento_subir(request, pk):
         for errores in form.errors.values():
             for error in errores:
                 messages.error(request, error)
+    return redirect("crm:cliente_ficha", pk=cliente.pk)
+
+
+def _kpis_del_cliente(cliente):
+    return KPICliente.all_objects.filter(cliente=cliente)
+
+
+def _errores_como_mensajes(request, form):
+    for errores in form.errors.values():
+        for error in errores:
+            messages.error(request, error)
+
+
+@solo_equipo
+@require_POST
+def cliente_kpi_crear(request, pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not puede_aprobar(request.user):
+        messages.error(request, "Solo la administradora puede agregar KPIs a la ficha.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    form = KPIForm(request.POST, cliente=cliente)
+    if form.is_valid():
+        kpi = form.save(commit=False)
+        kpi.cliente = cliente
+        kpi.save()
+        RegistroAuditoria.registrar(
+            usuario=request.user, accion=RegistroAuditoria.Accion.CREAR, entidad="kpi",
+            entidad_id=kpi.pk, detalle=f"{kpi.get_indicador_display()} de {cliente.nombre}",
+        )
+        messages.success(request, f"KPI «{kpi.get_indicador_display()}» agregado.")
+    else:
+        _errores_como_mensajes(request, form)
+    return redirect("crm:cliente_ficha", pk=cliente.pk)
+
+
+@solo_equipo
+@require_POST
+def cliente_kpi_medicion(request, pk, kpi_pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not puede_aprobar(request.user):
+        messages.error(request, "Solo la administradora puede registrar mediciones.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    kpi = get_object_or_404(_kpis_del_cliente(cliente), pk=kpi_pk)
+    form = MedicionForm(request.POST)
+    if form.is_valid():
+        medicion = form.save(commit=False)
+        medicion.kpi = kpi
+        medicion.cliente = cliente
+        medicion.fuente = MedicionKPI.Fuente.MANUAL
+        medicion.registrado_por = request.user
+        medicion.save()
+        messages.success(request, f"Medición de «{kpi.get_indicador_display()}» registrada.")
+    else:
+        _errores_como_mensajes(request, form)
+    return redirect("crm:cliente_ficha", pk=cliente.pk)
+
+
+@solo_equipo
+@require_POST
+def cliente_kpi_eliminar(request, pk, kpi_pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not puede_aprobar(request.user):
+        messages.error(request, "Solo la administradora puede quitar KPIs de la ficha.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    kpi = get_object_or_404(_kpis_del_cliente(cliente), pk=kpi_pk)
+    nombre = kpi.get_indicador_display()
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.ELIMINAR, entidad="kpi",
+        entidad_id=kpi.pk, detalle=f"{nombre} de {cliente.nombre}",
+    )
+    kpi.delete()
+    messages.success(request, f"KPI «{nombre}» eliminado junto con su historial.")
     return redirect("crm:cliente_ficha", pk=cliente.pk)
 
 

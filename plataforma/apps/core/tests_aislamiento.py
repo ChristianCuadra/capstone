@@ -296,3 +296,54 @@ class CapaDeDatosTests(BaseAislamiento):
         self.client.force_login(self.admin)
         self.client.get(reverse("crm:clientes"))
         self.assertIsNone(get_allowed_client_ids())
+
+
+class AislamientoDeKPIsTests(BaseAislamiento):
+    """Los KPIs y sus mediciones también quedan aislados por cliente."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.clients.models import KPICliente, MedicionKPI
+
+        self.kpi_a = KPICliente.all_objects.create(cliente=self.a, indicador="seguidores", valor_inicial=100, meta=200)
+        self.kpi_b = KPICliente.all_objects.create(cliente=self.b, indicador="seguidores", valor_inicial=7777, meta=9999)
+        MedicionKPI.all_objects.create(cliente=self.b, kpi=self.kpi_b, fecha="2026-10-01", valor=8888)
+
+    def test_ficha_propia_no_muestra_kpis_del_otro_cliente(self):
+        self.client.force_login(self.colab)
+        r = self.client.get(reverse("crm:cliente_ficha", args=[self.a.pk]))
+        self.assertContains(r, "Seguidores")
+        for secreto in ("7777", "9999", "8888"):
+            self.assertNotContains(r, secreto)
+
+    def test_no_se_mide_ni_se_elimina_un_kpi_ajeno(self):
+        from apps.clients.models import KPICliente, MedicionKPI
+
+        self.client.force_login(self.admin)
+        antes = MedicionKPI.all_objects.count()
+        # KPI de B pedido a través de la URL del cliente A: no existe para A
+        r1 = self.client.post(reverse("crm:cliente_kpi_medicion", args=[self.a.pk, self.kpi_b.pk]), {"fecha": "2026-10-02", "valor": "1"})
+        r2 = self.client.post(reverse("crm:cliente_kpi_eliminar", args=[self.a.pk, self.kpi_b.pk]))
+        self.assertEqual((r1.status_code, r2.status_code), (404, 404))
+        self.assertEqual(MedicionKPI.all_objects.count(), antes)
+        self.assertTrue(KPICliente.all_objects.filter(pk=self.kpi_b.pk).exists())
+
+    def test_colaboradora_no_toca_kpis_de_cliente_no_asignado(self):
+        self.client.force_login(self.colab)
+        for nombre, args in (("crm:cliente_kpi_crear", [self.b.pk]), ("crm:cliente_kpi_medicion", [self.b.pk, self.kpi_b.pk]), ("crm:cliente_kpi_eliminar", [self.b.pk, self.kpi_b.pk])):
+            with self.subTest(vista=nombre):
+                self.assertEqual(self.client.post(reverse(nombre, args=args), {}).status_code, 404)
+
+    def test_el_manager_filtra_kpis_y_mediciones_por_cliente(self):
+        from apps.clients.models import KPICliente, MedicionKPI
+
+        self._restringir({self.a.pk})
+        self.assertEqual(set(KPICliente.objects.values_list("cliente_id", flat=True)), {self.a.pk})
+        self.assertEqual(MedicionKPI.objects.count(), 0)
+
+    def test_no_se_guarda_un_kpi_en_un_cliente_ajeno(self):
+        from apps.clients.models import KPICliente
+
+        self._restringir({self.a.pk})
+        with self.assertRaises(PermissionDenied):
+            KPICliente(cliente=self.b, indicador="alcance", valor_inicial=1, meta=2).save()

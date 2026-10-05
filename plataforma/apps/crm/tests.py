@@ -580,3 +580,147 @@ class FichaClienteTests(TestCase):
         doc = DocumentoCliente.all_objects.get(cliente=self.a)
         self.client.post(reverse("crm:cliente_documento_eliminar", args=[self.a.pk, doc.pk]))
         self.assertEqual(DocumentoCliente.all_objects.count(), 0)
+
+
+class KPIsFichaClienteTests(TestCase):
+    """PC-CLI-02: KPIs del cliente con valor inicial, meta, mediciones con historial y % de cumplimiento."""
+
+    def setUp(self):
+        from apps.clients.models import Cliente
+
+        User = get_user_model()
+        self.a = Cliente.objects.create(nombre="Panadería A")
+        self.b = Cliente.objects.create(nombre="Clínica B")
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+        self.colab.clientes_asignados.set([self.a])
+
+    def _crear_kpi(self, cliente=None, indicador="seguidores", inicial="800", meta="1200"):
+        self.client.force_login(self.admin)
+        return self.client.post(
+            reverse("crm:cliente_kpi_crear", args=[(cliente or self.a).pk]),
+            {"indicador": indicador, "valor_inicial": inicial, "meta": meta},
+        )
+
+    def _kpi(self, cliente=None, indicador="seguidores"):
+        from apps.clients.models import KPICliente
+
+        return KPICliente.all_objects.get(cliente=cliente or self.a, indicador=indicador)
+
+    def _medir(self, kpi, valor, fecha=None, usuario=None):
+        self.client.force_login(usuario or self.admin)
+        return self.client.post(
+            reverse("crm:cliente_kpi_medicion", args=[kpi.cliente_id, kpi.pk]),
+            {"fecha": (fecha or timezone.localdate()).isoformat(), "valor": valor},
+        )
+
+    def test_ficha_parte_sin_kpis_ni_datos_de_ejemplo(self):
+        from apps.clients.models import KPICliente
+
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("crm:cliente_ficha", args=[self.a.pk]))
+        self.assertContains(r, "Aún no hay KPIs definidos")
+        self.assertEqual(KPICliente.all_objects.count(), 0)
+
+    def test_administradora_crea_kpi_y_queda_en_auditoria(self):
+        from apps.core.models import RegistroAuditoria
+
+        self._crear_kpi()
+        kpi = self._kpi()
+        self.assertEqual((kpi.valor_inicial, kpi.meta), (800, 1200))
+        self.assertTrue(RegistroAuditoria.objects.filter(entidad="kpi", entidad_id=str(kpi.pk)).exists())
+
+    def test_meta_debe_ser_mayor_que_el_valor_inicial(self):
+        from apps.clients.models import KPICliente
+
+        for inicial, meta in (("800", "800"), ("800", "500"), ("-1", "100")):
+            with self.subTest(inicial=inicial, meta=meta):
+                self._crear_kpi(inicial=inicial, meta=meta)
+        self.assertEqual(KPICliente.all_objects.count(), 0)
+
+    def test_no_se_repite_el_indicador_por_cliente(self):
+        from apps.clients.models import KPICliente
+
+        self._crear_kpi()
+        self._crear_kpi(inicial="10", meta="20")
+        self.assertEqual(KPICliente.all_objects.filter(cliente=self.a).count(), 1)
+        self._crear_kpi(cliente=self.b)  # otro cliente sí puede tener el mismo indicador
+        self.assertEqual(KPICliente.all_objects.count(), 2)
+
+    def test_indicador_fuera_de_la_lista_se_rechaza(self):
+        from apps.clients.models import KPICliente
+
+        self._crear_kpi(indicador="cpc")
+        self.assertEqual(KPICliente.all_objects.count(), 0)
+
+    def test_porcentaje_de_cumplimiento_y_valor_actual(self):
+        self._crear_kpi()
+        kpi = self._kpi()
+        self.assertIsNone(kpi.valor_actual)
+        self.assertIsNone(kpi.porcentaje_cumplimiento)
+        self._medir(kpi, "1000")
+        kpi = self._kpi()
+        self.assertEqual(kpi.valor_actual, 1000)
+        self.assertEqual(float(kpi.porcentaje_cumplimiento), 50.0)
+
+    def test_porcentaje_supera_100_y_nunca_es_negativo(self):
+        self._crear_kpi()
+        self._medir(self._kpi(), "1500")
+        self.assertEqual(float(self._kpi().porcentaje_cumplimiento), 175.0)
+        self._medir(self._kpi(), "500", fecha=timezone.localdate() + timezone.timedelta(days=0))
+        self.assertEqual(float(self._kpi().porcentaje_cumplimiento), 0.0)
+
+    def test_el_historial_se_conserva_y_el_actual_es_la_ultima_medicion(self):
+        self._crear_kpi()
+        hoy = timezone.localdate()
+        self._medir(self._kpi(), "900", fecha=hoy - timezone.timedelta(days=40))
+        self._medir(self._kpi(), "1100", fecha=hoy)
+        kpi = self._kpi()
+        self.assertEqual(kpi.mediciones.count(), 2)
+        self.assertEqual(kpi.valor_actual, 1100)
+
+    def test_medicion_con_fecha_futura_o_valor_negativo_se_rechaza(self):
+        self._crear_kpi()
+        kpi = self._kpi()
+        self._medir(kpi, "100", fecha=timezone.localdate() + timezone.timedelta(days=3))
+        self._medir(kpi, "-5")
+        self.assertEqual(self._kpi().mediciones.count(), 0)
+
+    def test_aviso_de_dato_desactualizado(self):
+        self._crear_kpi()
+        kpi = self._kpi()
+        self.assertTrue(kpi.desactualizado)  # sin mediciones
+        self._medir(kpi, "900", fecha=timezone.localdate() - timezone.timedelta(days=31))
+        self.assertTrue(self._kpi().desactualizado)
+        self._medir(self._kpi(), "950")
+        self.assertFalse(self._kpi().desactualizado)
+
+    def test_ficha_muestra_el_kpi_con_su_avance(self):
+        self._crear_kpi()
+        self._medir(self._kpi(), "1000")
+        r = self.client.get(reverse("crm:cliente_ficha", args=[self.a.pk]))
+        self.assertContains(r, "Seguidores")
+        self.assertContains(r, "50% de la meta")
+
+    def test_colaboradora_ve_pero_no_crea_ni_mide_ni_elimina(self):
+        from apps.clients.models import KPICliente
+
+        self._crear_kpi()
+        kpi = self._kpi()
+        self.client.force_login(self.colab)
+        self.assertContains(self.client.get(reverse("crm:cliente_ficha", args=[self.a.pk])), "Seguidores")
+        self.client.post(reverse("crm:cliente_kpi_crear", args=[self.a.pk]), {"indicador": "alcance", "valor_inicial": "1", "meta": "2"})
+        self._medir(kpi, "1000", usuario=self.colab)
+        self.client.post(reverse("crm:cliente_kpi_eliminar", args=[self.a.pk, kpi.pk]))
+        self.assertEqual(KPICliente.all_objects.count(), 1)
+        self.assertEqual(self._kpi().mediciones.count(), 0)
+
+    def test_eliminar_kpi_borra_su_historial(self):
+        from apps.clients.models import KPICliente, MedicionKPI
+
+        self._crear_kpi()
+        self._medir(self._kpi(), "900")
+        self.client.force_login(self.admin)
+        self.client.post(reverse("crm:cliente_kpi_eliminar", args=[self.a.pk, self._kpi().pk]))
+        self.assertEqual(KPICliente.all_objects.count(), 0)
+        self.assertEqual(MedicionKPI.all_objects.count(), 0)
