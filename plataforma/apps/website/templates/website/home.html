@@ -77,7 +77,7 @@
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Servicios</p>
     <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Lo que hacemos por tu marca</h2>
-    <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas. Precios con IVA incluido.</p>
+    <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas. Valores netos, no incluyen IVA.</p>
 
     <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {% for servicio in servicios %}
@@ -87,15 +87,15 @@
         {% if servicio.descripcion %}<p class="mt-3 text-sm leading-relaxed">{{ servicio.descripcion }}</p>{% endif %}
         <div class="flex-1"></div>
         <p class="mt-6 border-t border-gris-borde pt-4 text-sm text-vino">
-          <strong class="text-base">{{ servicio.precio|con_iva|clp }}</strong>{{ servicio.sufijo_precio }}
+          <strong class="text-base">{{ servicio.precio|clp }}</strong>{{ servicio.sufijo_precio }}
         </p>
       </article>
       {% endfor %}
       {% if plan_desde %}
       <a href="{% url 'website:planes' %}" class="group flex flex-col justify-between rounded-2xl bg-vino p-6 text-lila transition hover:bg-vino-oscuro">
         <span class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
-        <span class="mt-3 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|con_iva|clp }} al mes</span>
-        <span class="mt-1 text-xs text-lila">IVA incluido</span>
+        <span class="mt-3 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
+        <span class="mt-1 text-xs text-lila">+ IVA</span>
         <span class="mt-6 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
       </a>
       {% endif %}

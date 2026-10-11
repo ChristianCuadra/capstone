@@ -52,7 +52,7 @@
           {% if prospecto_enviado.plan_sugerido %}
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">Según lo que nos contaste</p>
           <p class="mt-2 text-vino">El plan que mejor calza con tu marca es <strong class="font-serif text-2xl">{{ prospecto_enviado.plan_sugerido.nombre }}</strong></p>
-          <p class="mt-1 text-sm">{{ prospecto_enviado.plan_sugerido.precio_mensual|con_iva|clp }}/mes IVA incluido · {{ prospecto_enviado.plan_sugerido.descripcion }}</p>
+          <p class="mt-1 text-sm">{{ prospecto_enviado.plan_sugerido.precio_mensual|clp }}/mes + IVA · {{ prospecto_enviado.plan_sugerido.descripcion }}</p>
           {% else %}
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">Según lo que nos contaste</p>
           <p class="mt-2 text-vino">Te conviene partir con <strong>servicios sueltos</strong> y sumar un plan mensual cuando tu marca lo necesite.</p>
@@ -73,7 +73,7 @@
         {% if plan_interes %}
         <input type="hidden" name="plan" value="{{ plan_interes.slug }}">
         <p class="flex flex-wrap items-center gap-2 rounded-2xl bg-fondo-suave px-4 py-3 text-sm text-vino">
-          Plan de interés: <strong>{{ plan_interes.nombre }}</strong> · {{ plan_interes.precio_mensual|con_iva|clp }}/mes IVA incluido
+          Plan de interés: <strong>{{ plan_interes.nombre }}</strong> · {{ plan_interes.precio_mensual|clp }}/mes + IVA
           <a href="{% url 'website:planes' %}" class="ml-auto text-xs font-semibold underline decoration-rosa underline-offset-2">Cambiar</a>
         </p>
         {% endif %}

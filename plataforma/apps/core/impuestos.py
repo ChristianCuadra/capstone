@@ -1,7 +1,7 @@
 """IVA de Chile en un solo lugar.
 
-El catálogo (planes y servicios) guarda el precio NETO. El sitio público muestra el precio final
-con IVA incluido y la cotización desglosa neto + IVA = total, con el mismo cálculo.
+El catálogo (planes y servicios) guarda el precio NETO, y el sitio público lo muestra neto («+ IVA»).
+La cotización desglosa neto + IVA = total, y el panel muestra el total con IVA como referencia.
 """
 
 TASA_IVA = 0.19

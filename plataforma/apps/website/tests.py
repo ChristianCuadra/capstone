@@ -56,11 +56,11 @@ class SitioPublicoTests(TestCase):
         respuesta = self.client.get(reverse("website:planes"))
         nombres = [p["nombre"] for p in respuesta.context["planes"]]
         self.assertEqual(nombres, ["Presencia", "Posicionamiento", "Crecimiento", "Expansión"])
-        # El catálogo guarda el neto ($400.000); el sitio muestra el precio final con IVA incluido.
-        self.assertContains(respuesta, "Primer mes $476.000")
-        self.assertContains(respuesta, "$178.500")  # Presencia: $150.000 + IVA
-        self.assertNotContains(respuesta, "$150.000<span")
-        self.assertContains(respuesta, "IVA incluido")
+        # Decisión del 11 oct 2026: el sitio muestra los precios netos y avisa que no incluyen IVA.
+        self.assertContains(respuesta, "Primer mes $400.000")
+        self.assertContains(respuesta, "$150.000<span")
+        self.assertNotContains(respuesta, "$178.500")
+        self.assertContains(respuesta, "no incluyen IVA")
 
     def test_plan_oculto_no_aparece_en_el_sitio(self):
         Plan.objects.filter(slug="expansion").update(visible_en_sitio=False)
@@ -213,14 +213,15 @@ class AsesoriaGratuitaHomeTests(TestCase):
         self.assertContains(respuesta, 'id="asesoria-mas-info"')
 
 
-class PreciosConIvaTests(TestCase):
-    """Decisión del 11 oct 2026: el sitio muestra precios con IVA incluido; el catálogo guarda el neto."""
+class PreciosIvaTests(TestCase):
+    """Decisión del 11 oct 2026: el sitio muestra precios netos («+ IVA»); la cotización suma el IVA."""
 
-    def test_home_muestra_servicios_y_plan_desde_con_iva(self):
+    def test_home_muestra_precios_netos_mas_iva(self):
         respuesta = self.client.get(reverse("website:home"))
-        self.assertContains(respuesta, "desde $178.500 al mes")
-        self.assertContains(respuesta, "$41.650")  # Asesorías: $35.000 + IVA
-        self.assertContains(respuesta, "IVA incluido")
+        self.assertContains(respuesta, "desde $150.000 al mes")
+        self.assertContains(respuesta, "$35.000")  # Asesorías, neto
+        self.assertContains(respuesta, "no incluyen IVA")
+        self.assertNotContains(respuesta, "IVA incluido")
 
     def test_filtro_con_iva_redondea_al_peso(self):
         from apps.core.impuestos import con_iva, iva_de

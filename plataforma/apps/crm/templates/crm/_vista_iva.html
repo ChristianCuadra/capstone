@@ -1,4 +1,4 @@
-{# Bajo cada precio del catálogo muestra el valor final con IVA que verá el visitante en el sitio. #}
+{# Bajo cada precio del catálogo muestra, como referencia, el total con IVA que tendrá en la cotización. #}
 {# El cálculo replica apps.core.impuestos.con_iva (neto + IVA redondeado al peso). #}
 <script>
   (function () {
@@ -12,8 +12,8 @@
       function actualizar() {
         const neto = parseInt(campo.value, 10);
         aviso.textContent = Number.isFinite(neto) && neto > 0
-          ? "En el sitio se verá: $" + formato.format(neto + Math.round(neto * TASA_IVA)) + " (IVA incluido)"
-          : "Ingresa el precio neto (sin IVA); el sitio lo muestra con IVA incluido.";
+          ? "Con IVA (así suma en la cotización): $" + formato.format(neto + Math.round(neto * TASA_IVA)) + ". En el sitio se muestra el neto."
+          : "Ingresa el precio neto (sin IVA).";
       }
       campo.addEventListener("input", actualizar);
       actualizar();

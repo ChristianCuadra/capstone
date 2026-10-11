@@ -215,7 +215,7 @@ class Cotizacion(models.Model):
         SEMESTRAL = "semestral", "Pago semestral anticipado"
         TARJETA = "tarjeta", "Tarjeta de crédito (recurrente)"
 
-    IVA = TASA_IVA  # Los precios del catálogo son netos; el sitio los muestra con IVA incluido (apps.core.impuestos).
+    IVA = TASA_IVA  # Los precios del catálogo son netos (el sitio los muestra «+ IVA»). Ver apps.core.impuestos.
 
     numero = models.CharField("número", max_length=20, unique=True, editable=False)
     prospecto = models.ForeignKey(Prospecto, on_delete=models.CASCADE, related_name="cotizaciones")
