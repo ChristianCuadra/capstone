@@ -22,13 +22,15 @@ User = get_user_model()
 # Vistas del panel que cualquier usuario del equipo puede abrir, y las exclusivas de la administradora.
 PANEL_EQUIPO = [
     ("crm:dashboard", []), ("crm:prospectos", []), ("crm:prospectos_exportar", []), ("crm:prospecto_nuevo", []),
-    ("crm:cotizaciones", []), ("crm:clientes", []), ("crm:planes_servicios", []), ("crm:contenidos", []),
+    ("crm:cotizaciones", []), ("crm:clientes", []), ("crm:contenidos", []),
     ("crm:prospecto_detalle", [1]), ("crm:cotizacion_editar", [1]), ("crm:cliente_ficha", [1]),
     ("crm:cliente_documento_descargar", [1, 1]),
 ]
 PANEL_SOLO_ADMIN = [
     ("crm:usuarios", []), ("crm:usuario_nuevo", []), ("crm:usuario_editar", [1]), ("crm:auditoria", []),
     ("crm:usuario_alternar_activo", [1]), ("crm:usuario_restablecer_2fa", [1]), ("crm:usuario_eliminar", [1]),
+    ("crm:planes_servicios", []), ("crm:plan_nuevo", []), ("crm:plan_editar", [1]),
+    ("crm:servicio_nuevo", []), ("crm:servicio_editar", [1]),
 ]
 ACCIONES_POST = [
     ("crm:cliente_activo", []), ("crm:cliente_documento_subir", [1]), ("crm:cliente_documento_eliminar", [1, 1]),
@@ -113,6 +115,30 @@ class PermisosPorRolTests(BaseAislamiento):
             with self.subTest(vista=nombre):
                 r = self.client.get(reverse(nombre, args=args))
                 self.assertEqual(r.status_code, 302)
+
+    def test_colaboradora_no_modifica_el_catalogo_por_post(self):
+        """PC-CAT-01: solo la administradora crea, edita o desactiva planes y servicios."""
+        from apps.catalog.models import Plan, Servicio
+
+        plan = Plan.objects.create(nombre="Plan Prueba", slug="plan-prueba", precio_mensual=100000, activo=True)
+        servicio = Servicio.objects.filter(activo=True).first()
+        self.client.force_login(self.colab)
+        r = self.client.post(reverse("crm:plan_alternar_activo", args=[plan.pk]))
+        self.assertFalse(_destino(r).startswith("/panel/planes-servicios"))
+        plan.refresh_from_db()
+        self.assertTrue(plan.activo)
+        if servicio:
+            self.client.post(reverse("crm:servicio_alternar_activo", args=[servicio.pk]))
+            servicio.refresh_from_db()
+            self.assertTrue(servicio.activo)
+        self.client.post(reverse("crm:plan_editar", args=[plan.pk]), {"nombre": "Hackeado", "precio_mensual": 1})
+        plan.refresh_from_db()
+        self.assertEqual(plan.precio_mensual, 100000)
+
+    def test_colaboradora_no_ve_planes_y_servicios_en_el_menu(self):
+        self.client.force_login(self.colab)
+        r = self.client.get(reverse("crm:dashboard"))
+        self.assertNotContains(r, reverse("crm:planes_servicios"))
 
     def test_colaboradora_no_gestiona_usuarios_por_post(self):
         self.client.force_login(self.colab)

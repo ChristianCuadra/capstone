@@ -930,7 +930,7 @@ def cliente_activo(request):
 
 # ── Planes y servicios ─────────────────────────────────────────────────────────
 
-@solo_equipo
+@requiere_administradora
 def planes_servicios(request):
     planes = Plan.objects.prefetch_related("entregables__tipo_entregable").order_by("orden", "precio_mensual")
     servicios = Servicio.objects.order_by("orden", "nombre")
@@ -1139,7 +1139,7 @@ def _slug_unico(modelo, nombre, pk_actual=None):
     return slug
 
 
-@solo_equipo
+@requiere_administradora
 def servicio_form(request, pk=None):
     servicio = get_object_or_404(Servicio, pk=pk) if pk else None
     if request.method == "POST":
@@ -1157,7 +1157,7 @@ def servicio_form(request, pk=None):
     return render(request, "crm/servicio_formulario.html", context)
 
 
-@solo_equipo
+@requiere_administradora
 def plan_form(request, pk=None):
     plan = get_object_or_404(Plan, pk=pk) if pk else None
     if request.method == "POST":
@@ -1179,7 +1179,7 @@ def plan_form(request, pk=None):
     context = contexto_panel(request, "planes_servicios", form=form, formset=formset, plan=plan)
     return render(request, "crm/plan_formulario.html", context)
 
-@solo_equipo
+@requiere_administradora
 @require_POST
 def plan_alternar_activo(request, pk):
     plan = get_object_or_404(Plan, pk=pk)
@@ -1188,7 +1188,7 @@ def plan_alternar_activo(request, pk):
     messages.success(request, f"Plan {'activado' if plan.activo else 'desactivado'}.")
     return redirect("crm:planes_servicios")
 
-@solo_equipo
+@requiere_administradora
 @require_POST
 def servicio_alternar_activo(request, pk):
     servicio = get_object_or_404(Servicio, pk=pk)
