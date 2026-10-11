@@ -61,6 +61,8 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     # Debe ir después de Session y Authentication: necesita request.user y request.session.
     "apps.core.middleware.TenantMiddleware",
+    # PC-CAP-01: guarda en la sesión el origen de la visita (UTM / sitio de referencia) para el prospecto.
+    "apps.website.middleware.OrigenVisitaMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",

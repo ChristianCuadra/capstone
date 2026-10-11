@@ -1,0 +1,162 @@
+{% extends "website/base.html" %}
+
+{% block title %}Asesoría estratégica gratuita · {{ agencia.nombre }}{% endblock %}
+{% block meta_description %}Cuéntanos el caso de tu emprendimiento o empresa y te mostramos cómo lo abordaríamos. Asesoría estratégica gratuita y sin compromiso con {{ agencia.nombre }}.{% endblock %}
+
+{% block head %}
+{% include "website/_estilos_formulario.html" %}
+{% endblock %}
+
+{% block content %}
+<section class="bg-fondo-suave">
+  <div class="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_1.35fr] lg:gap-16 lg:px-8 lg:py-20">
+
+    {# ── Columna izquierda: qué es la asesoría ─────────────────────── #}
+    <div class="lg:sticky lg:top-28 lg:self-start">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Sin costo · Sin compromiso</p>
+      <h1 class="mt-3 font-serif text-4xl leading-tight text-vino sm:text-5xl">Asesoría estratégica gratuita</h1>
+      <p class="mt-5 text-lg leading-relaxed">Una primera mirada a tu emprendimiento o empresa. Tú nos cuentas los desafíos que tienes y nosotras te mostramos cómo lo abordaríamos.</p>
+
+      <ol class="mt-9 space-y-6">
+        {% for paso in pasos %}
+        <li class="flex gap-4">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white font-serif text-vino ring-1 ring-gris-borde">{{ forloop.counter }}</span>
+          <div>
+            <p class="font-semibold text-vino">{{ paso.titulo }}</p>
+            <p class="mt-1 text-sm leading-relaxed">{{ paso.texto }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <p class="mt-8 text-sm leading-relaxed">Te respondemos por correo y, si tu caso lo amerita, coordinamos una videollamada.</p>
+
+      <div class="mt-8 rounded-2xl border border-gris-borde bg-white p-5 text-sm">
+        <p class="font-semibold text-vino">¿Prefieres escribirnos directo?</p>
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+          <a href="mailto:{{ agencia.correo }}?subject=Asesor%C3%ADa%20gratuita" class="inline-flex items-center justify-center gap-2 rounded-full border border-vino px-4 py-2 font-semibold text-vino hover:bg-fondo-suave">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4zM4 7l8 6 8-6"/></svg>
+            {{ agencia.correo }}
+          </a>
+          <a href="https://wa.me/{{ agencia.whatsapp }}?text=Hola%2C%20quiero%20pedir%20la%20asesor%C3%ADa%20gratuita%20para%20mi%20marca." target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 rounded-full border border-vino px-4 py-2 font-semibold text-vino hover:bg-fondo-suave">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-4.1-1.1z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# ── Columna derecha: formulario ───────────────────────────────── #}
+    <div class="rounded-3xl border border-gris-borde bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+      {% if enviado %}
+      <div class="py-8 text-center">
+        <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rosa/20 text-vino">
+          <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </span>
+        <h2 class="mt-5 font-serif text-3xl text-vino">¡Recibimos tu caso!</h2>
+        <p class="mx-auto mt-3 max-w-md">Una de las socias lo revisará y te responderá por correo.</p>
+
+        <div class="mx-auto mt-8 max-w-md rounded-2xl bg-fondo-suave p-6 text-left">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">¿Ya sabes lo que necesitas?</p>
+          <p class="mt-2 text-vino">Pide tu cotización: los datos que nos diste ya quedan cargados.</p>
+        </div>
+
+        <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-6 py-3 font-semibold text-white hover:bg-vino-oscuro">Solicitar cotización</a>
+          <a href="{% url 'website:planes' %}" class="rounded-full border border-vino px-6 py-3 font-semibold text-vino hover:bg-fondo-suave">Ver los planes</a>
+        </div>
+      </div>
+      {% else %}
+      {# Al enviar se guarda como prospecto (canal «Asesoría gratuita») y se envía al correo de la agencia (crm.services). #}
+      <form method="post" class="space-y-7" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">{{ form.non_field_errors.0 }}</div>
+        {% elif form.errors %}
+        <div class="rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">Revisa los campos marcados antes de enviar.</div>
+        {% endif %}
+
+        {# ── Tu caso ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Tu caso</legend>
+          <label class="block"><span class="etiqueta">¿Qué desafíos tiene hoy tu marca?</span>
+            <textarea name="situacion_actual" rows="5" required placeholder="Cuéntanos qué problemas tienes, qué has intentado y qué te gustaría lograr." class="campo {% if form.situacion_actual.errors %}campo-error{% endif %}">{{ form.situacion_actual.value|default:'' }}</textarea>
+            {% if form.situacion_actual.errors %}<p class="error">{{ form.situacion_actual.errors.0 }}</p>{% endif %}
+          </label>
+        </fieldset>
+
+        {# ── Tus datos ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Tus datos</legend>
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block"><span class="etiqueta">Nombre</span>
+              <input type="text" name="nombre" value="{{ form.nombre.value|default:'' }}" required autocomplete="name" class="campo {% if form.nombre.errors %}campo-error{% endif %}">
+              {% if form.nombre.errors %}<p class="error">{{ form.nombre.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Empresa o marca</span>
+              <input type="text" name="empresa" value="{{ form.empresa.value|default:'' }}" required autocomplete="organization" class="campo {% if form.empresa.errors %}campo-error{% endif %}">
+              {% if form.empresa.errors %}<p class="error">{{ form.empresa.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Correo</span>
+              <input type="email" name="correo" value="{{ form.correo.value|default:'' }}" required autocomplete="email" class="campo {% if form.correo.errors %}campo-error{% endif %}">
+              {% if form.correo.errors %}<p class="error">{{ form.correo.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Teléfono <span class="font-normal text-gris-txt">(opcional)</span></span>
+              <input type="tel" name="telefono" value="{{ form.telefono.value|default:'' }}" autocomplete="tel" placeholder="+56 9" class="campo">
+            </label>
+          </div>
+        </fieldset>
+
+        {# ── Tu negocio ── #}
+        <fieldset class="bloque">
+          <legend class="bloque-titulo">Tu negocio</legend>
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block"><span class="etiqueta">Rubro</span>
+              <select name="rubro" required class="campo {% if form.rubro.errors %}campo-error{% endif %}">
+                <option value="" {% if not form.rubro.value %}selected{% endif %} disabled>Selecciona tu rubro</option>
+                {% for valor, etiqueta in form.fields.rubro.choices %}{% if valor %}<option value="{{ valor }}" {% if form.rubro.value == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endif %}{% endfor %}
+              </select>
+              {% if form.rubro.errors %}<p class="error">{{ form.rubro.errors.0 }}</p>{% endif %}
+            </label>
+            <label class="block"><span class="etiqueta">Región</span>
+              <select name="region" required class="campo {% if form.region.errors %}campo-error{% endif %}">
+                <option value="" {% if not form.region.value %}selected{% endif %} disabled>Selecciona tu región</option>
+                {% for valor, etiqueta in form.fields.region.choices %}{% if valor %}<option value="{{ valor }}" {% if form.region.value == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endif %}{% endfor %}
+              </select>
+              {% if form.region.errors %}<p class="error">{{ form.region.errors.0 }}</p>{% endif %}
+            </label>
+          </div>
+          <div>
+            <p class="etiqueta">¿Cuántas personas trabajan en tu marca?</p>
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              {% for opcion in form.tamano %}{% if opcion.data.value %}<label class="chip chip-radio">{{ opcion.tag }}{{ opcion.choice_label }}</label>{% endif %}{% endfor %}
+            </div>
+            {% if form.tamano.errors %}<p class="error">{{ form.tamano.errors.0 }}</p>{% endif %}
+          </div>
+          <label class="block sm:max-w-xs"><span class="etiqueta">Usuario de Instagram <span class="font-normal text-gris-txt">(opcional)</span></span>
+            <span class="relative block"><span class="pointer-events-none absolute left-4 top-1/2 mt-[3px] -translate-y-1/2 text-gris-txt">@</span>
+              <input type="text" name="instagram" value="{{ form.instagram.value|default:'' }}" placeholder="tumarca" class="campo !pl-8"></span>
+          </label>
+
+          {# Campo trampa anti-spam: invisible para personas #}
+          <div class="absolute -left-[9999px]" aria-hidden="true">
+            <label>No completar <input type="text" name="sitio_empresa" tabindex="-1" autocomplete="off"></label>
+          </div>
+
+          <div>
+            <label class="flex items-start gap-3 text-sm">
+              <input type="checkbox" name="acepta_privacidad" required {% if form.acepta_privacidad.value %}checked{% endif %} class="mt-0.5 h-4 w-4 rounded border-gris-borde accent-vino">
+              <span>Acepto que {{ agencia.nombre }} trate mis datos para responder esta solicitud, según su política de privacidad.</span>
+            </label>
+            {% if form.acepta_privacidad.errors %}<p class="error">{{ form.acepta_privacidad.errors.0 }}</p>{% endif %}
+          </div>
+        </fieldset>
+
+        <button type="submit" class="w-full rounded-full bg-vino px-7 py-4 font-semibold text-white hover:bg-vino-oscuro sm:w-auto">Enviar mi caso</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

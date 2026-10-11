@@ -27,9 +27,9 @@
       <p class="mt-2 text-sm leading-relaxed xl:min-h-[4.5rem]">{{ plan.descripcion }}</p>
 
       <div class="mt-6">
-        <p class="font-serif text-4xl {% if plan.destacado %}text-white{% else %}text-vino{% endif %}">{{ plan.precio_mensual|clp }}<span class="font-sans text-base font-normal">/mes</span></p>
+        <p class="font-serif text-4xl {% if plan.destacado %}text-white{% else %}text-vino{% endif %}">{{ plan.precio_mensual|con_iva|clp }}<span class="font-sans text-base font-normal">/mes</span></p>
         <p class="mt-1 min-h-[1rem] text-xs">
-          {% if plan.precio_primer_mes %}Primer mes {{ plan.precio_primer_mes|clp }}{% else %}Cobro mensual{% endif %}
+          {% if plan.precio_primer_mes %}Primer mes {{ plan.precio_primer_mes|con_iva|clp }}{% else %}Cobro mensual{% endif %} · IVA incluido
         </p>
       </div>
 
@@ -88,13 +88,13 @@
           <tr class="bg-fondo-suave/60">
             <th scope="row" class="px-5 py-3.5 font-semibold text-vino">Precio mensual</th>
             {% for plan in planes %}
-            <td class="px-5 py-3.5 text-center font-semibold tabular-nums text-vino">{{ plan.precio_mensual|clp }}</td>
+            <td class="px-5 py-3.5 text-center font-semibold tabular-nums text-vino">{{ plan.precio_mensual|con_iva|clp }}</td>
             {% endfor %}
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="mt-4 text-xs">Valores en pesos chilenos, cobro mensual.</p>
+    <p class="mt-4 text-xs">Valores en pesos chilenos con IVA incluido, cobro mensual.</p>
   </div>
 </section>
 {% endif %}
@@ -110,7 +110,7 @@
       {% for s in servicios %}
       <li class="flex items-baseline justify-between gap-4 rounded-2xl border border-gris-borde bg-white px-5 py-4">
         <span class="font-medium text-vino">{{ s.nombre }}</span>
-        <span class="whitespace-nowrap text-sm"><strong class="text-vino">{{ s.precio|clp }}</strong>{{ s.sufijo_precio }}</span>
+        <span class="whitespace-nowrap text-sm"><strong class="text-vino">{{ s.precio|con_iva|clp }}</strong>{{ s.sufijo_precio }}</span>
       </li>
       {% endfor %}
     </ul>

@@ -196,7 +196,8 @@ def dashboard(request):
     del_periodo = [p for p in prospectos if _en_rango(p.creado_en, inicio, fin)]
     conteo = {}
     for p in del_periodo:
-        clave = p.get_como_nos_conocio_display() or "No indicó"
+        # Lo que declaró; si no indicó nada, la fuente medida de la campaña (UTM, PC-CAP-01).
+        clave = p.get_como_nos_conocio_display() or (p.utm_source.capitalize() if p.utm_source else "No indicó")
         conteo[clave] = conteo.get(clave, 0) + 1
     orden = sorted(conteo.items(), key=lambda x: -x[1])
     origenes = [{"origen": n, "cantidad": c} for n, c in orden[:3]]
@@ -345,13 +346,15 @@ def prospectos_exportar(request):
     escritor = csv.writer(respuesta, delimiter=";")
     escritor.writerow([
         "Empresa", "Nombre", "Correo", "Teléfono", "Rubro", "Región", "Tamaño", "Presupuesto", "Objetivos",
-        "Plan de interés", "Plan sugerido", "Etapa", "Responsable", "Cómo nos conoció", "Creado",
+        "Plan de interés", "Plan sugerido", "Etapa", "Responsable", "Cómo nos conoció", "Canal",
+        "Fuente (UTM)", "Medio (UTM)", "Campaña (UTM)", "Sitio de referencia", "Creado",
     ])
     for p in lista:
         escritor.writerow([
             p.empresa, p.nombre, p.correo, p.telefono, p.rubro, p.region, p.get_tamano_display(), p.get_presupuesto_display(),
             ", ".join(p.objetivos), p.plan_interes.nombre if p.plan_interes else "", p.plan_sugerido.nombre if p.plan_sugerido else "",
-            p.get_etapa_display(), _nombre(p.responsable) or "", p.get_como_nos_conocio_display(),
+            p.get_etapa_display(), _nombre(p.responsable) or "", p.get_como_nos_conocio_display(), p.get_canal_display(),
+            p.utm_source, p.utm_medium, p.utm_campaign, p.sitio_referencia,
             timezone.localtime(p.creado_en).strftime("%d-%m-%Y %H:%M"),
         ])
     return respuesta

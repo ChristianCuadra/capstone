@@ -1,0 +1,12 @@
+{# Estilos compartidos de los formularios públicos (cotización y asesoría gratuita). #}
+<style type="text/tailwindcss">
+  .campo { @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40; }
+  .campo-error { @apply border-[#B3261E]; }
+  .etiqueta { @apply text-sm font-medium text-vino; }
+  .error { @apply mt-1 text-xs font-medium text-[#B3261E]; }
+  .chip { @apply cursor-pointer rounded-full border border-gris-borde bg-white px-4 py-2 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-rosa; }
+  .chip-radio { @apply has-[:checked]:border-vino has-[:checked]:bg-vino has-[:checked]:text-white; }
+  .chip-check { @apply has-[:checked]:border-rosa has-[:checked]:bg-rosa/15 has-[:checked]:text-vino; }
+  .bloque { @apply space-y-5 border-t border-gris-borde pt-7 first:border-t-0 first:pt-0; }
+  .bloque-titulo { @apply font-serif text-xl text-vino; }
+</style>

@@ -1,0 +1,22 @@
+{# Bajo cada precio del catálogo muestra el valor final con IVA que verá el visitante en el sitio. #}
+{# El cálculo replica apps.core.impuestos.con_iva (neto + IVA redondeado al peso). #}
+<script>
+  (function () {
+    const TASA_IVA = {{ tasa_iva|default:"0.19" }};
+    const formato = new Intl.NumberFormat("es-CL");
+    document.querySelectorAll('input[name="precio_mensual"], input[name="precio_primer_mes"], input[name="precio"]').forEach(function (campo) {
+      const aviso = document.createElement("span");
+      aviso.className = "mt-1 block text-xs font-normal text-gris-txt";
+      aviso.setAttribute("aria-live", "polite");
+      campo.insertAdjacentElement("afterend", aviso);
+      function actualizar() {
+        const neto = parseInt(campo.value, 10);
+        aviso.textContent = Number.isFinite(neto) && neto > 0
+          ? "En el sitio se verá: $" + formato.format(neto + Math.round(neto * TASA_IVA)) + " (IVA incluido)"
+          : "Ingresa el precio neto (sin IVA); el sitio lo muestra con IVA incluido.";
+      }
+      campo.addEventListener("input", actualizar);
+      actualizar();
+    });
+  })();
+</script>

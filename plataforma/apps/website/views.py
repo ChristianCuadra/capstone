@@ -12,11 +12,13 @@ from django.urls import reverse
 from apps.catalog.models import Plan
 from apps.catalog.services import comparativa_de_planes, planes_del_sitio, servicios_del_sitio
 from apps.crm.models import Prospecto
-from apps.crm.services import registrar_solicitud
+from apps.crm.services import notificar_asesoria, registrar_asesoria, registrar_solicitud
 
 from django.shortcuts import get_object_or_404
 
-from .forms import SolicitudCotizacionForm
+from .context_processors import agencia as datos_agencia
+from .forms import SolicitudAsesoriaForm, SolicitudCotizacionForm
+from .middleware import CLAVE_SESION as CLAVE_ORIGEN
 from .models import Contenido
 
 
@@ -97,11 +99,12 @@ def cotizacion(request):
         elif form.is_valid():
             cache.set(clave_limite, envios + 1, 60 * 60)
             if not form.es_spam():  # a un bot se le responde igual, pero no se guarda nada
-                prospecto = registrar_solicitud(form, plan_interes)
+                prospecto = registrar_solicitud(form, plan_interes, origen=request.session.get(CLAVE_ORIGEN))
                 request.session["prospecto_enviado"] = prospecto.pk
             return redirect(reverse("website:cotizacion") + "?enviado=1")
     else:
-        form = SolicitudCotizacionForm()
+        # Si ya pidió la asesoría gratuita en esta visita, sus datos quedan precargados (no los escribe de nuevo).
+        form = SolicitudCotizacionForm(initial=_datos_desde_asesoria(request))
 
     enviado = request.GET.get("enviado") == "1"
     prospecto_enviado = None
@@ -121,6 +124,57 @@ def cotizacion(request):
         ],
     }
     return render(request, "website/cotizacion.html", context)
+
+
+CAMPOS_PRECARGA = ("nombre", "empresa", "correo", "telefono", "rubro", "region", "tamano", "instagram", "situacion_actual")
+
+
+def _datos_desde_asesoria(request):
+    pk = request.session.get("prospecto_asesoria")
+    prospecto = Prospecto.objects.filter(pk=pk).first() if pk else None
+    if not prospecto:
+        return {}
+    return {campo: getattr(prospecto, campo) for campo in CAMPOS_PRECARGA if getattr(prospecto, campo)}
+
+
+def asesoria(request):
+    """Asesoría estratégica gratuita: el visitante cuenta su caso y se envía por correo a la agencia.
+
+    El caso también queda guardado como prospecto (canal «Asesoría gratuita») para que no se pierda y,
+    si después cotiza o contrata, sus datos ya estén cargados.
+    """
+    if request.method == "POST":
+        form = SolicitudAsesoriaForm(request.POST)
+        clave_limite = f"asesoria:{_ip_cliente(request)}"
+        envios = cache.get(clave_limite, 0)
+        if envios >= LIMITE_SOLICITUDES_POR_HORA:
+            form.add_error(None, "Recibimos varias solicitudes desde tu conexión. Intenta en una hora o escríbenos por correo.")
+        elif form.is_valid():
+            cache.set(clave_limite, envios + 1, 60 * 60)
+            if not form.es_spam():
+                prospecto = registrar_asesoria(form, origen=request.session.get(CLAVE_ORIGEN))
+                notificar_asesoria(
+                    prospecto,
+                    form.cleaned_data["situacion_actual"],
+                    datos_agencia(request)["agencia"]["correo"],
+                    request.build_absolute_uri(reverse("crm:prospecto_detalle", args=[prospecto.pk])),
+                )
+                request.session["prospecto_asesoria"] = prospecto.pk
+            return redirect(reverse("website:asesoria") + "?enviado=1")
+    else:
+        form = SolicitudAsesoriaForm()
+
+    context = {
+        "form": form,
+        "enviado": request.GET.get("enviado") == "1",
+        # TODO: Supabase - sitio_contenido (clave "asesoria_pasos"). Texto entregado por la agencia (11 oct 2026).
+        "pasos": [
+            {"titulo": "Nos cuentas tu caso", "texto": "Qué problemas o desafíos tiene hoy tu emprendimiento o empresa y qué te gustaría lograr."},
+            {"titulo": "Lo analizamos contigo", "texto": "Revisamos en conjunto tus necesidades, fortalezas, debilidades y amenazas, y cómo puedes mejorar."},
+            {"titulo": "Te mostramos el camino", "texto": "Te contamos nuestra visión y cómo trabajamos, y si te conviene un plan mensual o una cotización personalizada."},
+        ],
+    }
+    return render(request, "website/asesoria.html", context)
 
 
 # ── Novedades (CMS, PC-WEB-02) ──────────────────────────────────────────────

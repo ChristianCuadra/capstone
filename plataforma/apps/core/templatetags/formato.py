@@ -30,3 +30,11 @@ def clp(valor):
         return ""
     signo = "-" if int(valor) < 0 else ""
     return f"{signo}${_miles(abs(int(valor)))}"
+
+
+@register.filter
+def con_iva(valor):
+    """150000 -> 178500 (precio neto del catálogo -> precio final con IVA incluido). Usar antes de |clp."""
+    from apps.core.impuestos import con_iva as _con_iva
+
+    return _con_iva(valor)
