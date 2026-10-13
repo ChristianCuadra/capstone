@@ -6,7 +6,7 @@ Sitio corporativo, panel interno (CRM) y portal de clientes de la agencia. Djang
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 copy .env.example .env          # completar SECRET_KEY como mínimo
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py runserver
@@ -52,8 +52,28 @@ Para entrar al admin, crear una cuenta: `.\.venv\Scripts\python.exe manage.py cr
 
 `manage.py test` usa `config/settings/test.py` (SQLite en memoria): nunca crea bases en Supabase.
 
+## Despliegue en Vercel
+
+En Vercel se importa el repositorio de GitHub con **Root Directory = `plataforma`**. `vercel.json` publica `config/wsgi.py`,
+que en Vercel (variable `VERCEL=1`) usa `config/settings/prod.py`: DEBUG apagado, cookies seguras y estáticos servidos por
+WhiteNoise sin `collectstatic`. Vercel instala solo `requirements.txt`; desarrollo y tests usan `requirements-dev.txt`.
+
+Variables de entorno del proyecto en Vercel (Settings → Environment Variables):
+
+| Variable | Valor |
+|---|---|
+| `SECRET_KEY` | Una clave larga y nueva (no la de desarrollo) |
+| `DATABASE_URL` | La de Supabase con el pooler en modo transacción (puerto 6543) |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL`, `AWS_S3_REGION_NAME` | Supabase Storage (documentos y CMS) |
+| `AI_API_KEY` | Clave de Gemini (opcional; sin ella la IA queda desactivada) |
+| `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | Solo si se usa un dominio propio (por defecto `.vercel.app`) |
+
+No copiar `DEBUG` ni `ALLOWED_HOSTS=localhost` del `.env` local. Las migraciones se aplican desde un equipo local
+(`manage.py migrate` con el `DATABASE_URL` de Supabase), no en Vercel. Mientras no haya proveedor de correo,
+los correos quedan en los logs de Vercel.
+
 ## Notas
 
 - WeasyPrint (PDFs) necesita GTK/Pango instalado en el sistema. En Windows: instalar MSYS2 y `pacman -S mingw-w64-x86_64-pango`
   (ver https://doc.courtbouillon.org/weasyprint/stable/first_steps.html). Solo es necesario al implementar los PDFs.
-- `config/settings/dev.py` es el único settings por ahora; falta un `prod.py` (HTTPS, DEBUG=False) antes de desplegar.
+- `config/settings/prod.py` es el de producción (Vercel); `dev.py` el local y `test.py` el de los tests.

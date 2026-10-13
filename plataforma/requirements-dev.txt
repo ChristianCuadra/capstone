@@ -1,0 +1,11 @@
+-r requirements.txt
+
+# Planificadas, aún sin uso en el código: PDF de reportes (WeasyPrint necesita Pango/GTK en el sistema)
+# e importación de métricas por archivo. Se pasan a requirements.txt cuando se implementen.
+weasyprint==62.3
+pandas==2.2.*
+
+# Tests y calidad
+pytest-django==4.9.*
+factory-boy==3.3.*
+ruff==0.6.*

@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: plataforma/requirements.txt
+          cache-dependency-path: plataforma/requirements*.txt
 
       # WeasyPrint (generación de PDFs) necesita Pango/Cairo instalados a nivel de sistema.
       - name: Dependencias de sistema (WeasyPrint)
@@ -33,7 +33,7 @@ jobs:
             libcairo2 libffi-dev shared-mime-info fonts-liberation
 
       - name: Instalar dependencias Python
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Tests
         env:

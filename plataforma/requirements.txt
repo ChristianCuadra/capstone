@@ -1,3 +1,4 @@
+# Dependencias de ejecución (las que instala Vercel). Desarrollo y tests: requirements-dev.txt
 django==5.1.*
 psycopg[binary]==3.2.*
 pgvector==0.3.*
@@ -9,9 +10,4 @@ django-storages[boto3]==1.14.*
 django-htmx==1.21.*
 python-decouple==3.8
 whitenoise==6.7.*
-weasyprint==62.3
-pandas==2.2.*
-pytest-django==4.9.*
-factory-boy==3.3.*
-ruff==0.6.*
 pillow>=11.0
