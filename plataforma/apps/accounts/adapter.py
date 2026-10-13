@@ -11,6 +11,8 @@ class CuentaAdapter(DefaultAccountAdapter):
 
     def get_login_redirect_url(self, request):
         # Equipo de la agencia → panel interno; clientes → portal.
-        if request.user.is_staff:
+        from apps.core.access import es_equipo
+
+        if es_equipo(request.user):
             return reverse("crm:dashboard")
         return reverse("content:calendario")

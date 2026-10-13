@@ -21,7 +21,7 @@
   {% csrf_token %}
   <label class="block text-sm font-medium text-vino">Nombre{{ form.nombre }}</label>
   <label class="block text-sm font-medium text-vino">Descripción{{ form.descripcion }}</label>
-  <label class="block text-sm font-medium text-vino">Precio (CLP){{ form.precio }}</label>
+  <label class="block text-sm font-medium text-vino">Precio neto (CLP, sin IVA){{ form.precio }}</label>
   <label class="block text-sm font-medium text-vino">Modalidad de cobro{{ form.modalidad_cobro }}</label>
   <label class="block text-sm font-medium text-vino">Orden{{ form.orden }}</label>
   <label class="flex items-center gap-2 text-sm font-medium text-vino">{{ form.visible_en_sitio }} Visible en el sitio</label>
@@ -32,4 +32,5 @@
     <a href="{% url 'crm:planes_servicios' %}" class="rounded-full border border-gris-borde px-6 py-3 font-medium text-vino hover:bg-fondo-suave">Cancelar</a>
   </div>
 </form>
+{% include "crm/_vista_iva.html" %}
 {% endblock %}

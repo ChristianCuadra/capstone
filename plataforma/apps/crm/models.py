@@ -9,6 +9,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from apps.core.impuestos import TASA_IVA
+
 RUBROS = [
     "Gastronomía y cafeterías",
     "Retail y moda",
@@ -83,6 +85,7 @@ class Prospecto(models.Model):
 
     class Canal(models.TextChoices):
         FORMULARIO_SITIO = "formulario_sitio", "Formulario del sitio"
+        ASESORIA = "asesoria_gratuita", "Asesoría gratuita (sitio)"
         MANUAL = "manual", "Ingreso manual"
 
     # Contacto
@@ -117,6 +120,16 @@ class Prospecto(models.Model):
     )
     como_nos_conocio = models.CharField("¿cómo nos conoció?", max_length=20, choices=ComoNosConocio.choices, blank=True)
     canal = models.CharField(max_length=20, choices=Canal.choices, default=Canal.FORMULARIO_SITIO)
+
+    # Origen de la visita (PC-CAP-01): de qué campaña o sitio llegó. Se captura al entrar al sitio
+    # (apps.website.middleware.OrigenVisitaMiddleware) y se graba al enviar un formulario. Vacío = visita directa.
+    utm_source = models.CharField("fuente (utm_source)", max_length=100, blank=True)
+    utm_medium = models.CharField("medio (utm_medium)", max_length=100, blank=True)
+    utm_campaign = models.CharField("campaña (utm_campaign)", max_length=150, blank=True)
+    utm_term = models.CharField("término (utm_term)", max_length=150, blank=True)
+    utm_content = models.CharField("contenido (utm_content)", max_length=150, blank=True)
+    pagina_entrada = models.CharField("página de entrada", max_length=300, blank=True)
+    sitio_referencia = models.CharField("sitio de referencia", max_length=300, blank=True)
     etapa = models.CharField(max_length=20, choices=Etapa.choices, default=Etapa.NUEVO, db_index=True)
     responsable = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     acepta_privacidad = models.BooleanField("acepta la política de privacidad", default=False)
@@ -159,6 +172,10 @@ class Prospecto(models.Model):
     def dias_sin_movimiento(self):
         return (timezone.now() - self.actualizado_en).days
 
+    @property
+    def tiene_origen(self):
+        return any((self.utm_source, self.utm_medium, self.utm_campaign, self.pagina_entrada, self.sitio_referencia))
+
     def nombres_redes(self):
         nombres = dict(REDES)
         return [nombres.get(r, r) for r in self.redes_actuales]
@@ -198,7 +215,7 @@ class Cotizacion(models.Model):
         SEMESTRAL = "semestral", "Pago semestral anticipado"
         TARJETA = "tarjeta", "Tarjeta de crédito (recurrente)"
 
-    IVA = 0.19  # TODO: confirmar con la agencia si los precios del catálogo son netos (+ IVA)
+    IVA = TASA_IVA  # Los precios del catálogo son netos (el sitio los muestra «+ IVA»). Ver apps.core.impuestos.
 
     numero = models.CharField("número", max_length=20, unique=True, editable=False)
     prospecto = models.ForeignKey(Prospecto, on_delete=models.CASCADE, related_name="cotizaciones")

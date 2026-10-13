@@ -62,6 +62,7 @@
       <label class="flex items-center gap-2 text-sm">{{ form.is_staff }} {{ form.is_staff.label }}</label>
       <label class="flex items-center gap-2 text-sm">{{ form.is_active }} {{ form.is_active.label }}</label>
     </div>
+    {% for e in form.is_staff.errors %}<p class="-mt-2 text-xs text-red-700">{{ e }}</p>{% endfor %}
 
     <div class="flex gap-3 pt-2">
       <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Guardar</button>

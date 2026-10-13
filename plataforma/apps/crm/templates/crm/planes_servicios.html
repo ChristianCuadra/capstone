@@ -26,7 +26,7 @@
         <tr>
           <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Plan</th>
           <th scope="col" class="px-5 py-3 font-semibold">Incluye</th>
-          <th scope="col" class="px-5 py-3 text-right font-semibold">Precio mensual</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Precio mensual<span class="block font-normal normal-case tracking-normal">neto · con IVA</span></th>
           <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
           <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">&nbsp;</th>
         </tr>
@@ -47,6 +47,7 @@
           </td>
           <td class="px-5 py-3.5 text-right tabular-nums text-vino">
             {{ plan.precio_mensual|clp }}
+            <span class="block text-xs text-gris-txt">{{ plan.precio_mensual|con_iva|clp }} con IVA</span>
             {% if plan.precio_primer_mes and plan.precio_primer_mes != plan.precio_mensual %}<span class="block text-xs text-gris-txt">1er mes {{ plan.precio_primer_mes|clp }}</span>{% endif %}
           </td>
           <td class="px-5 py-3.5">
@@ -89,7 +90,7 @@
         <tr>
           <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Servicio</th>
           <th scope="col" class="px-5 py-3 font-semibold">Modalidad</th>
-          <th scope="col" class="px-5 py-3 text-right font-semibold">Precio</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold">Precio<span class="block font-normal normal-case tracking-normal">neto · con IVA</span></th>
           <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
           <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">&nbsp;</th>
         </tr>
@@ -102,7 +103,7 @@
             {% if servicio.descripcion %}<p class="mt-0.5 text-xs">{{ servicio.descripcion|truncatechars:80 }}</p>{% endif %}
           </td>
           <td class="px-5 py-3.5">{{ servicio.get_modalidad_cobro_display }}</td>
-          <td class="px-5 py-3.5 text-right tabular-nums text-vino">{{ servicio.precio|clp }}</td>
+          <td class="px-5 py-3.5 text-right tabular-nums text-vino">{{ servicio.precio|clp }}<span class="block text-xs text-gris-txt">{{ servicio.precio|con_iva|clp }} con IVA</span></td>
           <td class="px-5 py-3.5">
             <div class="flex flex-wrap gap-1.5">
               <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if servicio.activo %}bg-vino/10 text-vino{% else %}bg-fondo-suave text-gris-txt{% endif %}">{% if servicio.activo %}Activo{% else %}Inactivo{% endif %}</span>

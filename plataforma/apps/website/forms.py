@@ -54,6 +54,39 @@ class SolicitudCotizacionForm(forms.ModelForm):
         return bool(self.cleaned_data.get("sitio_empresa"))
 
 
+class SolicitudAsesoriaForm(forms.ModelForm):
+    """Asesoría estratégica gratuita: datos básicos de la empresa y su caso. Crea (o completa) un Prospecto."""
+
+    acepta_privacidad = forms.BooleanField(required=True, error_messages={"required": "Debes aceptar para enviar tu caso."})
+    sitio_empresa = forms.CharField(required=False)  # campo trampa anti-spam, igual que en la cotización
+
+    class Meta:
+        model = Prospecto
+        fields = ["nombre", "empresa", "correo", "telefono", "rubro", "region", "tamano", "instagram", "situacion_actual", "acepta_privacidad"]
+        widgets = {"tamano": forms.RadioSelect}
+        error_messages = {"correo": {"invalid": "Revisa el correo: no parece válido."}}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["tamano"].widget.attrs["class"] = "sr-only"
+        for nombre in ("rubro", "region", "tamano"):
+            self.fields[nombre].required = True
+            self.fields[nombre].error_messages["required"] = "Elige una opción."
+        for nombre in ("nombre", "empresa", "correo"):
+            self.fields[nombre].error_messages["required"] = "Este dato es obligatorio."
+        self.fields["situacion_actual"].required = True
+        self.fields["situacion_actual"].error_messages["required"] = "Cuéntanos tu caso para poder orientarte."
+
+    def clean_instagram(self):
+        return self.cleaned_data["instagram"].strip().lstrip("@")
+
+    def clean_correo(self):
+        return self.cleaned_data["correo"].strip().lower()
+
+    def es_spam(self):
+        return bool(self.cleaned_data.get("sitio_empresa"))
+
+
 class ContenidoForm(forms.ModelForm):
     """Formulario del CMS (PC-WEB-02). El slug se genera solo si se deja vacío."""
 

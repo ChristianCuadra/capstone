@@ -115,11 +115,23 @@
       <dl class="mt-4 space-y-3 text-sm">
         <div class="flex justify-between gap-4"><dt>Canal</dt><dd class="text-right text-vino">{{ prospecto.get_canal_display }}</dd></div>
         <div class="flex justify-between gap-4"><dt>¿Cómo nos conoció?</dt><dd class="text-right text-vino">{{ prospecto.get_como_nos_conocio_display|default:"No indicó" }}</dd></div>
+        {# Origen medido (UTM / sitio de referencia), distinto de lo que el prospecto declaró arriba. PC-CAP-01. #}
+        <div class="flex justify-between gap-4"><dt>Origen de la visita</dt>
+          <dd class="text-right text-vino">
+            {% if prospecto.tiene_origen %}
+              {% if prospecto.utm_source %}{{ prospecto.utm_source }}{% if prospecto.utm_medium %} · {{ prospecto.utm_medium }}{% endif %}{% elif prospecto.sitio_referencia %}Desde otro sitio{% endif %}
+              {% if prospecto.utm_campaign %}<span class="block text-xs">Campaña: {{ prospecto.utm_campaign }}</span>{% endif %}
+              {% if prospecto.utm_term or prospecto.utm_content %}<span class="block text-xs">{{ prospecto.utm_term }}{% if prospecto.utm_term and prospecto.utm_content %} · {% endif %}{{ prospecto.utm_content }}</span>{% endif %}
+              {% if prospecto.sitio_referencia %}<span class="block max-w-[16rem] truncate text-xs" title="{{ prospecto.sitio_referencia }}">Llegó desde {{ prospecto.sitio_referencia }}</span>{% endif %}
+              {% if prospecto.pagina_entrada %}<span class="block max-w-[16rem] truncate text-xs" title="{{ prospecto.pagina_entrada }}">Entró por {{ prospecto.pagina_entrada }}</span>{% endif %}
+            {% else %}Directo o sin datos{% endif %}
+          </dd>
+        </div>
         <div class="flex justify-between gap-4"><dt>Tamaño</dt><dd class="text-right text-vino">{{ prospecto.get_tamano_display }}</dd></div>
-        <div class="flex justify-between gap-4"><dt>¿Trabaja con agencia?</dt><dd class="text-right text-vino">{{ prospecto.get_agencia_actual_display }}</dd></div>
-        <div class="flex justify-between gap-4"><dt>Presupuesto declarado</dt><dd class="text-right text-vino">{{ prospecto.get_presupuesto_display }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>¿Trabaja con agencia?</dt><dd class="text-right text-vino">{{ prospecto.get_agencia_actual_display|default:"—" }}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Presupuesto declarado</dt><dd class="text-right text-vino">{{ prospecto.get_presupuesto_display|default:"—" }}</dd></div>
         <div class="flex justify-between gap-4"><dt>Plan de interés</dt><dd class="text-right text-vino">{{ prospecto.plan_interes.nombre|default:"—" }}</dd></div>
-        <div class="flex justify-between gap-4"><dt>Plan sugerido (cotizador)</dt><dd class="text-right font-semibold text-vino">{% if prospecto.plan_sugerido %}{{ prospecto.plan_sugerido.nombre }} · {{ prospecto.plan_sugerido.precio_mensual|clp }}/mes{% else %}Servicios sueltos{% endif %}</dd></div>
+        <div class="flex justify-between gap-4"><dt>Plan sugerido (cotizador)</dt><dd class="text-right font-semibold text-vino">{% if prospecto.plan_sugerido %}{{ prospecto.plan_sugerido.nombre }} · {{ prospecto.plan_sugerido.precio_mensual|clp }}/mes neto{% elif not prospecto.presupuesto %}<span class="font-normal">Aún no cotiza</span>{% else %}Servicios sueltos{% endif %}</dd></div>
         <div class="flex items-center justify-between gap-4"><dt>Responsable</dt>
           <dd class="flex items-center gap-2 text-right text-vino">
             {% if prospecto.responsable %}{{ prospecto.responsable.get_full_name|default:prospecto.responsable.email }}{% else %}Sin asignar{% endif %}

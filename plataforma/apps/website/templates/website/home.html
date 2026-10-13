@@ -40,7 +40,7 @@
 </section>
 
 {# ── Asesoría gratuita (destacado) ─────────────────────────────────── #}
-{# TODO: el botón "Más información" aún no se conecta; falta definir el contenido y el flujo de la asesoría con la agencia. #}
+{# «Más información» lleva a la página de la asesoría gratuita (contenido entregado por la agencia, 11 oct 2026). #}
 <section id="asesoria-gratis" aria-labelledby="asesoria-titulo" class="border-y border-gris-borde bg-vino">
   <div class="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8 lg:py-10">
     <div class="flex items-start gap-4">
@@ -51,7 +51,7 @@
         <p class="mt-2 max-w-xl text-lila">Conversa con nosotras y descubre cómo potenciar tu marca, sin compromiso.</p>
       </div>
     </div>
-    <button type="button" id="asesoria-mas-info" class="shrink-0 rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Más información</button>
+    <a href="{% url 'website:asesoria' %}" id="asesoria-mas-info" class="shrink-0 rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Más información</a>
   </div>
 </section>
 
@@ -77,7 +77,7 @@
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Servicios</p>
     <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Lo que hacemos por tu marca</h2>
-    <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas.</p>
+    <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas. Valores netos, no incluyen IVA.</p>
 
     <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {% for servicio in servicios %}
@@ -95,6 +95,7 @@
       <a href="{% url 'website:planes' %}" class="group flex flex-col justify-between rounded-2xl bg-vino p-6 text-lila transition hover:bg-vino-oscuro">
         <span class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
         <span class="mt-3 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
+        <span class="mt-1 text-xs text-lila">+ IVA</span>
         <span class="mt-6 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
       </a>
       {% endif %}

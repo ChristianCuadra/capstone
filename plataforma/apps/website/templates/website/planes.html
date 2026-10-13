@@ -29,7 +29,7 @@
       <div class="mt-6">
         <p class="font-serif text-4xl {% if plan.destacado %}text-white{% else %}text-vino{% endif %}">{{ plan.precio_mensual|clp }}<span class="font-sans text-base font-normal">/mes</span></p>
         <p class="mt-1 min-h-[1rem] text-xs">
-          {% if plan.precio_primer_mes %}Primer mes {{ plan.precio_primer_mes|clp }}{% else %}Cobro mensual{% endif %}
+          {% if plan.precio_primer_mes %}Primer mes {{ plan.precio_primer_mes|clp }}{% else %}Cobro mensual{% endif %} · + IVA
         </p>
       </div>
 
@@ -94,7 +94,7 @@
         </tbody>
       </table>
     </div>
-    <p class="mt-4 text-xs">Valores en pesos chilenos, cobro mensual.</p>
+    <p class="mt-4 text-xs">Valores netos en pesos chilenos (no incluyen IVA), cobro mensual.</p>
   </div>
 </section>
 {% endif %}

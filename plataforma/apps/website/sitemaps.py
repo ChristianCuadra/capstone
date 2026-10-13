@@ -13,6 +13,7 @@ class SitioPublicoSitemap(Sitemap):
             ("website:home", 1.0),
             ("website:planes", 0.8),
             ("website:cotizacion", 0.6),
+            ("website:asesoria", 0.6),
         ]
 
     def location(self, item):

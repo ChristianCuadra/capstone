@@ -5,17 +5,7 @@
 {% block meta_description %}Cuéntanos de tu marca y te enviamos una cotización con diagnóstico en 3 días hábiles, con {{ agencia.nombre }}.{% endblock %}
 
 {% block head %}
-<style type="text/tailwindcss">
-  .campo { @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40; }
-  .campo-error { @apply border-[#B3261E]; }
-  .etiqueta { @apply text-sm font-medium text-vino; }
-  .error { @apply mt-1 text-xs font-medium text-[#B3261E]; }
-  .chip { @apply cursor-pointer rounded-full border border-gris-borde bg-white px-4 py-2 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-rosa; }
-  .chip-radio { @apply has-[:checked]:border-vino has-[:checked]:bg-vino has-[:checked]:text-white; }
-  .chip-check { @apply has-[:checked]:border-rosa has-[:checked]:bg-rosa/15 has-[:checked]:text-vino; }
-  .bloque { @apply space-y-5 border-t border-gris-borde pt-7 first:border-t-0 first:pt-0; }
-  .bloque-titulo { @apply font-serif text-xl text-vino; }
-</style>
+{% include "website/_estilos_formulario.html" %}
 {% endblock %}
 
 {% block content %}
@@ -62,7 +52,7 @@
           {% if prospecto_enviado.plan_sugerido %}
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">Según lo que nos contaste</p>
           <p class="mt-2 text-vino">El plan que mejor calza con tu marca es <strong class="font-serif text-2xl">{{ prospecto_enviado.plan_sugerido.nombre }}</strong></p>
-          <p class="mt-1 text-sm">{{ prospecto_enviado.plan_sugerido.precio_mensual|clp }}/mes · {{ prospecto_enviado.plan_sugerido.descripcion }}</p>
+          <p class="mt-1 text-sm">{{ prospecto_enviado.plan_sugerido.precio_mensual|clp }}/mes + IVA · {{ prospecto_enviado.plan_sugerido.descripcion }}</p>
           {% else %}
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-malva">Según lo que nos contaste</p>
           <p class="mt-2 text-vino">Te conviene partir con <strong>servicios sueltos</strong> y sumar un plan mensual cuando tu marca lo necesite.</p>
@@ -83,7 +73,7 @@
         {% if plan_interes %}
         <input type="hidden" name="plan" value="{{ plan_interes.slug }}">
         <p class="flex flex-wrap items-center gap-2 rounded-2xl bg-fondo-suave px-4 py-3 text-sm text-vino">
-          Plan de interés: <strong>{{ plan_interes.nombre }}</strong> · {{ plan_interes.precio_mensual|clp }}/mes
+          Plan de interés: <strong>{{ plan_interes.nombre }}</strong> · {{ plan_interes.precio_mensual|clp }}/mes + IVA
           <a href="{% url 'website:planes' %}" class="ml-auto text-xs font-semibold underline decoration-rosa underline-offset-2">Cambiar</a>
         </p>
         {% endif %}

@@ -27,6 +27,19 @@ def ids_permitidos(user):
     return frozenset()
 
 
+def es_equipo(user):
+    """Quién entra al panel interno: Administradora, Colaboradora, superusuario o personal sin rol asignado.
+
+    Un usuario con rol de cliente nunca entra, aunque tenga marcada la casilla «Es del equipo» (is_staff):
+    el panel muestra prospectos y cotizaciones de todos, que no se filtran por cliente.
+    """
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        return False
+    if user.is_superuser or user.rol in (Rol.ADMINISTRADORA, Rol.COLABORADORA):
+        return True
+    return bool(user.is_staff and not user.rol)
+
+
 def puede_aprobar(user):
     """Quién puede aprobar y enviar una cotización: la administradora (PC-COT-02).
 

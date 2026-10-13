@@ -83,6 +83,8 @@ class UsuarioForm(forms.ModelForm):
         clientes_asignados = cleaned.get("clientes_asignados")
         if rol in (Rol.CLIENTE_APROBADOR, Rol.CLIENTE_LECTOR) and not cliente:
             self.add_error("cliente", "Los roles de cliente deben tener una empresa asociada.")
+        if rol in (Rol.CLIENTE_APROBADOR, Rol.CLIENTE_LECTOR) and cleaned.get("is_staff"):
+            self.add_error("is_staff", "Un usuario cliente no puede tener acceso al panel interno.")
         if rol == Rol.COLABORADORA and clientes_asignados is not None and not clientes_asignados:
             self.add_error("clientes_asignados", "La colaboradora debe tener al menos un cliente asignado.")
         return cleaned

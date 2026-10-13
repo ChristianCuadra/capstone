@@ -27,7 +27,7 @@ from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotiz
 from apps.catalog.models import Plan, Servicio
 from apps.clients.forms import ClienteFichaForm, DocumentoClienteForm, KPIForm, MedicionForm
 from apps.clients.models import Cliente, DocumentoCliente, KPICliente, MedicionKPI
-from apps.core.access import clientes_visibles, obtener_cliente_visible, puede_aprobar
+from apps.core.access import clientes_visibles, es_equipo, obtener_cliente_visible, puede_aprobar
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
 from allauth.mfa.models import Authenticator
@@ -49,7 +49,7 @@ ETAPAS_ACTIVAS = ETAPAS_EMBUDO[:-1]
 PERIODOS = [("mes", "Este mes"), ("mes_anterior", "Mes anterior"), ("3_meses", "Últimos 3 meses"), ("anio", "Este año")]
 MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-solo_equipo = user_passes_test(lambda u: u.is_active and u.is_staff, login_url="account_login")
+solo_equipo = user_passes_test(es_equipo, login_url="account_login")
 
 
 # ── Utilidades ────────────────────────────────────────────────────────────────
@@ -196,7 +196,8 @@ def dashboard(request):
     del_periodo = [p for p in prospectos if _en_rango(p.creado_en, inicio, fin)]
     conteo = {}
     for p in del_periodo:
-        clave = p.get_como_nos_conocio_display() or "No indicó"
+        # Lo que declaró; si no indicó nada, la fuente medida de la campaña (UTM, PC-CAP-01).
+        clave = p.get_como_nos_conocio_display() or (p.utm_source.capitalize() if p.utm_source else "No indicó")
         conteo[clave] = conteo.get(clave, 0) + 1
     orden = sorted(conteo.items(), key=lambda x: -x[1])
     origenes = [{"origen": n, "cantidad": c} for n, c in orden[:3]]
@@ -345,13 +346,15 @@ def prospectos_exportar(request):
     escritor = csv.writer(respuesta, delimiter=";")
     escritor.writerow([
         "Empresa", "Nombre", "Correo", "Teléfono", "Rubro", "Región", "Tamaño", "Presupuesto", "Objetivos",
-        "Plan de interés", "Plan sugerido", "Etapa", "Responsable", "Cómo nos conoció", "Creado",
+        "Plan de interés", "Plan sugerido", "Etapa", "Responsable", "Cómo nos conoció", "Canal",
+        "Fuente (UTM)", "Medio (UTM)", "Campaña (UTM)", "Sitio de referencia", "Creado",
     ])
     for p in lista:
         escritor.writerow([
             p.empresa, p.nombre, p.correo, p.telefono, p.rubro, p.region, p.get_tamano_display(), p.get_presupuesto_display(),
             ", ".join(p.objetivos), p.plan_interes.nombre if p.plan_interes else "", p.plan_sugerido.nombre if p.plan_sugerido else "",
-            p.get_etapa_display(), _nombre(p.responsable) or "", p.get_como_nos_conocio_display(),
+            p.get_etapa_display(), _nombre(p.responsable) or "", p.get_como_nos_conocio_display(), p.get_canal_display(),
+            p.utm_source, p.utm_medium, p.utm_campaign, p.sitio_referencia,
             timezone.localtime(p.creado_en).strftime("%d-%m-%Y %H:%M"),
         ])
     return respuesta
@@ -930,7 +933,7 @@ def cliente_activo(request):
 
 # ── Planes y servicios ─────────────────────────────────────────────────────────
 
-@solo_equipo
+@requiere_administradora
 def planes_servicios(request):
     planes = Plan.objects.prefetch_related("entregables__tipo_entregable").order_by("orden", "precio_mensual")
     servicios = Servicio.objects.order_by("orden", "nombre")
@@ -1139,7 +1142,7 @@ def _slug_unico(modelo, nombre, pk_actual=None):
     return slug
 
 
-@solo_equipo
+@requiere_administradora
 def servicio_form(request, pk=None):
     servicio = get_object_or_404(Servicio, pk=pk) if pk else None
     if request.method == "POST":
@@ -1157,7 +1160,7 @@ def servicio_form(request, pk=None):
     return render(request, "crm/servicio_formulario.html", context)
 
 
-@solo_equipo
+@requiere_administradora
 def plan_form(request, pk=None):
     plan = get_object_or_404(Plan, pk=pk) if pk else None
     if request.method == "POST":
@@ -1179,7 +1182,7 @@ def plan_form(request, pk=None):
     context = contexto_panel(request, "planes_servicios", form=form, formset=formset, plan=plan)
     return render(request, "crm/plan_formulario.html", context)
 
-@solo_equipo
+@requiere_administradora
 @require_POST
 def plan_alternar_activo(request, pk):
     plan = get_object_or_404(Plan, pk=pk)
@@ -1188,7 +1191,7 @@ def plan_alternar_activo(request, pk):
     messages.success(request, f"Plan {'activado' if plan.activo else 'desactivado'}.")
     return redirect("crm:planes_servicios")
 
-@solo_equipo
+@requiere_administradora
 @require_POST
 def servicio_alternar_activo(request, pk):
     servicio = get_object_or_404(Servicio, pk=pk)
