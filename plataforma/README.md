@@ -54,16 +54,21 @@ Para entrar al admin, crear una cuenta: `.\.venv\Scripts\python.exe manage.py cr
 
 ## Despliegue en Vercel
 
-En Vercel se importa el repositorio de GitHub con **Root Directory = `plataforma`**. `vercel.json` publica `config/wsgi.py`,
-que en Vercel (variable `VERCEL=1`) usa `config/settings/prod.py`: DEBUG apagado, cookies seguras y estáticos servidos por
-WhiteNoise sin `collectstatic`. Vercel instala solo `requirements.txt`; desarrollo y tests usan `requirements-dev.txt`.
+En Vercel se importa el repositorio de GitHub con **Root Directory = `plataforma`** y Framework Preset «Other».
+`vercel.json` envía todas las rutas a `api/index.py`, que carga Django con `config/settings/prod.py`: DEBUG apagado,
+cookies seguras, estáticos servidos por WhiteNoise sin `collectstatic` y tareas de Celery ejecutadas en el momento
+(no hay worker). Vercel instala solo `requirements.txt`; desarrollo y tests usan `requirements-dev.txt`.
+
+Plan B en Render (Web Service, Root Directory `plataforma`): build `pip install -r requirements.txt`, start
+`gunicorn config.wsgi:application`, mismas variables con `ALLOWED_HOSTS=.onrender.com` y
+`CSRF_TRUSTED_ORIGINS=https://*.onrender.com`.
 
 Variables de entorno del proyecto en Vercel (Settings → Environment Variables):
 
 | Variable | Valor |
 |---|---|
 | `SECRET_KEY` | Una clave larga y nueva (no la de desarrollo) |
-| `DATABASE_URL` | La de Supabase con el pooler en modo transacción (puerto 6543) |
+| `DATABASE_URL` | La del pooler de Supabase (`...pooler.supabase.com`), idealmente en modo transacción (puerto 6543) |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL`, `AWS_S3_REGION_NAME` | Supabase Storage (documentos y CMS) |
 | `AI_API_KEY` | Clave de Gemini (opcional; sin ella la IA queda desactivada) |
 | `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | Solo si se usa un dominio propio (por defecto `.vercel.app`) |

@@ -33,6 +33,10 @@ WHITENOISE_USE_FINDERS = True
 STATIC_ROOT = None  # no hay carpeta staticfiles (no se corre collectstatic); evita un aviso en cada arranque
 STORAGES = {**STORAGES, "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}}
 
+# En Vercel no hay worker de Celery: si se encola una tarea, se ejecuta en el momento (y sus errores se ven).
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
 # Mientras no haya proveedor de correo, los correos quedan en los logs de Vercel en vez de botar la página
 # (p. ej. recuperar contraseña). La asesoría gratuita igual queda guardada como prospecto en el panel.
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")

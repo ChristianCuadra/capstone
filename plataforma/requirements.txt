@@ -11,3 +11,4 @@ django-htmx==1.21.*
 python-decouple==3.8
 whitenoise==6.7.*
 pillow>=11.0
+gunicorn==23.0.*  # solo para el plan B en Render (Vercel no lo usa)
