@@ -228,5 +228,7 @@ if REDIS_URL.startswith("rediss://"):
 
 # Proveedor de IA: Google Gemini (API REST). Sin AI_API_KEY, las funciones de IA quedan desactivadas.
 AI_API_KEY = config("AI_API_KEY", default="")
-AI_MODEL = config("AI_MODEL", default="") or "gemini-2.5-flash"
+# gemini-2.5-flash ya no se habilita para cuentas nuevas de Google AI Studio (oct. 2026).
+# Flash-Lite: borradores de igual calidad en ~3 s; gemini-3.8-flash tardaba 18-50 s según la demanda.
+AI_MODEL = config("AI_MODEL", default="") or "gemini-3.5-flash-lite"
 EMAIL_API_KEY = config("EMAIL_API_KEY", default="")

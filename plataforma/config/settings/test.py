@@ -12,3 +12,6 @@ STORAGES = {
 }
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# Los tests nunca llaman a Gemini aunque .env tenga clave: los que prueban la IA la simulan con override_settings.
+AI_API_KEY = ""
