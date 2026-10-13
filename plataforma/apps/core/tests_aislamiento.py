@@ -157,6 +157,33 @@ class PermisosPorRolTests(BaseAislamiento):
                     self.assertEqual(r.status_code, 302)
                     self.assertFalse(_destino(r).startswith("/portal/"))
 
+    def test_cliente_con_casilla_de_equipo_marcada_igual_no_entra_al_panel(self):
+        """El rol manda: is_staff mal marcado en un cliente no le abre prospectos ni cotizaciones de todos."""
+        self.aprobador_a.is_staff = True
+        self.aprobador_a.save()
+        self.client.force_login(self.aprobador_a)
+        for nombre, args in PANEL_EQUIPO:
+            with self.subTest(vista=nombre):
+                r = self.client.get(reverse(nombre, args=args))
+                self.assertEqual(r.status_code, 302)
+                self.assertFalse(_destino(r).startswith("/panel/"))
+
+    def test_formulario_de_usuarios_no_permite_cliente_con_acceso_al_panel(self):
+        from apps.accounts.forms import UsuarioForm
+
+        form = UsuarioForm({
+            "username": "nuevo", "email": "nuevo@x.cl", "first_name": "N", "last_name": "U",
+            "rol": "cliente_lector", "cliente": self.a.pk, "is_staff": "on", "is_active": "on", "password": "Clave-123-x",
+        }, es_nuevo=True)
+        self.assertFalse(form.is_valid())
+        self.assertIn("is_staff", form.errors)
+
+    def test_colaboradora_sin_casilla_de_equipo_entra_al_panel_por_su_rol(self):
+        self.colab.is_staff = False
+        self.colab.save()
+        self.client.force_login(self.colab)
+        self.assertEqual(self.client.get(reverse("crm:dashboard")).status_code, 200)
+
 
 class AccesoPorUrlEntreClientesTests(BaseAislamiento):
     """CP-020: pedir por URL un recurso de otro cliente se deniega sin revelar que existe."""

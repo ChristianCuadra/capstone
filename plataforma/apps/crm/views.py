@@ -27,7 +27,7 @@ from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotiz
 from apps.catalog.models import Plan, Servicio
 from apps.clients.forms import ClienteFichaForm, DocumentoClienteForm, KPIForm, MedicionForm
 from apps.clients.models import Cliente, DocumentoCliente, KPICliente, MedicionKPI
-from apps.core.access import clientes_visibles, obtener_cliente_visible, puede_aprobar
+from apps.core.access import clientes_visibles, es_equipo, obtener_cliente_visible, puede_aprobar
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
 from allauth.mfa.models import Authenticator
@@ -49,7 +49,7 @@ ETAPAS_ACTIVAS = ETAPAS_EMBUDO[:-1]
 PERIODOS = [("mes", "Este mes"), ("mes_anterior", "Mes anterior"), ("3_meses", "Últimos 3 meses"), ("anio", "Este año")]
 MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-solo_equipo = user_passes_test(lambda u: u.is_active and u.is_staff, login_url="account_login")
+solo_equipo = user_passes_test(es_equipo, login_url="account_login")
 
 
 # ── Utilidades ────────────────────────────────────────────────────────────────

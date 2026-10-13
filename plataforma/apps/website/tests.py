@@ -340,6 +340,20 @@ class AsesoriaGratuitaTests(TestCase):
         self.assertIsNotNone(p.plan_sugerido)
         self.assertEqual(p.interacciones.count(), 2)
 
+    def test_formulario_publico_no_reemplaza_datos_ya_registrados(self):
+        """Quien escriba el correo de un prospecto existente no puede cambiar sus datos: quedan anotados para revisar."""
+        self.client.post(reverse("website:asesoria"), DATOS_ASESORIA)
+        otro = self.client_class()
+        datos = {**DATOS_VALIDOS, "nombre": "Otra Persona", "empresa": "Empresa Falsa", "correo": "bea@tiendabea.cl"}
+        otro.post(reverse("website:cotizacion"), datos)
+
+        p = Prospecto.objects.get()
+        self.assertEqual((p.nombre, p.empresa, p.rubro), ("Bea Soto", "Tienda Bea", "Retail y moda"))
+        self.assertEqual(p.presupuesto, "150_250")  # lo que estaba vacío sí se completa
+        nota = p.interacciones.order_by("-pk").first().descripcion
+        self.assertIn("Otra Persona", nota)
+        self.assertIn("no se aplicaron", nota)
+
     def test_cliente_ya_convertido_no_se_reutiliza(self):
         from apps.clients.models import Cliente
 

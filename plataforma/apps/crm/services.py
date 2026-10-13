@@ -104,22 +104,52 @@ def buscar_prospecto_abierto(correo):
     )
 
 
+def completar_prospecto(prospecto, datos, campos):
+    """Completa solo los campos vacíos del prospecto con lo que llegó desde un formulario público.
+
+    Los formularios del sitio no exigen sesión: quien escriba el correo de otro prospecto no debe poder
+    reemplazar sus datos. Lo que llegue distinto de lo ya registrado no se aplica; se devuelve como texto
+    para dejarlo en el historial y que el equipo decida si lo actualiza.
+    """
+    distintos = []
+    for campo in campos:
+        nuevo = datos.get(campo)
+        if nuevo in (None, "", []):
+            continue
+        actual = getattr(prospecto, campo)
+        if actual in (None, "", []):
+            setattr(prospecto, campo, nuevo)
+        elif actual != nuevo:
+            etiqueta = Prospecto._meta.get_field(campo).verbose_name
+            distintos.append(f"{etiqueta}: «{nuevo}»")
+    return distintos
+
+
+def _nota_distintos(distintos):
+    if not distintos:
+        return ""
+    return " Datos enviados distintos a los registrados (no se aplicaron; revisar): " + "; ".join(distintos) + "."
+
+
 @transaction.atomic
 def registrar_solicitud(form, plan_interes=None, origen=None):
     """Crea (o completa) el Prospecto desde el formulario de cotización, le sugiere un plan y abre su historial.
 
-    Si la persona ya había pedido la asesoría gratuita con el mismo correo, se completa ese mismo prospecto.
+    Si la persona ya había pedido la asesoría gratuita con el mismo correo, se completa ese mismo prospecto
+    (solo los campos vacíos, ver completar_prospecto).
     """
     existente = buscar_prospecto_abierto(form.cleaned_data.get("correo"))
+    distintos = []
     if existente:
         prospecto = existente
-        for campo in form._meta.fields:
-            if campo in form.cleaned_data and campo != "servicios_requeridos":
-                setattr(prospecto, campo, form.cleaned_data[campo])
-        prospecto.plan_interes = plan_interes or prospecto.plan_interes
+        excluidos = ("servicios_requeridos", "correo", "acepta_privacidad")
+        campos = [c for c in form._meta.fields if c in form.cleaned_data and c not in excluidos]
+        distintos = completar_prospecto(prospecto, form.cleaned_data, campos)
+        prospecto.acepta_privacidad = True  # el formulario lo exige
+        prospecto.plan_interes = prospecto.plan_interes or plan_interes
         aplicar_origen(prospecto, origen)
         prospecto.save()
-        prospecto.servicios_requeridos.set(form.cleaned_data.get("servicios_requeridos") or [])
+        prospecto.servicios_requeridos.add(*(form.cleaned_data.get("servicios_requeridos") or []))
     else:
         prospecto = form.save(commit=False)
         prospecto.canal = Prospecto.Canal.FORMULARIO_SITIO
@@ -139,7 +169,8 @@ def registrar_solicitud(form, plan_interes=None, origen=None):
         descripcion=(
             f"Presupuesto: {prospecto.get_presupuesto_display()}. "
             f"Plan sugerido por el cotizador: {prospecto.plan_sugerido.nombre if prospecto.plan_sugerido else 'servicios sueltos'}."
-            + (" Completó la cotización después de pedir la asesoría gratuita: se actualizaron sus datos." if existente else "")
+            + (" Completó la cotización después de pedir la asesoría gratuita: se completaron sus datos." if existente else "")
+            + _nota_distintos(distintos)
         ),
     )
     # TODO: notificación "Nuevo prospecto registrado" por correo al equipo (Alcance 5.10) cuando haya EMAIL_API_KEY.
@@ -154,11 +185,11 @@ def registrar_asesoria(form, origen=None):
     """
     caso = form.cleaned_data["situacion_actual"]
     prospecto = buscar_prospecto_abierto(form.cleaned_data["correo"])
+    distintos = []
     if prospecto:
-        for campo in ("nombre", "empresa", "telefono", "rubro", "region", "tamano", "instagram"):
-            valor = form.cleaned_data.get(campo)
-            if valor:
-                setattr(prospecto, campo, valor)
+        distintos = completar_prospecto(
+            prospecto, form.cleaned_data, ("nombre", "empresa", "telefono", "rubro", "region", "tamano", "instagram")
+        )
         if not prospecto.situacion_actual:
             prospecto.situacion_actual = caso
         aplicar_origen(prospecto, origen)
@@ -173,7 +204,7 @@ def registrar_asesoria(form, origen=None):
         prospecto=prospecto,
         tipo=Interaccion.Tipo.SISTEMA,
         titulo="Pidió la asesoría gratuita desde el sitio",
-        descripcion=f"Su caso: {caso}",
+        descripcion=f"Su caso: {caso}" + _nota_distintos(distintos),
     )
     return prospecto
 
