@@ -1,0 +1,52 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cotización #{{ cotizacion.numero }} · Agencia Cosmopolitan</title>
+  <style>
+    body { font-family: 'Jost', system-ui, -apple-system, sans-serif; background-color: #FBF6F8; color: #5A5A63; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 20px auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E3D5DC; overflow: hidden; }
+    .header { background-color: #522136; padding: 32px 24px; text-align: center; }
+    .brand { font-family: Georgia, serif; color: #F47FB1; font-size: 14px; text-transform: uppercase; letter-spacing: 0.25em; font-weight: bold; }
+    .subbrand { color: #FFFFFF; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 4px; }
+    .content { padding: 32px 24px; }
+    .saludo { font-size: 18px; font-weight: 600; color: #522136; margin-bottom: 16px; }
+    .card-total { background-color: #FBF6F8; border: 1px solid #E3D5DC; border-radius: 12px; padding: 20px; margin: 24px 0; }
+    .total-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #8A5A72; font-weight: 600; }
+    .total-monto { font-size: 28px; font-weight: bold; color: #522136; margin-top: 6px; }
+    .footer { border-top: 1px solid #E3D5DC; padding: 20px 24px; text-align: center; font-size: 12px; color: #8A5A72; background-color: #FFFFFF; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">Agencia</div>
+      <div class="subbrand">Cosmopolitan</div>
+    </div>
+    <div class="content">
+      <div class="saludo">Hola {{ prospecto.nombre }},</div>
+      <p>Es un gusto saludarte. Hemos preparado la propuesta comercial <strong>#{{ cotizacion.numero }}</strong> especialmente adaptada para las necesidades de <strong>{{ prospecto.empresa }}</strong>.</p>
+      
+      <div class="card-total">
+        <div class="total-title">Monto Total de la Propuesta</div>
+        <div class="total-monto">${{ totales.total|intcomma }} CLP <span style="font-size: 14px; font-weight: normal; color: #8A5A72;">(IVA incluido)</span></div>
+      </div>
+
+      {% if cotizacion.diagnostico %}
+      <div style="margin-bottom: 24px;">
+        <h4 style="color: #522136; margin-bottom: 8px;">Diagnóstico & Resumen de la propuesta:</h4>
+        <p style="white-space: pre-line; background: #FFF; padding: 16px; border-radius: 8px; border-left: 3px solid #F47FB1; font-size: 13px;">{{ cotizacion.diagnostico }}</p>
+      </div>
+      {% endif %}
+
+      <p>Puedes comunicarte directamente con nosotros respondiendo a este correo para resolver cualquier inquietud o para avanzar con la activación de tus servicios.</p>
+    </div>
+    <div class="footer">
+      <strong>Agencia Cosmopolitan</strong> · Estrategia Digital y Marketing<br>
+      Este correo fue enviado automáticamente en respuesta a tu solicitud de cotización.
+    </div>
+  </div>
+</body>
+</html>

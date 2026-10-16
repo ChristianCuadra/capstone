@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
     # Terceros
     "allauth",
     "allauth.account",

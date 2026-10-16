@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, request
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -31,6 +31,8 @@ from apps.core.access import clientes_visibles, es_equipo, obtener_cliente_visib
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
 from allauth.mfa.models import Authenticator
+
+from apps.website.views import cotizacion
 
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
@@ -599,36 +601,58 @@ DESCUENTO_MAX = 50
 
 
 def _guardar_campos(request, cotizacion):
-    """Guarda lo editado en el formulario (se ejecuta antes de cualquier otra acción para no perder cambios)."""
+    """Guarda lo editado en el formulario validando rangos permitidos (CP-031, CP-032)."""
     cotizacion.contacto = request.POST.get("contacto", cotizacion.contacto)[:200]
     for campo in ("valida_hasta", "inicio_estimado"):
         try:
             setattr(cotizacion, campo, date.fromisoformat(request.POST.get(campo, "")))
         except ValueError:
             setattr(cotizacion, campo, None)
+            
     if request.POST.get("forma_pago") in Cotizacion.FormaPago.values:
         cotizacion.forma_pago = request.POST["forma_pago"]
+        
     if request.POST.get("descuento_pct", "").isdigit():
         descuento = int(request.POST["descuento_pct"])
-        if descuento <= DESCUENTO_MAX:
+        if 0 <= descuento <= DESCUENTO_MAX:
             cotizacion.descuento_pct = descuento
         else:
-            messages.error(request, f"El descuento debe estar entre 0 y {DESCUENTO_MAX}%. Se mantuvo {cotizacion.descuento_pct}%.")
+            messages.error(request, f"El descuento debe estar entre 0% y {DESCUENTO_MAX}%. Se mantuvo {cotizacion.descuento_pct}%.")
+            
     cotizacion.diagnostico = request.POST.get("diagnostico", cotizacion.diagnostico).strip()
     cotizacion.save()
+    
     for item in cotizacion.items.all():
-        cantidad = request.POST.get(f"cantidad_{item.pk}", "").strip()
-        meses = request.POST.get(f"meses_{item.pk}", "").strip()
-        if cantidad:
-            if cantidad.isdigit() and CANTIDAD_MIN <= int(cantidad) <= CANTIDAD_MAX:
-                item.cantidad = int(cantidad)
-            else:
-                messages.error(request, f"«{item.descripcion}»: la cantidad debe ser un número entero entre {CANTIDAD_MIN} y {CANTIDAD_MAX}. Se mantuvo {item.cantidad}.")
-        if item.meses and meses:
-            if meses.isdigit() and MESES_MIN <= int(meses) <= MESES_MAX:
-                item.meses = int(meses)
-            else:
-                messages.error(request, f"«{item.descripcion}»: los meses deben ser un número entero entre {MESES_MIN} y {MESES_MAX}. Se mantuvo {item.meses}.")
+        cantidad_raw = request.POST.get(f"cantidad_{item.pk}", "").strip()
+        meses_raw = request.POST.get(f"meses_{item.pk}", "").strip()
+        
+        # CP-032: Validación estricta de cantidad (rechaza 0 o negativas)
+        if cantidad_raw:
+            try:
+                val_cant = int(cantidad_raw)
+                if CANTIDAD_MIN <= val_cant <= CANTIDAD_MAX:
+                    item.cantidad = val_cant
+                else:
+                    messages.error(
+                        request, 
+                        f"Se rechazó la cantidad ({val_cant}) para «{item.descripcion}». El rango permitido es de {CANTIDAD_MIN} a {CANTIDAD_MAX}. El total no fue alterado."
+                    )
+            except ValueError:
+                messages.error(request, f"Cantidad inválida para «{item.descripcion}». El total no fue alterado.")
+
+        if item.meses and meses_raw:
+            try:
+                val_meses = int(meses_raw)
+                if MESES_MIN <= val_meses <= MESES_MAX:
+                    item.meses = val_meses
+                else:
+                    messages.error(
+                        request, 
+                        f"Se rechazó la duración en meses ({val_meses}) para «{item.descripcion}». El rango permitido es de {MESES_MIN} a {MESES_MAX}."
+                    )
+            except ValueError:
+                messages.error(request, f"Duración en meses inválida para «{item.descripcion}».")
+                
         item.save(update_fields=["cantidad", "meses"])
 
 
@@ -676,15 +700,54 @@ def cotizacion_editar(request, pk):
                 cotizacion.estado = Cotizacion.Estado.ENVIADA
                 cotizacion.enviada_en = timezone.now()
                 cotizacion.save(update_fields=["estado", "enviada_en", "actualizado_en"])
-                # Solo avanza el embudo: un prospecto en etapa posterior (o perdido) no retrocede.
+                
+                # Avanza la etapa del prospecto
                 if prospecto.etapa in (Prospecto.Etapa.NUEVO, Prospecto.Etapa.DIAGNOSTICO):
                     _mover_etapa(prospecto, Prospecto.Etapa.COTIZACION_ENVIADA, request.user)
-                _registrar(prospecto, request.user, f"Cotización #{cotizacion.numero} enviada", Interaccion.Tipo.CORREO)
-                messages.success(
-                    request,
-                    "Cotización marcada como enviada. El correo automático se activa al configurar EMAIL_API_KEY; "
-                    "mientras, compártela desde «Vista para imprimir / PDF».",
+                
+                # Intento de envío de correo HTML + Texto plano
+                correo_enviado = False
+                try:
+                    from django.core.mail import EmailMultiAlternatives
+                    from django.template.loader import render_to_string
+                    from django.utils.html import strip_tags
+
+                    asunto = f"Cotización #{cotizacion.numero} · Agencia Cosmopolitan"
+                    remitente = getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@agenciacosmopolitan.cl")
+                    
+                    contexto_email = {
+                        "cotizacion": cotizacion,
+                        "prospecto": prospecto,
+                        "totales": cotizacion.totales(),
+                    }
+                    
+                    html_content = render_to_string("crm/email_cotizacion.html", contexto_email)
+                    text_content = strip_tags(html_content)
+
+                    msg = EmailMultiAlternatives(
+                        subject=asunto,
+                        body=text_content,
+                        from_email=remitente,
+                        to=[prospecto.correo],
+                    )
+                    msg.attach_alternative(html_content, "text/html")
+                    msg.send(fail_silently=False)
+                    correo_enviado = True
+
+                except Exception as e:
+                    messages.warning(request, f"La cotización cambió a 'Enviada', pero no se pudo enviar el correo automático: {e}")
+
+                _registrar(
+                    prospecto, 
+                    request.user, 
+                    f"Cotización #{cotizacion.numero} enviada" + (" por correo" if correo_enviado else ""), 
+                    Interaccion.Tipo.CORREO
                 )
+                
+                if correo_enviado:
+                    messages.success(request, f"Cotización #{cotizacion.numero} aprobada y enviada exitosamente por correo a {prospecto.correo}.")
+                else:
+                    messages.success(request, f"Cotización #{cotizacion.numero} aprobada y marcada como enviada.")
         elif accion in ("aceptada", "rechazada") and cotizacion.estado == Cotizacion.Estado.ENVIADA:
             cotizacion.estado = accion
             cotizacion.respondida_en = timezone.now()
