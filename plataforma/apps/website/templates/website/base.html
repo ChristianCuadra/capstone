@@ -2,13 +2,14 @@
 <html lang="es-CL">
 <head>
   {% include "partials/head.html" %}
-  <title>{% block title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}{{ agencia.nombre }}: {{ agencia.descriptor }} para pymes, marcas personales y emprendedoras en {{ agencia.ciudad }}.{% endblock %}">
+  {# PC-SEO-01b: si la administradora definió título/descripción de esta página en el CMS, se usan esos; si no, el texto por defecto. #}
+  <title>{% if seo_pagina.meta_titulo %}{{ seo_pagina.meta_titulo }} · {{ agencia.nombre }}{% else %}{% block title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}{% endif %}</title>
+  <meta name="description" content="{% if seo_pagina.meta_descripcion %}{{ seo_pagina.meta_descripcion }}{% else %}{% block meta_description %}{{ agencia.nombre }}: {{ agencia.descriptor }} para pymes, marcas personales y emprendedoras en {{ agencia.ciudad }}.{% endblock %}{% endif %}">
   <link rel="canonical" href="{{ request.scheme }}://{{ agencia.dominio }}{{ request.path }}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ agencia.nombre }}">
-  <meta property="og:title" content="{% block og_title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}{{ agencia.nombre }}: {{ agencia.descriptor }} para pymes, marcas personales y emprendedoras en {{ agencia.ciudad }}.{% endblock %}">
+  <meta property="og:title" content="{% if seo_pagina.meta_titulo %}{{ seo_pagina.meta_titulo }} · {{ agencia.nombre }}{% else %}{% block og_title %}{{ agencia.nombre }} · {{ agencia.descriptor }}{% endblock %}{% endif %}">
+  <meta property="og:description" content="{% if seo_pagina.meta_descripcion %}{{ seo_pagina.meta_descripcion }}{% else %}{% block og_description %}{{ agencia.nombre }}: {{ agencia.descriptor }} para pymes, marcas personales y emprendedoras en {{ agencia.ciudad }}.{% endblock %}{% endif %}">
   <meta property="og:url" content="{{ request.scheme }}://{{ agencia.dominio }}{{ request.path }}">
   {% block structured_data %}
   <script type="application/ld+json">

@@ -11,7 +11,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import user_passes_test
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse, request
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -19,15 +18,16 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.utils.text import slugify
+from django.urls import reverse_lazy
 
-from apps.accounts.decorators import requiere_administradora
+from apps.accounts.decorators import requiere_administradora, requiere_equipo
 from apps.accounts.forms import UsuarioForm
 from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
 from apps.clients.forms import ClienteFichaForm, DocumentoClienteForm, KPIForm, MedicionForm
 from apps.clients.models import Cliente, DocumentoCliente, KPICliente, MedicionKPI
-from apps.core.access import clientes_visibles, es_equipo, obtener_cliente_visible, puede_aprobar
+from apps.core.access import clientes_visibles, obtener_cliente_visible, puede_aprobar
 from apps.core.middleware import SESSION_CLIENT_KEY
 from apps.core.models import RegistroAuditoria
 from allauth.mfa.models import Authenticator
@@ -37,8 +37,8 @@ from apps.website.views import cotizacion
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
 from .froms import PlanEntregableFormSet, PlanForm, ProspectoManualForm, ServicioForm
-from apps.website.models import Contenido
-from apps.website.forms import ContenidoForm
+from apps.website.models import Contenido, MetadatosPagina
+from apps.website.forms import ContenidoForm, MetadatosPaginaForm
 
 ETAPAS_EMBUDO = [
     Prospecto.Etapa.NUEVO,
@@ -51,7 +51,8 @@ ETAPAS_ACTIVAS = ETAPAS_EMBUDO[:-1]
 PERIODOS = [("mes", "Este mes"), ("mes_anterior", "Mes anterior"), ("3_meses", "Últimos 3 meses"), ("anio", "Este año")]
 MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-solo_equipo = user_passes_test(es_equipo, login_url="account_login")
+# Sin sesión: al login. Con sesión y sin acceso (p. ej. un cliente): mensaje y registro en la auditoría (CP-019).
+solo_equipo = requiere_equipo
 
 
 # ── Utilidades ────────────────────────────────────────────────────────────────
@@ -1327,3 +1328,45 @@ def contenido_alternar_publicado(request, pk):
     )
     messages.success(request, f"«{contenido.titulo}» ahora está {contenido.get_estado_display().lower()}.")
     return _volver(request, "crm:contenidos")
+
+
+@requiere_administradora
+def seo_paginas(request):
+    """Metadatos SEO (título y descripción) de las páginas fijas del sitio (PC-SEO-01b, CP-009).
+
+    Un formulario por página en la misma pantalla; solo se guardan, y quedan en la auditoría,
+    las páginas que cambiaron.
+    """
+    existentes = {m.pagina: m for m in MetadatosPagina.objects.all()}
+    filas = []
+    for valor, etiqueta in MetadatosPagina.Pagina.choices:
+        instancia = existentes.get(valor) or MetadatosPagina(pagina=valor)
+        form = MetadatosPaginaForm(request.POST or None, instance=instancia, prefix=valor)
+        filas.append({"valor": valor, "etiqueta": etiqueta, "url": reverse_lazy(f"website:{valor}"), "form": form})
+
+    if request.method == "POST":
+        if all(f["form"].is_valid() for f in filas):
+            cambiadas = []
+            with transaction.atomic():
+                for fila in filas:
+                    if not fila["form"].has_changed():
+                        continue
+                    obj = fila["form"].save(commit=False)
+                    obj.actualizado_por = request.user
+                    obj.save()
+                    RegistroAuditoria.registrar(
+                        usuario=request.user,
+                        accion=RegistroAuditoria.Accion.EDITAR,
+                        entidad="SEO de página",
+                        entidad_id=obj.pagina,
+                        detalle=f"{fila['etiqueta']} · título: {obj.meta_titulo or '(por defecto)'}"[:255],
+                    )
+                    cambiadas.append(fila["etiqueta"])
+            if cambiadas:
+                messages.success(request, f"Metadatos guardados: {', '.join(cambiadas)}.")
+            else:
+                messages.info(request, "No había cambios que guardar.")
+            return redirect("crm:seo_paginas")
+        messages.error(request, "Revisa los campos marcados.")
+
+    return render(request, "crm/seo_paginas.html", contexto_panel(request, "contenidos", filas=filas))

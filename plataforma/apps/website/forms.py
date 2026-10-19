@@ -3,7 +3,7 @@ from django import forms
 from apps.catalog.models import Servicio
 from apps.crm.models import OBJETIVOS, REDES, Prospecto
 
-from .models import Contenido
+from .models import Contenido, MetadatosPagina
 
 
 class SolicitudCotizacionForm(forms.ModelForm):
@@ -107,3 +107,20 @@ class ContenidoForm(forms.ModelForm):
                 continue
             campo.widget.attrs["class"] = "campo"
             campo.widget.attrs.setdefault("autocomplete", "off")
+
+
+class MetadatosPaginaForm(forms.ModelForm):
+    """Título y descripción SEO de una página fija (PC-SEO-01b). Vacío = texto por defecto del sitio."""
+
+    class Meta:
+        model = MetadatosPagina
+        fields = ["meta_titulo", "meta_descripcion"]
+        widgets = {"meta_descripcion": forms.Textarea(attrs={"rows": 2})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in self.fields.values():
+            campo.widget.attrs["class"] = "campo"
+            campo.widget.attrs["autocomplete"] = "off"
+            campo.widget.attrs["maxlength"] = campo.max_length
+            campo.widget.attrs["placeholder"] = "Vacío: se usa el texto actual del sitio"

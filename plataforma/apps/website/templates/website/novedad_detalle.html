@@ -2,6 +2,8 @@
 
 {% block title %}{{ contenido.meta_titulo|default:contenido.titulo }} · {{ agencia.nombre }}{% endblock %}
 {% block meta_description %}{{ contenido.meta_descripcion|default:contenido.resumen }}{% endblock %}
+{% block og_title %}{{ contenido.meta_titulo|default:contenido.titulo }} · {{ agencia.nombre }}{% endblock %}
+{% block og_description %}{{ contenido.meta_descripcion|default:contenido.resumen }}{% endblock %}
 
 {% block content %}
 <article class="bg-white pb-16 pt-14 lg:pb-24 lg:pt-20">

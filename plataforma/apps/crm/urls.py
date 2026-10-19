@@ -42,6 +42,7 @@ urlpatterns = [
     path("planes-servicios/servicios/<int:pk>/alternar/", views.servicio_alternar_activo, name="servicio_alternar_activo"),
     path("contenidos/", views.contenidos, name="contenidos"),
     path("contenidos/nuevo/", views.contenido_form, name="contenido_nuevo"),
+    path("contenidos/seo/", views.seo_paginas, name="seo_paginas"),
     path("contenidos/<int:pk>/", views.contenido_form, name="contenido_editar"),
     path("contenidos/<int:pk>/alternar/", views.contenido_alternar_publicado, name="contenido_alternar_publicado"),
 ]

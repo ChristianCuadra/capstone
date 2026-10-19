@@ -5,7 +5,7 @@
 {% block content %}
 <header>
   <h1 class="font-serif text-3xl text-vino lg:text-4xl">Registro de auditoría</h1>
-  <p class="mt-1 text-sm">Historial de creación, edición y eliminación de usuarios. Es de solo lectura: se genera automáticamente y no se puede modificar.</p>
+  <p class="mt-1 text-sm">Historial de acciones del panel: creación, edición y eliminación, e intentos de entrar sin permiso. Es de solo lectura: se genera automáticamente y no se puede modificar.</p>
 </header>
 
 <form method="get" class="mt-6 flex flex-wrap items-center gap-2">
@@ -35,8 +35,13 @@
       <div>
         <p class="text-sm">
           <span class="font-semibold text-vino">{{ r.usuario|default:"(cuenta eliminada)" }}</span>
+          {% if r.accion == "denegado" %}
+          intentó entrar sin permiso al {{ r.entidad }}{% if r.detalle %} — {{ r.detalle }}{% endif %}
+          <span class="ml-1 rounded-full bg-[#B3261E]/10 px-2 py-0.5 text-[11px] font-semibold text-[#B3261E]">Acceso denegado</span>
+          {% else %}
           {% if r.accion == "crear" %}creó{% elif r.accion == "editar" %}editó{% else %}eliminó{% endif %}
           un {{ r.entidad }}{% if r.detalle %} — {{ r.detalle }}{% endif %}
+          {% endif %}
         </p>
         <p class="mt-0.5 text-xs">{{ r.creado_en|date:"d-m-Y H:i" }}</p>
       </div>

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from apps.core.admin_mixins import AuditoriaAdminMixin
 
-from .models import Contenido
+from .models import Contenido, MetadatosPagina
 
 
 @admin.register(Contenido)
@@ -12,3 +12,9 @@ class ContenidoAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     search_fields = ("titulo", "resumen", "cuerpo")
     prepopulated_fields = {"slug": ("titulo",)}
     auditoria_entidad = "contenido del sitio"
+
+
+@admin.register(MetadatosPagina)
+class MetadatosPaginaAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
+    list_display = ("pagina", "meta_titulo", "actualizado_en")
+    auditoria_entidad = "SEO de página"

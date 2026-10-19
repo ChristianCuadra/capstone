@@ -77,3 +77,46 @@ class Contenido(models.Model):
             self.publicado_en = None
 
         super().save(*args, **kwargs)
+
+
+class MetadatosPagina(models.Model):
+    """Título y descripción SEO de las páginas fijas del sitio, editables desde el CMS (PC-SEO-01b, CP-009).
+
+    Si un campo queda vacío, la página usa el texto que trae por defecto (PC-SEO-01). Así nada cambia
+    en el sitio hasta que la administradora lo defina.
+    """
+
+    class Pagina(models.TextChoices):
+        # El valor es el nombre de la URL en apps.website.urls (website:<valor>).
+        HOME = "home", "Inicio"
+        PLANES = "planes", "Planes"
+        COTIZACION = "cotizacion", "Solicitar cotización"
+        ASESORIA = "asesoria", "Asesoría gratuita"
+        NOVEDADES = "novedades", "Novedades (listado)"
+
+    pagina = models.CharField("página", max_length=20, choices=Pagina.choices, unique=True)
+    meta_titulo = models.CharField(
+        "meta título (SEO)", max_length=70, blank=True, help_text="Se muestra en la pestaña y en Google. Al final se agrega el nombre de la agencia."
+    )
+    meta_descripcion = models.CharField(
+        "meta descripción (SEO)", max_length=160, blank=True, help_text="Texto bajo el título en los resultados de búsqueda."
+    )
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "sitio_metadatos_paginas"
+        verbose_name = "metadatos SEO de página"
+        verbose_name_plural = "metadatos SEO de páginas"
+        ordering = ["pagina"]
+
+    def __str__(self):
+        return self.get_pagina_display()
+
+    def save(self, *args, **kwargs):
+        # Sanitización igual que el resto del CMS (RNF-03, CP-008).
+        self.meta_titulo = strip_tags(self.meta_titulo).strip()
+        self.meta_descripcion = strip_tags(self.meta_descripcion).strip()
+        super().save(*args, **kwargs)
