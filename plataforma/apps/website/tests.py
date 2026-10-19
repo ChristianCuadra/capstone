@@ -540,3 +540,122 @@ class MetadatosDelCMSTests(TestCase):
         sitemap = self.client.get("/sitemap.xml").content.decode()
         self.assertIn(reverse("website:novedad_detalle", args=[publicada.slug]), sitemap)
         self.assertNotIn(borrador.slug, sitemap)
+
+
+class CTACotizacionTests(TestCase):
+    """Pedido de la agencia (27/09/2026): llamado a cotizar en todas las páginas públicas, no en panel ni portal."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_cada_pagina_publica_termina_con_el_cta_y_trae_el_boton_flotante(self):
+        from .models import Contenido
+
+        novedad = Contenido.objects.create(titulo="Una novedad", cuerpo="Texto", estado=Contenido.Estado.PUBLICADO)
+        paginas = [reverse(n) for n in ("website:home", "website:planes", "website:asesoria", "website:novedades")]
+        paginas.append(reverse("website:novedad_detalle", args=[novedad.slug]))
+        for url in paginas:
+            with self.subTest(url=url):
+                respuesta = self.client.get(url)
+                self.assertContains(respuesta, 'id="cta-cotizacion-titulo"', count=1)
+                self.assertContains(respuesta, 'id="cta-flotante"', count=1)
+                self.assertNotContains(respuesta, "{#")  # ningún comentario de plantilla queda visible
+
+    def test_la_pagina_de_cotizacion_no_repite_el_llamado(self):
+        respuesta = self.client.get(reverse("website:cotizacion"))
+        self.assertNotContains(respuesta, 'id="cta-cotizacion-titulo"')
+        self.assertNotContains(respuesta, 'id="cta-flotante"')
+
+    def test_panel_y_portal_no_llevan_el_cta(self):
+        from django.contrib.auth import get_user_model
+
+        from apps.clients.models import Cliente
+
+        User = get_user_model()
+        admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        cliente = User.objects.create_user("cli", "cli@x.cl", "x", rol="cliente_lector", cliente=Cliente.objects.create(nombre="Alfa"))
+        self.client.force_login(admin)
+        self.assertNotContains(self.client.get(reverse("crm:dashboard")), 'id="cta-cotizacion-titulo"')
+        self.client.force_login(cliente)
+        self.assertNotContains(self.client.get(reverse("content:calendario")), 'id="cta-cotizacion-titulo"')
+
+
+class ConfiguracionAgenciaTests(TestCase):
+    """Panel → Configuración: datos de contacto de la agencia editables por la administradora."""
+
+    DATOS = {
+        "correo": "contacto@agencia-real.cl", "telefono": "+56 9 1111 2222", "whatsapp": "+56 9 1111 2222",
+        "ciudad": "Viña del Mar, Chile", "instagram_usuario": "@agencia.cosmo", "linkedin_nombre": "Agencia Cosmopolitan",
+        "linkedin_url": "https://www.linkedin.com/company/agencia-cosmo",
+    }
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        cache.clear()
+        User = get_user_model()
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+
+    def test_sin_configurar_el_sitio_muestra_los_datos_provisorios(self):
+        respuesta = self.client.get(reverse("website:home"))
+        self.assertContains(respuesta, "hola@agenciacosmopolitan.cl")
+        self.assertContains(respuesta, "+56 9 8765 4321")
+        self.assertNotContains(respuesta, "instagram.com/")
+
+    def test_la_administradora_cambia_los_datos_y_el_sitio_los_muestra(self):
+        self.client.force_login(self.admin)
+        self.assertRedirects(self.client.post(reverse("crm:configuracion"), self.DATOS), reverse("crm:configuracion"))
+        self.client.logout()
+        home = self.client.get(reverse("website:home"))
+        self.assertContains(home, "contacto@agencia-real.cl")
+        self.assertContains(home, "Viña del Mar, Chile")
+        self.assertContains(home, 'href="https://instagram.com/agencia.cosmo"')
+        self.assertContains(home, "Instagram · @agencia.cosmo")
+        self.assertContains(home, "https://www.linkedin.com/company/agencia-cosmo")
+        self.assertNotContains(home, "hola@agenciacosmopolitan.cl")
+        asesoria = self.client.get(reverse("website:asesoria"))
+        self.assertContains(asesoria, "https://wa.me/56911112222")
+
+    def test_el_aviso_de_asesoria_va_al_correo_configurado(self):
+        from django.core import mail
+
+        from .models import ConfiguracionAgencia
+
+        ConfiguracionAgencia(correo="avisos@agencia-real.cl").save()
+        self.client.post(reverse("website:asesoria"), DATOS_ASESORIA)
+        self.assertTrue(mail.outbox, "debería enviarse el aviso de asesoría")
+        self.assertEqual(mail.outbox[-1].to, ["avisos@agencia-real.cl"])
+
+    def test_validaciones(self):
+        from .models import ConfiguracionAgencia
+
+        self.client.force_login(self.admin)
+        malos = {**self.DATOS, "whatsapp": "123", "instagram_usuario": "con espacio", "linkedin_url": "https://facebook.com/x"}
+        respuesta = self.client.post(reverse("crm:configuracion"), malos)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "código de país")
+        self.assertContains(respuesta, "letras, números, puntos")
+        self.assertContains(respuesta, "linkedin.com")
+        self.assertFalse(ConfiguracionAgencia.objects.exists())
+
+    def test_cambio_queda_en_auditoria_y_es_un_registro_unico(self):
+        from apps.core.models import RegistroAuditoria
+
+        from .models import ConfiguracionAgencia
+
+        self.client.force_login(self.admin)
+        self.client.post(reverse("crm:configuracion"), self.DATOS)
+        self.client.post(reverse("crm:configuracion"), {**self.DATOS, "ciudad": "Valparaíso, Chile"})
+        self.assertEqual(ConfiguracionAgencia.objects.count(), 1)
+        registros = RegistroAuditoria.objects.filter(entidad="configuración de la agencia").order_by("creado_en")
+        self.assertEqual(registros.count(), 2)
+        self.assertIn("Ciudad", registros.last().detalle)
+
+    def test_colaboradora_no_cambia_la_configuracion(self):
+        from .models import ConfiguracionAgencia
+
+        self.client.force_login(self.colab)
+        self.assertEqual(self.client.post(reverse("crm:configuracion"), self.DATOS).status_code, 302)
+        self.assertFalse(ConfiguracionAgencia.objects.exists())
+        self.assertNotContains(self.client.get(reverse("crm:dashboard")), reverse("crm:configuracion"))

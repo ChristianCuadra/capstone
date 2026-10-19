@@ -37,8 +37,8 @@ from apps.website.views import cotizacion
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
 
 from .froms import PlanEntregableFormSet, PlanForm, ProspectoManualForm, ServicioForm
-from apps.website.models import Contenido, MetadatosPagina
-from apps.website.forms import ContenidoForm, MetadatosPaginaForm
+from apps.website.models import ConfiguracionAgencia, Contenido, MetadatosPagina
+from apps.website.forms import ConfiguracionAgenciaForm, ContenidoForm, MetadatosPaginaForm
 
 ETAPAS_EMBUDO = [
     Prospecto.Etapa.NUEVO,
@@ -1370,3 +1370,38 @@ def seo_paginas(request):
         messages.error(request, "Revisa los campos marcados.")
 
     return render(request, "crm/seo_paginas.html", contexto_panel(request, "contenidos", filas=filas))
+
+
+@requiere_administradora
+def configuracion(request):
+    """Datos de contacto de la agencia que usa el sitio, la cotización y los avisos por correo.
+
+    Reemplaza el enlace al admin de Django. Queda en la auditoría qué campos cambiaron.
+    """
+    config = ConfiguracionAgencia.actual()
+    form = ConfiguracionAgenciaForm(request.POST or None, instance=config)
+    if request.method == "POST":
+        if form.is_valid():
+            if form.has_changed():
+                obj = form.save(commit=False)
+                obj.actualizado_por = request.user
+                obj.save()
+                etiquetas = ", ".join(str(form.fields[c].label) for c in form.changed_data)
+                RegistroAuditoria.registrar(
+                    usuario=request.user,
+                    accion=RegistroAuditoria.Accion.EDITAR,
+                    entidad="configuración de la agencia",
+                    entidad_id=obj.pk,
+                    detalle=f"Campos: {etiquetas}"[:255],
+                )
+                messages.success(request, "Configuración guardada. El sitio ya muestra los datos nuevos.")
+            else:
+                messages.info(request, "No había cambios que guardar.")
+            return redirect("crm:configuracion")
+        messages.error(request, "Revisa los campos marcados.")
+    contexto = contexto_panel(
+        request, "configuracion", form=form, config=config,
+        campos_contacto=[form[c] for c in ("correo", "telefono", "whatsapp", "ciudad")],
+        campos_redes=[form[c] for c in ("instagram_usuario", "linkedin_nombre", "linkedin_url")],
+    )
+    return render(request, "crm/configuracion.html", contexto)

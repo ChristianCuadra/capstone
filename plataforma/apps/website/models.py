@@ -120,3 +120,47 @@ class MetadatosPagina(models.Model):
         self.meta_titulo = strip_tags(self.meta_titulo).strip()
         self.meta_descripcion = strip_tags(self.meta_descripcion).strip()
         super().save(*args, **kwargs)
+
+
+class ConfiguracionAgencia(models.Model):
+    """Datos de contacto de la agencia que se muestran en el sitio, la cotización y los avisos por correo.
+
+    Registro único (pk=1), editable por la administradora en Panel → Configuración. Los valores por defecto
+    son los provisorios que tenía el sitio, así nada cambia hasta que la agencia entregue los reales.
+    El correo es también el destino de los avisos de asesoría gratuita.
+    """
+
+    correo = models.EmailField("correo de contacto", default="hola@agenciacosmopolitan.cl")
+    telefono = models.CharField("teléfono", max_length=30, default="+56 9 8765 4321", help_text="Como se muestra en el sitio, ej. +56 9 1234 5678.")
+    whatsapp = models.CharField(
+        "WhatsApp", max_length=15, default="56987654321", help_text="Solo números, con código de país y sin «+». Ej.: 56912345678."
+    )
+    ciudad = models.CharField(max_length=80, default="Santiago, Chile")
+    instagram_usuario = models.CharField(
+        "usuario de Instagram", max_length=30, blank=True, help_text="Sin @. Vacío = no se muestra en el sitio."
+    )
+    linkedin_nombre = models.CharField("nombre en LinkedIn", max_length=80, blank=True)
+    linkedin_url = models.URLField("URL de LinkedIn", blank=True, help_text="Vacío = no se muestra en el sitio.")
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "agencia_config"
+        verbose_name = "configuración de la agencia"
+        verbose_name_plural = "configuración de la agencia"
+
+    def __str__(self):
+        return "Configuración de la agencia"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # registro único
+        self.instagram_usuario = self.instagram_usuario.strip().lstrip("@")
+        self.whatsapp = "".join(c for c in self.whatsapp if c.isdigit())
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def actual(cls):
+        """La configuración guardada, o una con los valores por defecto (sin guardarla) si aún no existe."""
+        return cls.objects.filter(pk=1).first() or cls(pk=1)

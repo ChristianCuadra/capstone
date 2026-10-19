@@ -3,7 +3,7 @@ from django import forms
 from apps.catalog.models import Servicio
 from apps.crm.models import OBJETIVOS, REDES, Prospecto
 
-from .models import Contenido, MetadatosPagina
+from .models import ConfiguracionAgencia, Contenido, MetadatosPagina
 
 
 class SolicitudCotizacionForm(forms.ModelForm):
@@ -124,3 +124,37 @@ class MetadatosPaginaForm(forms.ModelForm):
             campo.widget.attrs["autocomplete"] = "off"
             campo.widget.attrs["maxlength"] = campo.max_length
             campo.widget.attrs["placeholder"] = "Vacío: se usa el texto actual del sitio"
+
+
+class ConfiguracionAgenciaForm(forms.ModelForm):
+    """Datos de contacto de la agencia (Panel → Configuración)."""
+
+    class Meta:
+        model = ConfiguracionAgencia
+        fields = ["correo", "telefono", "whatsapp", "ciudad", "instagram_usuario", "linkedin_nombre", "linkedin_url"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in self.fields.values():
+            campo.widget.attrs["class"] = "campo"
+            campo.widget.attrs["autocomplete"] = "off"
+
+    def clean_whatsapp(self):
+        digitos = "".join(c for c in self.cleaned_data["whatsapp"] if c.isdigit())
+        if not 8 <= len(digitos) <= 15:
+            raise forms.ValidationError("Ingresa el número con código de país, solo números. Ej.: 56912345678.")
+        return digitos
+
+    def clean_instagram_usuario(self):
+        import re
+
+        usuario = self.cleaned_data["instagram_usuario"].strip().lstrip("@")
+        if usuario and not re.fullmatch(r"[A-Za-z0-9._]{1,30}", usuario):
+            raise forms.ValidationError("El usuario solo puede tener letras, números, puntos y guiones bajos.")
+        return usuario
+
+    def clean_linkedin_url(self):
+        url = self.cleaned_data["linkedin_url"].strip()
+        if url and "linkedin.com/" not in url.lower():
+            raise forms.ValidationError("Debe ser una dirección de linkedin.com.")
+        return url

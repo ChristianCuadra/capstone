@@ -32,7 +32,7 @@ PANEL_SOLO_ADMIN = [
     ("crm:usuarios", []), ("crm:usuario_nuevo", []), ("crm:usuario_editar", [1]), ("crm:auditoria", []),
     ("crm:usuario_alternar_activo", [1]), ("crm:usuario_restablecer_2fa", [1]), ("crm:usuario_eliminar", [1]),
     ("crm:planes_servicios", []), ("crm:plan_nuevo", []), ("crm:plan_editar", [1]),
-    ("crm:servicio_nuevo", []), ("crm:servicio_editar", [1]), ("crm:seo_paginas", []),
+    ("crm:servicio_nuevo", []), ("crm:servicio_editar", [1]), ("crm:seo_paginas", []), ("crm:configuracion", []),
 ]
 ACCIONES_POST = [
     ("crm:cliente_activo", []), ("crm:cliente_documento_subir", [1]), ("crm:cliente_documento_eliminar", [1, 1]),

@@ -33,6 +33,7 @@ urlpatterns = [
     path("usuarios/<int:pk>/restablecer-2fa/", views.usuario_restablecer_2fa, name="usuario_restablecer_2fa"),
     path("usuarios/<int:pk>/eliminar/", views.usuario_eliminar, name="usuario_eliminar"),
     path("auditoria/", views.auditoria, name="auditoria"),
+    path("configuracion/", views.configuracion, name="configuracion"),
     path("planes-servicios/", views.planes_servicios, name="planes_servicios"),
     path("planes-servicios/planes/nuevo/", views.plan_form, name="plan_nuevo"),
     path("planes-servicios/planes/<int:pk>/", views.plan_form, name="plan_editar"),

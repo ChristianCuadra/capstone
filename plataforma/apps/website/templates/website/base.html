@@ -97,6 +97,9 @@
 
   <main>{% block content %}{% endblock %}</main>
 
+  {% block cta_final %}{% include "website/_cta_cotizacion.html" %}{% endblock %}
+  {% block cta_flotante %}{% include "website/_cta_flotante.html" %}{% endblock %}
+
   <footer id="contacto" class="bg-vino text-lila">
     {# TODO: Supabase - agencia_config (vía context processor apps.website.context_processors.agencia) #}
     <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:px-8">

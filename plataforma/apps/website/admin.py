@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from apps.core.admin_mixins import AuditoriaAdminMixin
 
-from .models import Contenido, MetadatosPagina
+from .models import ConfiguracionAgencia, Contenido, MetadatosPagina
 
 
 @admin.register(Contenido)
@@ -18,3 +18,9 @@ class ContenidoAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
 class MetadatosPaginaAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     list_display = ("pagina", "meta_titulo", "actualizado_en")
     auditoria_entidad = "SEO de página"
+
+
+@admin.register(ConfiguracionAgencia)
+class ConfiguracionAgenciaAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
+    list_display = ("__str__", "correo", "telefono", "actualizado_en")
+    auditoria_entidad = "configuración de la agencia"

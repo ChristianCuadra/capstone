@@ -8,6 +8,10 @@
 {% include "website/_estilos_formulario.html" %}
 {% endblock %}
 
+{# En la propia página de cotización no se repite el llamado a cotizar. #}
+{% block cta_final %}{% endblock %}
+{% block cta_flotante %}{% endblock %}
+
 {% block content %}
 <section class="bg-fondo-suave">
   <div class="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_1.35fr] lg:gap-16 lg:px-8 lg:py-20">
