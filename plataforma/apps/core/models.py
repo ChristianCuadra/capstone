@@ -58,13 +58,15 @@ class RegistroAuditoria(models.Model):
     """Bitácora de acciones administrativas sensibles (Documento de Alcance 9.2, RNF-01).
 
     Por ahora se registra manualmente desde las vistas que lo requieren
-    (alta/edición de usuarios); se puede ampliar a otras acciones sensibles después.
+    (alta/edición de usuarios, catálogo, contenidos) y en cada intento de entrar al
+    panel sin el rol requerido (CP-019).
     """
 
     class Accion(models.TextChoices):
         CREAR = "crear", "Crear"
         EDITAR = "editar", "Editar"
         ELIMINAR = "eliminar", "Eliminar"
+        ACCESO_DENEGADO = "denegado", "Acceso denegado"
 
     usuario = models.ForeignKey(
         "accounts.User",

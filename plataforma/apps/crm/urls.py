@@ -33,6 +33,7 @@ urlpatterns = [
     path("usuarios/<int:pk>/restablecer-2fa/", views.usuario_restablecer_2fa, name="usuario_restablecer_2fa"),
     path("usuarios/<int:pk>/eliminar/", views.usuario_eliminar, name="usuario_eliminar"),
     path("auditoria/", views.auditoria, name="auditoria"),
+    path("configuracion/", views.configuracion, name="configuracion"),
     path("planes-servicios/", views.planes_servicios, name="planes_servicios"),
     path("planes-servicios/planes/nuevo/", views.plan_form, name="plan_nuevo"),
     path("planes-servicios/planes/<int:pk>/", views.plan_form, name="plan_editar"),
@@ -42,6 +43,7 @@ urlpatterns = [
     path("planes-servicios/servicios/<int:pk>/alternar/", views.servicio_alternar_activo, name="servicio_alternar_activo"),
     path("contenidos/", views.contenidos, name="contenidos"),
     path("contenidos/nuevo/", views.contenido_form, name="contenido_nuevo"),
+    path("contenidos/seo/", views.seo_paginas, name="seo_paginas"),
     path("contenidos/<int:pk>/", views.contenido_form, name="contenido_editar"),
     path("contenidos/<int:pk>/alternar/", views.contenido_alternar_publicado, name="contenido_alternar_publicado"),
 ]

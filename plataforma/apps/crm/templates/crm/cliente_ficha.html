@@ -114,7 +114,7 @@
               <label class="text-xs">Valor<input type="number" name="valor" min="0" step="0.01" required class="mt-1 block w-28 rounded-xl border border-gris-borde px-2 py-1.5 text-sm"></label>
               <button type="submit" class="rounded-full bg-vino px-4 py-2 text-xs font-semibold text-white hover:bg-vino-oscuro">Registrar</button>
             </form>
-            <form method="post" action="{% url 'crm:cliente_kpi_eliminar' cliente.pk k.pk %}" onsubmit="return confirm('¿Quitar este KPI y todo su historial?');">
+            <form method="post" action="{% url 'crm:cliente_kpi_eliminar' cliente.pk k.pk %}" data-confirmar-titulo="¿Quitar este KPI?" data-confirmar="Se elimina el KPI y todo su historial de mediciones. No se puede deshacer." data-confirmar-boton="Sí, quitar" data-confirmar-peligro>
               {% csrf_token %}
               <button type="submit" class="rounded-full px-3 py-2 text-xs font-medium text-red-700 ring-1 ring-inset ring-gris-borde hover:bg-rubor">Quitar KPI</button>
             </form>
@@ -155,7 +155,7 @@
           <div class="flex gap-2">
             <a href="{% url 'crm:cliente_documento_descargar' cliente.pk d.pk %}" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Descargar</a>
             {% if puede_editar %}
-            <form method="post" action="{% url 'crm:cliente_documento_eliminar' cliente.pk d.pk %}" onsubmit="return confirm('¿Eliminar este documento?');">
+            <form method="post" action="{% url 'crm:cliente_documento_eliminar' cliente.pk d.pk %}" data-confirmar-titulo="¿Eliminar «{{ d.nombre }}»?" data-confirmar="El documento se elimina de la ficha del cliente. No se puede deshacer." data-confirmar-boton="Sí, eliminar" data-confirmar-peligro>
               {% csrf_token %}
               <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-red-700 ring-1 ring-inset ring-gris-borde hover:bg-rubor">Eliminar</button>
             </form>

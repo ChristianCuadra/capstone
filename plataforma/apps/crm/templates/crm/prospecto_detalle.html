@@ -34,7 +34,7 @@
     {% if prospecto.cliente %}
     <a href="{% url 'crm:clientes' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">Ver cliente</a>
     {% else %}
-    <form method="post" class="flex flex-wrap items-center gap-2 rounded-2xl border border-gris-borde bg-white p-2" onsubmit="return confirm('¿Convertir {{ prospecto.empresa|escapejs }} en cliente? Quedará en etapa Cerrado ganado.')">
+    <form method="post" class="flex flex-wrap items-center gap-2 rounded-2xl border border-gris-borde bg-white p-2" data-confirmar-titulo="¿Convertir «{{ prospecto.empresa }}» en cliente?" data-confirmar="Se crea el cliente con sus datos y el prospecto queda en etapa Cerrado ganado." data-confirmar-boton="Sí, convertir">
       {% csrf_token %}<input type="hidden" name="accion" value="convertir_cliente">
       <label class="sr-only" for="conv-plan">Plan contratado</label>
       <select id="conv-plan" name="plan" required class="rounded-full border border-gris-borde bg-white px-3 py-2 text-sm">
@@ -207,7 +207,7 @@
         <form method="post">
           {% csrf_token %}<input type="hidden" name="accion" value="generar_diagnostico">
           <button type="submit" class="rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if not ia_configurada %}text-gris-txt{% else %}text-vino{% endif %}"
-                  {% if prospecto.diagnostico_ia %}onclick="return confirm('Se reemplazará el texto actual por uno nuevo. ¿Continuar?')"{% endif %}>
+                  {% if prospecto.diagnostico_ia %}data-confirmar-titulo="¿Regenerar el diagnóstico?" data-confirmar="Se reemplazará el texto actual por uno nuevo." data-confirmar-boton="Sí, regenerar"{% endif %}>
             {% if prospecto.diagnostico_ia %}↻ Regenerar{% else %}Generar con IA{% endif %}
           </button>
         </form>

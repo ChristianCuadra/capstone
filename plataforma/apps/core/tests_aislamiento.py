@@ -1,6 +1,7 @@
 """PC-TEC-04 · Suite de pruebas de aislamiento entre clientes y de permisos por rol.
 
-Cubre CP-020 (acceso por URL a un recurso de otro cliente) y CP-021 (manipulación del identificador
+Cubre CP-019 (usuario cliente sin acceso al panel, con el intento registrado en la bitácora),
+CP-020 (acceso por URL a un recurso de otro cliente) y CP-021 (manipulación del identificador
 de cliente). Criterio de la suite: todo intento de leer datos de otro cliente o de ejecutar una acción
 fuera del rol debe quedar denegado, sin revelar la existencia del recurso.
 
@@ -16,6 +17,7 @@ from django.urls import reverse
 from apps.clients.models import Cliente, DocumentoCliente
 from apps.core.context import get_allowed_client_ids, reset_allowed_client_ids, set_allowed_client_ids
 from apps.core.middleware import SESSION_CLIENT_KEY
+from apps.core.models import RegistroAuditoria
 
 User = get_user_model()
 
@@ -30,7 +32,7 @@ PANEL_SOLO_ADMIN = [
     ("crm:usuarios", []), ("crm:usuario_nuevo", []), ("crm:usuario_editar", [1]), ("crm:auditoria", []),
     ("crm:usuario_alternar_activo", [1]), ("crm:usuario_restablecer_2fa", [1]), ("crm:usuario_eliminar", [1]),
     ("crm:planes_servicios", []), ("crm:plan_nuevo", []), ("crm:plan_editar", [1]),
-    ("crm:servicio_nuevo", []), ("crm:servicio_editar", [1]),
+    ("crm:servicio_nuevo", []), ("crm:servicio_editar", [1]), ("crm:seo_paginas", []), ("crm:configuracion", []),
 ]
 ACCIONES_POST = [
     ("crm:cliente_activo", []), ("crm:cliente_documento_subir", [1]), ("crm:cliente_documento_eliminar", [1, 1]),
@@ -400,3 +402,54 @@ class AislamientoDeKPIsTests(BaseAislamiento):
         self._restringir({self.a.pk})
         with self.assertRaises(PermissionDenied):
             KPICliente(cliente=self.b, indicador="alcance", valor_inicial=1, meta=2).save()
+
+
+class IntentoDeAccesoAlPanelTests(BaseAislamiento):
+    """CP-019: un usuario cliente no entra al panel; se le informa y el intento queda en la bitácora."""
+
+    def _denegados(self, usuario=None):
+        registros = RegistroAuditoria.objects.filter(accion=RegistroAuditoria.Accion.ACCESO_DENEGADO)
+        return registros.filter(usuario=usuario) if usuario else registros
+
+    def test_cliente_que_abre_el_panel_vuelve_a_su_portal_con_mensaje(self):
+        self.client.force_login(self.aprobador_a)
+        r = self.client.get(reverse("crm:dashboard"), follow=True)
+        self.assertEqual(r.redirect_chain[-1][0], reverse("content:calendario"))
+        self.assertContains(r, "No tienes acceso a esa sección del panel")
+        self.assertNotContains(r, "Clínica Beta Secreta")
+
+    def test_cada_intento_del_cliente_queda_en_la_bitacora(self):
+        self.client.force_login(self.lector_a)
+        self.client.get(reverse("crm:cliente_ficha", args=[self.b.pk]))
+        self.client.post(reverse("crm:cliente_activo"), {"cliente": self.b.pk})
+        registros = list(self._denegados(self.lector_a).order_by("creado_en"))
+        self.assertEqual(len(registros), 2)
+        self.assertEqual(registros[0].detalle, f"GET {reverse('crm:cliente_ficha', args=[self.b.pk])}")
+        self.assertEqual(registros[1].detalle, f"POST {reverse('crm:cliente_activo')}")
+        self.assertEqual(registros[0].entidad, "panel de la agencia")
+
+    def test_colaboradora_en_vista_de_administradora_tambien_queda_registrada(self):
+        self.client.force_login(self.colab)
+        r = self.client.get(reverse("crm:usuarios"), follow=True)
+        self.assertEqual(r.redirect_chain[-1][0], reverse("crm:dashboard"))
+        self.assertContains(r, "No tienes acceso a esa sección del panel")
+        self.assertEqual(self._denegados(self.colab).count(), 1)
+
+    def test_sin_sesion_se_pide_iniciar_sesion_y_no_se_registra(self):
+        r = self.client.get(reverse("crm:dashboard"))
+        self.assertIn("login", r["Location"])
+        self.assertFalse(self._denegados().exists())
+
+    def test_el_equipo_entra_sin_dejar_registro_de_acceso_denegado(self):
+        for usuario in (self.admin, self.colab):
+            self.client.force_login(usuario)
+            self.assertEqual(self.client.get(reverse("crm:dashboard")).status_code, 200)
+        self.assertFalse(self._denegados().exists())
+
+    def test_la_administradora_ve_los_intentos_en_la_auditoria(self):
+        self.client.force_login(self.aprobador_a)
+        self.client.get(reverse("crm:prospectos"))
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("crm:auditoria") + "?accion=denegado")
+        self.assertContains(r, "Acceso denegado")
+        self.assertContains(r, reverse("crm:prospectos"))

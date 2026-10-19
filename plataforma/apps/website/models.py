@@ -77,3 +77,90 @@ class Contenido(models.Model):
             self.publicado_en = None
 
         super().save(*args, **kwargs)
+
+
+class MetadatosPagina(models.Model):
+    """Título y descripción SEO de las páginas fijas del sitio, editables desde el CMS (PC-SEO-01b, CP-009).
+
+    Si un campo queda vacío, la página usa el texto que trae por defecto (PC-SEO-01). Así nada cambia
+    en el sitio hasta que la administradora lo defina.
+    """
+
+    class Pagina(models.TextChoices):
+        # El valor es el nombre de la URL en apps.website.urls (website:<valor>).
+        HOME = "home", "Inicio"
+        PLANES = "planes", "Planes"
+        COTIZACION = "cotizacion", "Solicitar cotización"
+        ASESORIA = "asesoria", "Asesoría gratuita"
+        NOVEDADES = "novedades", "Novedades (listado)"
+
+    pagina = models.CharField("página", max_length=20, choices=Pagina.choices, unique=True)
+    meta_titulo = models.CharField(
+        "meta título (SEO)", max_length=70, blank=True, help_text="Se muestra en la pestaña y en Google. Al final se agrega el nombre de la agencia."
+    )
+    meta_descripcion = models.CharField(
+        "meta descripción (SEO)", max_length=160, blank=True, help_text="Texto bajo el título en los resultados de búsqueda."
+    )
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "sitio_metadatos_paginas"
+        verbose_name = "metadatos SEO de página"
+        verbose_name_plural = "metadatos SEO de páginas"
+        ordering = ["pagina"]
+
+    def __str__(self):
+        return self.get_pagina_display()
+
+    def save(self, *args, **kwargs):
+        # Sanitización igual que el resto del CMS (RNF-03, CP-008).
+        self.meta_titulo = strip_tags(self.meta_titulo).strip()
+        self.meta_descripcion = strip_tags(self.meta_descripcion).strip()
+        super().save(*args, **kwargs)
+
+
+class ConfiguracionAgencia(models.Model):
+    """Datos de contacto de la agencia que se muestran en el sitio, la cotización y los avisos por correo.
+
+    Registro único (pk=1), editable por la administradora en Panel → Configuración. Los valores por defecto
+    son los provisorios que tenía el sitio, así nada cambia hasta que la agencia entregue los reales.
+    El correo es también el destino de los avisos de asesoría gratuita.
+    """
+
+    correo = models.EmailField("correo de contacto", default="hola@agenciacosmopolitan.cl")
+    telefono = models.CharField("teléfono", max_length=30, default="+56 9 8765 4321", help_text="Como se muestra en el sitio, ej. +56 9 1234 5678.")
+    whatsapp = models.CharField(
+        "WhatsApp", max_length=15, default="56987654321", help_text="Solo números, con código de país y sin «+». Ej.: 56912345678."
+    )
+    ciudad = models.CharField(max_length=80, default="Santiago, Chile")
+    instagram_usuario = models.CharField(
+        "usuario de Instagram", max_length=30, blank=True, help_text="Sin @. Vacío = no se muestra en el sitio."
+    )
+    linkedin_nombre = models.CharField("nombre en LinkedIn", max_length=80, blank=True)
+    linkedin_url = models.URLField("URL de LinkedIn", blank=True, help_text="Vacío = no se muestra en el sitio.")
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "agencia_config"
+        verbose_name = "configuración de la agencia"
+        verbose_name_plural = "configuración de la agencia"
+
+    def __str__(self):
+        return "Configuración de la agencia"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # registro único
+        self.instagram_usuario = self.instagram_usuario.strip().lstrip("@")
+        self.whatsapp = "".join(c for c in self.whatsapp if c.isdigit())
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def actual(cls):
+        """La configuración guardada, o una con los valores por defecto (sin guardarla) si aún no existe."""
+        return cls.objects.filter(pk=1).first() or cls(pk=1)

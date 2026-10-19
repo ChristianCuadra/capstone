@@ -1,0 +1,18 @@
+{% comment %}
+  CTA de cotización al final de cada página pública (pedido de la agencia, reunión 27/09/2026).
+  Solo en el sitio público: no va en el panel interno ni en el portal del cliente.
+{% endcomment %}
+<section class="bg-vino-oscuro" aria-labelledby="cta-cotizacion-titulo">
+  <div class="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:py-24">
+    <h2 id="cta-cotizacion-titulo" class="font-serif text-3xl text-white sm:text-5xl">¿Conversamos sobre tu marca?</h2>
+    <p class="mx-auto mt-4 max-w-xl text-lila">Cuéntanos de tu marca y te enviamos una cotización con diagnóstico en 3 días hábiles.</p>
+    <div class="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+      <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Solicitar cotización</a>
+      {% if request.resolver_match.url_name != "planes" %}
+      <a href="{% url 'website:planes' %}" class="rounded-full border border-lila px-7 py-3.5 font-semibold text-white hover:border-white">Ver planes</a>
+      {% else %}
+      <a href="{% url 'website:asesoria' %}" class="rounded-full border border-lila px-7 py-3.5 font-semibold text-white hover:border-white">Asesoría gratuita</a>
+      {% endif %}
+    </div>
+  </div>
+</section>

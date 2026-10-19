@@ -1,0 +1,21 @@
+{# Botón flotante de cotización en celular: aparece al bajar por la página, para tener el CTA siempre a mano. #}
+<a href="{% url 'website:cotizacion' %}" id="cta-flotante"
+   class="pointer-events-none fixed bottom-4 right-4 z-30 translate-y-3 rounded-full bg-vino px-5 py-3 text-sm font-semibold text-white opacity-0 shadow-lg shadow-vino/30 transition duration-200 lg:hidden"
+   aria-hidden="true" tabindex="-1">Cotizar proyecto</a>
+<script>
+  (() => {
+    const boton = document.getElementById('cta-flotante');
+    const menu = document.getElementById('menu-movil');
+    const actualizar = () => {
+      const visible = window.scrollY > 320 && (!menu || menu.classList.contains('hidden'));
+      boton.classList.toggle('opacity-0', !visible);
+      boton.classList.toggle('translate-y-3', !visible);
+      boton.classList.toggle('pointer-events-none', !visible);
+      boton.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      boton.tabIndex = visible ? 0 : -1;
+    };
+    window.addEventListener('scroll', actualizar, { passive: true });
+    document.getElementById('boton-menu')?.addEventListener('click', () => setTimeout(actualizar, 0));
+    actualizar();
+  })();
+</script>

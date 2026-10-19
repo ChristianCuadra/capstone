@@ -43,6 +43,13 @@
 </header>
 
 <main class="mx-auto max-w-[1400px] px-4 pb-28 pt-6 sm:px-6 md:pb-12 lg:px-10 lg:pt-9">
+  {% if messages %}
+  <ul class="mb-6 space-y-2" role="status">
+    {% for m in messages %}
+    <li class="rounded-xl border px-4 py-3 text-sm {% if m.tags == 'error' %}border-[#B3261E]/40 bg-[#B3261E]/5 text-[#B3261E]{% else %}border-gris-borde bg-white text-vino{% endif %}">{{ m }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
   {% block content %}{% endblock %}
 </main>
 

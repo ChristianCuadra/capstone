@@ -444,3 +444,218 @@ class MenuNovedadesTests(TestCase):
         Contenido.objects.create(titulo="Lanzamiento", cuerpo="x", estado=Contenido.Estado.PUBLICADO)
         respuesta = self.client.get(reverse("website:home"))
         self.assertContains(respuesta, f'href="{reverse("website:novedades")}"', count=2)  # menú escritorio y móvil
+
+
+class MetadatosDelCMSTests(TestCase):
+    """PC-SEO-01b · CP-009: los metadatos definidos en el CMS aparecen en el código publicado del sitio."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        cache.clear()
+        User = get_user_model()
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+
+    def _guardar(self, usuario, datos):
+        self.client.force_login(usuario)
+        return self.client.post(reverse("crm:seo_paginas"), datos)
+
+    def test_sin_metadatos_cada_pagina_mantiene_su_texto_por_defecto(self):
+        respuesta = self.client.get(reverse("website:planes"))
+        self.assertContains(respuesta, "<title>Planes · Agencia Cosmopolitan</title>", html=False)
+        self.assertContains(respuesta, "Conoce los planes de marketing digital")
+
+    def test_metadatos_definidos_en_el_cms_aparecen_en_la_pagina_publicada(self):
+        respuesta = self._guardar(self.admin, {
+            "planes-meta_titulo": "Planes mensuales de redes sociales",
+            "planes-meta_descripcion": "Compara los planes y elige el que calza con tu marca.",
+        })
+        self.assertRedirects(respuesta, reverse("crm:seo_paginas"))
+        self.client.logout()
+        html = self.client.get(reverse("website:planes")).content.decode()
+        self.assertIn("<title>Planes mensuales de redes sociales · Agencia Cosmopolitan</title>", html)
+        self.assertIn('<meta name="description" content="Compara los planes y elige el que calza con tu marca.">', html)
+        self.assertIn('<meta property="og:title" content="Planes mensuales de redes sociales · Agencia Cosmopolitan">', html)
+        self.assertNotIn("Conoce los planes de marketing digital", html)
+        # Las demás páginas no cambian.
+        self.assertContains(self.client.get(reverse("website:cotizacion")), "<title>Solicitar cotización · Agencia Cosmopolitan</title>")
+
+    def test_todas_las_paginas_fijas_toman_sus_metadatos(self):
+        from .models import MetadatosPagina
+
+        for valor in MetadatosPagina.Pagina.values:
+            MetadatosPagina.objects.create(pagina=valor, meta_titulo=f"Título {valor}", meta_descripcion=f"Descripción {valor}")
+        for valor in MetadatosPagina.Pagina.values:
+            with self.subTest(pagina=valor):
+                respuesta = self.client.get(reverse(f"website:{valor}"))
+                self.assertContains(respuesta, f"<title>Título {valor} · Agencia Cosmopolitan</title>")
+                self.assertContains(respuesta, f'<meta name="description" content="Descripción {valor}">')
+
+    def test_html_en_los_metadatos_se_elimina_al_guardar(self):
+        from .models import MetadatosPagina
+
+        self._guardar(self.admin, {"home-meta_titulo": "<script>alert(1)</script>Inicio", "home-meta_descripcion": "<b>Hola</b>"})
+        meta = MetadatosPagina.objects.get(pagina="home")
+        self.assertEqual(meta.meta_titulo, "alert(1)Inicio")
+        self.assertEqual(meta.meta_descripcion, "Hola")
+        html = self.client.get(reverse("website:home")).content.decode()
+        self.assertIn("<title>alert(1)Inicio · Agencia Cosmopolitan</title>", html)
+        self.assertNotIn("<script>alert(1)", html)
+
+    def test_largo_maximo_se_valida(self):
+        from .models import MetadatosPagina
+
+        respuesta = self._guardar(self.admin, {"home-meta_titulo": "x" * 71, "home-meta_descripcion": ""})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertFalse(MetadatosPagina.objects.exists())
+
+    def test_cambio_queda_en_la_auditoria_y_sin_cambios_no_se_registra(self):
+        from apps.core.models import RegistroAuditoria
+
+        self._guardar(self.admin, {"home-meta_titulo": "Agencia de marketing digital", "home-meta_descripcion": ""})
+        self._guardar(self.admin, {"home-meta_titulo": "Agencia de marketing digital", "home-meta_descripcion": ""})
+        registros = RegistroAuditoria.objects.filter(entidad="SEO de página")
+        self.assertEqual(registros.count(), 1)
+        self.assertEqual(registros.get().entidad_id, "home")
+
+    def test_colaboradora_no_edita_los_metadatos(self):
+        from .models import MetadatosPagina
+
+        respuesta = self._guardar(self.colab, {"home-meta_titulo": "Cambio no autorizado"})
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertFalse(MetadatosPagina.objects.exists())
+
+    def test_novedad_publica_su_seo_en_open_graph_y_entra_al_sitemap(self):
+        from .models import Contenido
+
+        publicada = Contenido.objects.create(
+            titulo="Lanzamiento", cuerpo="Texto", estado=Contenido.Estado.PUBLICADO,
+            meta_titulo="Lanzamiento de temporada", meta_descripcion="Todo sobre la nueva temporada.",
+        )
+        borrador = Contenido.objects.create(titulo="Borrador oculto", cuerpo="Texto")
+        html = self.client.get(reverse("website:novedad_detalle", args=[publicada.slug])).content.decode()
+        self.assertIn('<meta property="og:title" content="Lanzamiento de temporada · Agencia Cosmopolitan">', html)
+        self.assertIn('<meta property="og:description" content="Todo sobre la nueva temporada.">', html)
+        sitemap = self.client.get("/sitemap.xml").content.decode()
+        self.assertIn(reverse("website:novedad_detalle", args=[publicada.slug]), sitemap)
+        self.assertNotIn(borrador.slug, sitemap)
+
+
+class CTACotizacionTests(TestCase):
+    """Pedido de la agencia (27/09/2026): llamado a cotizar en todas las páginas públicas, no en panel ni portal."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_cada_pagina_publica_termina_con_el_cta_y_trae_el_boton_flotante(self):
+        from .models import Contenido
+
+        novedad = Contenido.objects.create(titulo="Una novedad", cuerpo="Texto", estado=Contenido.Estado.PUBLICADO)
+        paginas = [reverse(n) for n in ("website:home", "website:planes", "website:asesoria", "website:novedades")]
+        paginas.append(reverse("website:novedad_detalle", args=[novedad.slug]))
+        for url in paginas:
+            with self.subTest(url=url):
+                respuesta = self.client.get(url)
+                self.assertContains(respuesta, 'id="cta-cotizacion-titulo"', count=1)
+                self.assertContains(respuesta, 'id="cta-flotante"', count=1)
+                self.assertNotContains(respuesta, "{#")  # ningún comentario de plantilla queda visible
+
+    def test_la_pagina_de_cotizacion_no_repite_el_llamado(self):
+        respuesta = self.client.get(reverse("website:cotizacion"))
+        self.assertNotContains(respuesta, 'id="cta-cotizacion-titulo"')
+        self.assertNotContains(respuesta, 'id="cta-flotante"')
+
+    def test_panel_y_portal_no_llevan_el_cta(self):
+        from django.contrib.auth import get_user_model
+
+        from apps.clients.models import Cliente
+
+        User = get_user_model()
+        admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        cliente = User.objects.create_user("cli", "cli@x.cl", "x", rol="cliente_lector", cliente=Cliente.objects.create(nombre="Alfa"))
+        self.client.force_login(admin)
+        self.assertNotContains(self.client.get(reverse("crm:dashboard")), 'id="cta-cotizacion-titulo"')
+        self.client.force_login(cliente)
+        self.assertNotContains(self.client.get(reverse("content:calendario")), 'id="cta-cotizacion-titulo"')
+
+
+class ConfiguracionAgenciaTests(TestCase):
+    """Panel → Configuración: datos de contacto de la agencia editables por la administradora."""
+
+    DATOS = {
+        "correo": "contacto@agencia-real.cl", "telefono": "+56 9 1111 2222", "whatsapp": "+56 9 1111 2222",
+        "ciudad": "Viña del Mar, Chile", "instagram_usuario": "@agencia.cosmo", "linkedin_nombre": "Agencia Cosmopolitan",
+        "linkedin_url": "https://www.linkedin.com/company/agencia-cosmo",
+    }
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        cache.clear()
+        User = get_user_model()
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol="administradora", is_staff=True)
+        self.colab = User.objects.create_user("col", "col@x.cl", "x", rol="colaboradora", is_staff=True)
+
+    def test_sin_configurar_el_sitio_muestra_los_datos_provisorios(self):
+        respuesta = self.client.get(reverse("website:home"))
+        self.assertContains(respuesta, "hola@agenciacosmopolitan.cl")
+        self.assertContains(respuesta, "+56 9 8765 4321")
+        self.assertNotContains(respuesta, "instagram.com/")
+
+    def test_la_administradora_cambia_los_datos_y_el_sitio_los_muestra(self):
+        self.client.force_login(self.admin)
+        self.assertRedirects(self.client.post(reverse("crm:configuracion"), self.DATOS), reverse("crm:configuracion"))
+        self.client.logout()
+        home = self.client.get(reverse("website:home"))
+        self.assertContains(home, "contacto@agencia-real.cl")
+        self.assertContains(home, "Viña del Mar, Chile")
+        self.assertContains(home, 'href="https://instagram.com/agencia.cosmo"')
+        self.assertContains(home, "Instagram · @agencia.cosmo")
+        self.assertContains(home, "https://www.linkedin.com/company/agencia-cosmo")
+        self.assertNotContains(home, "hola@agenciacosmopolitan.cl")
+        asesoria = self.client.get(reverse("website:asesoria"))
+        self.assertContains(asesoria, "https://wa.me/56911112222")
+
+    def test_el_aviso_de_asesoria_va_al_correo_configurado(self):
+        from django.core import mail
+
+        from .models import ConfiguracionAgencia
+
+        ConfiguracionAgencia(correo="avisos@agencia-real.cl").save()
+        self.client.post(reverse("website:asesoria"), DATOS_ASESORIA)
+        self.assertTrue(mail.outbox, "debería enviarse el aviso de asesoría")
+        self.assertEqual(mail.outbox[-1].to, ["avisos@agencia-real.cl"])
+
+    def test_validaciones(self):
+        from .models import ConfiguracionAgencia
+
+        self.client.force_login(self.admin)
+        malos = {**self.DATOS, "whatsapp": "123", "instagram_usuario": "con espacio", "linkedin_url": "https://facebook.com/x"}
+        respuesta = self.client.post(reverse("crm:configuracion"), malos)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "código de país")
+        self.assertContains(respuesta, "letras, números, puntos")
+        self.assertContains(respuesta, "linkedin.com")
+        self.assertFalse(ConfiguracionAgencia.objects.exists())
+
+    def test_cambio_queda_en_auditoria_y_es_un_registro_unico(self):
+        from apps.core.models import RegistroAuditoria
+
+        from .models import ConfiguracionAgencia
+
+        self.client.force_login(self.admin)
+        self.client.post(reverse("crm:configuracion"), self.DATOS)
+        self.client.post(reverse("crm:configuracion"), {**self.DATOS, "ciudad": "Valparaíso, Chile"})
+        self.assertEqual(ConfiguracionAgencia.objects.count(), 1)
+        registros = RegistroAuditoria.objects.filter(entidad="configuración de la agencia").order_by("creado_en")
+        self.assertEqual(registros.count(), 2)
+        self.assertIn("Ciudad", registros.last().detalle)
+
+    def test_colaboradora_no_cambia_la_configuracion(self):
+        from .models import ConfiguracionAgencia
+
+        self.client.force_login(self.colab)
+        self.assertEqual(self.client.post(reverse("crm:configuracion"), self.DATOS).status_code, 302)
+        self.assertFalse(ConfiguracionAgencia.objects.exists())
+        self.assertNotContains(self.client.get(reverse("crm:dashboard")), reverse("crm:configuracion"))

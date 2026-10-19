@@ -4,15 +4,15 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
-from apps.website.sitemaps import SitioPublicoSitemap
+from apps.website.sitemaps import NovedadesSitemap, SitioPublicoSitemap
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("panel/", include("apps.crm.urls")),
     path("portal/", include("apps.content.urls")),
-    # PC-SEO-01: sitemap.xml del sitio publico.
-    path("sitemap.xml", sitemap, {"sitemaps": {"sitio": SitioPublicoSitemap}}, name="sitemap"),
+    # PC-SEO-01 / PC-SEO-01b: sitemap.xml del sitio publico (paginas fijas y novedades publicadas).
+    path("sitemap.xml", sitemap, {"sitemaps": {"sitio": SitioPublicoSitemap, "novedades": NovedadesSitemap}}, name="sitemap"),
     path("", include("apps.website.urls")),
 ]
 

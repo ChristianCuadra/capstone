@@ -85,6 +85,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.website.context_processors.agencia",
                 "apps.website.context_processors.analitica",
+                "apps.website.context_processors.metadatos_pagina",
             ],
         },
     },

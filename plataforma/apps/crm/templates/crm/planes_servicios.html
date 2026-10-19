@@ -7,7 +7,7 @@
 <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
   <div>
     <h1 class="font-serif text-3xl text-vino lg:text-4xl">Planes y servicios</h1>
-    <p class="mt-1 text-sm">Lo que se ofrece a los clientes. Para crear o editar, usa el admin.</p>
+    <p class="mt-1 text-sm">Lo que se ofrece a los clientes en el sitio y el cotizador. Un plan o servicio desactivado deja de ofrecerse, pero no se borra.</p>
   </div>
 </header>
 
@@ -59,7 +59,7 @@
         <td class="px-5 py-3.5 text-right lg:px-6">
             <div class="flex justify-end gap-2">
               <a href="{% url 'crm:plan_editar' plan.pk %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
-              <form method="post" action="{% url 'crm:plan_alternar_activo' plan.pk %}" onsubmit="return confirm('{% if plan.activo %}¿Desactivar {{ plan.nombre|escapejs }}? Dejará de mostrarse en el sitio y el cotizador.{% else %}¿Reactivar {{ plan.nombre|escapejs }}?{% endif %}')">
+              <form method="post" action="{% url 'crm:plan_alternar_activo' plan.pk %}" {% if plan.activo %}data-confirmar-titulo="¿Desactivar «{{ plan.nombre }}»?" data-confirmar="Dejará de mostrarse en el sitio y en el cotizador. Puedes volver a activarlo cuando quieras." data-confirmar-boton="Sí, desactivar" data-confirmar-peligro{% else %}data-confirmar-titulo="¿Activar «{{ plan.nombre }}»?" data-confirmar="Volverá a estar disponible en el cotizador y, si está marcado como visible, en el sitio." data-confirmar-boton="Sí, activar"{% endif %}>
                 {% csrf_token %}
                 <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if plan.activo %}text-[#B3261E]{% else %}text-vino{% endif %}">
                   {% if plan.activo %}Desactivar{% else %}Activar{% endif %}
@@ -113,7 +113,7 @@
           <td class="px-5 py-3.5 text-right lg:px-6">
             <div class="flex justify-end gap-2">
               <a href="{% url 'crm:servicio_editar' servicio.pk %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Editar</a>
-              <form method="post" action="{% url 'crm:servicio_alternar_activo' servicio.pk %}" onsubmit="return confirm('{% if servicio.activo %}¿Desactivar {{ servicio.nombre|escapejs }}? Dejará de mostrarse en el sitio.{% else %}¿Reactivar {{ servicio.nombre|escapejs }}?{% endif %}')">
+              <form method="post" action="{% url 'crm:servicio_alternar_activo' servicio.pk %}" {% if servicio.activo %}data-confirmar-titulo="¿Desactivar «{{ servicio.nombre }}»?" data-confirmar="Dejará de mostrarse en el sitio. Puedes volver a activarlo cuando quieras." data-confirmar-boton="Sí, desactivar" data-confirmar-peligro{% else %}data-confirmar-titulo="¿Activar «{{ servicio.nombre }}»?" data-confirmar="Volverá a estar disponible y, si está marcado como visible, se mostrará en el sitio." data-confirmar-boton="Sí, activar"{% endif %}>
                 {% csrf_token %}
                 <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if servicio.activo %}text-[#B3261E]{% else %}text-vino{% endif %}">
                   {% if servicio.activo %}Desactivar{% else %}Activar{% endif %}
