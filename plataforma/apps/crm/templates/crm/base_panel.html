@@ -86,6 +86,16 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+
+{# Confirmación propia del panel (reemplaza el confirm() del navegador). Se activa con data-confirmar en un <form> o en su botón. #}
+<dialog id="dlg-confirmar" class="w-[90vw] max-w-md rounded-2xl border border-gris-borde bg-white p-6 backdrop:bg-black/40" aria-labelledby="dlg-confirmar-titulo">
+  <h2 id="dlg-confirmar-titulo" class="font-serif text-xl text-vino"></h2>
+  <p id="dlg-confirmar-texto" class="mt-2 text-sm"></p>
+  <div class="mt-5 flex gap-3">
+    <button type="button" id="dlg-confirmar-si" class="rounded-full px-5 py-2.5 text-sm font-semibold text-white"></button>
+    <button type="button" id="dlg-confirmar-no" class="rounded-full border border-gris-borde px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Cancelar</button>
+  </div>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
@@ -102,6 +112,42 @@
   abrirSidebar.addEventListener('click', () => toggleSidebar(true));
   document.getElementById('cerrar-sidebar').addEventListener('click', () => toggleSidebar(false));
   fondoSidebar.addEventListener('click', () => toggleSidebar(false));
+
+  // Confirmación con modal propio. Atributos (en el <form> o en el botón que lo envía):
+  //   data-confirmar="Texto"  data-confirmar-titulo="¿…?"  data-confirmar-boton="Sí, …"  data-confirmar-peligro (botón rojo)
+  (() => {
+    const dlg = document.getElementById('dlg-confirmar');
+    const si = document.getElementById('dlg-confirmar-si');
+    let pendiente = null;
+    const CLASES_NORMAL = ['bg-vino', 'hover:bg-vino-oscuro'];
+    const CLASES_PELIGRO = ['bg-[#B3261E]', 'hover:bg-[#8C1D17]'];
+    document.addEventListener('submit', (e) => {
+      const form = e.target;
+      const origen = (e.submitter && e.submitter.hasAttribute('data-confirmar')) ? e.submitter : form;
+      if (!origen.hasAttribute('data-confirmar') || form.dataset.confirmado === '1') return;
+      e.preventDefault();
+      pendiente = { form, submitter: e.submitter || null };
+      document.getElementById('dlg-confirmar-titulo').textContent = origen.dataset.confirmarTitulo || '¿Confirmas esta acción?';
+      document.getElementById('dlg-confirmar-texto').textContent = origen.dataset.confirmar;
+      si.textContent = origen.dataset.confirmarBoton || 'Sí, continuar';
+      const peligro = origen.hasAttribute('data-confirmar-peligro');
+      si.classList.remove(...CLASES_NORMAL, ...CLASES_PELIGRO);
+      si.classList.add(...(peligro ? CLASES_PELIGRO : CLASES_NORMAL));
+      dlg.showModal();
+      si.focus();
+    });
+    si.addEventListener('click', () => {
+      if (!pendiente) return;
+      const { form, submitter } = pendiente;
+      pendiente = null;
+      dlg.close();
+      form.dataset.confirmado = '1';
+      submitter ? form.requestSubmit(submitter) : form.requestSubmit();
+    });
+    document.getElementById('dlg-confirmar-no').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });  // clic fuera del cuadro
+    dlg.addEventListener('close', () => { pendiente = null; });
+  })();
 </script>
 {% block page_scripts %}{% endblock %}
 {% endblock %}

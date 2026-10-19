@@ -52,7 +52,7 @@
           {% endif %}
         </form>
         {% if u.pk in con_2fa %}
-        <form method="post" action="{% url 'crm:usuario_restablecer_2fa' u.pk %}" onsubmit="return confirm('¿Restablecer el 2FA de «{{ u.username }}»? Perderá su código y sus códigos de recuperación actuales, y deberá volver a configurarlo.');">
+        <form method="post" action="{% url 'crm:usuario_restablecer_2fa' u.pk %}" data-confirmar-titulo="¿Restablecer el 2FA de «{{ u.username }}»?" data-confirmar="Perderá su código y sus códigos de recuperación actuales, y deberá volver a configurarlo al iniciar sesión." data-confirmar-boton="Sí, restablecer" data-confirmar-peligro>
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" class="rounded-full px-3 py-1.5 font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Restablecer 2FA</button>
