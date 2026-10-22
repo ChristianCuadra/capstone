@@ -98,3 +98,32 @@ class UsuarioForm(forms.ModelForm):
             usuario.save()
             self.save_m2m()
         return usuario
+
+
+class InvitacionClienteForm(forms.Form):
+    """Crear la cuenta de una persona del cliente y enviarle la invitación (PC-AUT-07).
+
+    Sin contraseña: la define la propia persona desde el enlace de activación.
+    """
+
+    ROLES = [
+        (Rol.CLIENTE_APROBADOR, "Cliente aprobador · aprueba o pide cambios al contenido"),
+        (Rol.CLIENTE_LECTOR, "Cliente lector · solo consulta"),
+    ]
+
+    first_name = forms.CharField(label="Nombre", max_length=150)
+    last_name = forms.CharField(label="Apellido", max_length=150, required=False)
+    email = forms.EmailField(label="Correo")
+    rol = forms.ChoiceField(label="Rol", choices=ROLES, initial=Rol.CLIENTE_APROBADOR)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in self.fields.values():
+            campo.widget.attrs.setdefault("class", "mt-1 w-full rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm")
+        self.fields["email"].widget.attrs["autocomplete"] = "off"
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo. Revísalo en Usuarios.")
+        return email

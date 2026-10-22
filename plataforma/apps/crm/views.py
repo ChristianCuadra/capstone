@@ -18,10 +18,11 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.utils.text import slugify
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 
 from apps.accounts.decorators import requiere_administradora, requiere_equipo
-from apps.accounts.forms import UsuarioForm
+from apps.accounts import activacion
+from apps.accounts.forms import InvitacionClienteForm, UsuarioForm
 from apps.accounts.models import Rol
 from apps.ai.services import ErrorIA, IANoConfigurada, generar_diagnostico_cotizacion, reescribir_texto
 from apps.catalog.models import Plan, Servicio
@@ -528,7 +529,11 @@ def _accion_prospecto(request, prospecto):
                 prospecto.save(update_fields=["cliente", "actualizado_en"])
                 _mover_etapa(prospecto, Prospecto.Etapa.GANADO, usuario)
                 _registrar(prospecto, usuario, f"Convertido en cliente con el plan {plan.nombre}")
-            messages.success(request, f"{prospecto.empresa} ahora es cliente.")
+            messages.success(
+                request,
+                f"{prospecto.empresa} ahora es cliente. Cuando confirmen el pago, crea su acceso al portal "
+                "desde la ficha del cliente (sección «Acceso al portal»).",
+            )
 
 
 # ── Cotizaciones ──────────────────────────────────────────────────────────────
@@ -859,7 +864,102 @@ def cliente_ficha(request, pk):
         cliente=cliente, form=form, puede_editar=puede_editar,
         documentos=_documentos_del_cliente(cliente), doc_form=DocumentoClienteForm(),
         kpis=_kpis_del_cliente(cliente), kpi_form=KPIForm(cliente=cliente), medicion_form=MedicionForm(initial={"fecha": timezone.localdate()}),
+        **_contexto_acceso_portal(request, cliente),
     ))
+
+
+# ── Acceso al portal del cliente (PC-AUT-07) ──────────────────────────────────
+
+def _puede_invitar(user):
+    # Misma regla que requiere_administradora: «Usuarios y roles» es solo de la administradora (Alcance 9.3).
+    return user.rol == Rol.ADMINISTRADORA or user.is_superuser
+
+
+def _contexto_acceso_portal(request, cliente, invitacion_form=None):
+    if not _puede_invitar(request.user):
+        return {"puede_invitar": False}
+    cuentas = []
+    for u in cliente.usuarios.order_by("first_name", "email"):
+        estado = activacion.estado_cuenta(u)
+        cuentas.append({
+            "usuario": u,
+            "estado": estado,
+            "etiqueta": activacion.ETIQUETAS_ESTADO[estado],
+            "enlace": activacion.enlace_activacion(request, u) if estado == activacion.Estado.PENDIENTE else "",
+        })
+    if invitacion_form is None:
+        # Se propone el contacto principal solo si todavía no tiene cuenta (si no, el formulario lo rechazaría).
+        inicial = {}
+        if cliente.contacto_correo and not get_user_model().objects.filter(email__iexact=cliente.contacto_correo).exists():
+            nombre, _, apellido = (cliente.contacto_nombre or "").strip().partition(" ")
+            inicial = {"first_name": nombre, "last_name": apellido, "email": cliente.contacto_correo}
+        invitacion_form = InvitacionClienteForm(initial=inicial)
+    return {
+        "puede_invitar": True,
+        "cuentas_portal": cuentas,
+        "invitacion_form": invitacion_form,
+        "dias_activacion": activacion.dias_vigencia(),
+    }
+
+
+@requiere_administradora
+@require_POST
+def cliente_invitar(request, pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not cliente.activo:
+        messages.error(request, "El cliente está inactivo: actívalo en la ficha antes de darle acceso al portal.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    form = InvitacionClienteForm(request.POST)
+    if not form.is_valid():
+        _errores_como_mensajes(request, form)
+        return redirect(f"{reverse('crm:cliente_ficha', args=[cliente.pk])}#acceso-portal")
+
+    datos = form.cleaned_data
+    usuario = get_user_model()(
+        username=activacion.username_unico(datos["email"]),
+        email=datos["email"],
+        first_name=datos["first_name"],
+        last_name=datos["last_name"],
+        rol=datos["rol"],
+        cliente=cliente,
+        is_staff=False,
+        is_active=True,
+    )
+    usuario.set_unusable_password()
+    usuario.save()
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.CREAR, entidad="usuario", entidad_id=usuario.pk,
+        detalle=f"{usuario.username} · {usuario.get_rol_display()} · invitación al portal de {cliente.nombre}",
+    )
+    if activacion.enviar_invitacion(request, usuario):
+        messages.success(request, f"Cuenta creada. Enviamos la invitación a {usuario.email}; queda pendiente hasta que la active.")
+    else:
+        messages.warning(
+            request,
+            f"Cuenta creada, pero no se pudo enviar el correo a {usuario.email} (el envío de correos aún no está "
+            "configurado). Copia el enlace de activación desde «Acceso al portal» y envíaselo por otro medio.",
+        )
+    return redirect(f"{reverse('crm:cliente_ficha', args=[cliente.pk])}#acceso-portal")
+
+
+@requiere_administradora
+@require_POST
+def cliente_reenviar_invitacion(request, pk, usuario_pk):
+    cliente = obtener_cliente_visible(request.user, pk)
+    usuario = get_object_or_404(get_user_model(), pk=usuario_pk, cliente=cliente)
+    destino = f"{reverse('crm:cliente_ficha', args=[cliente.pk])}#acceso-portal"
+    if activacion.estado_cuenta(usuario) != activacion.Estado.PENDIENTE:
+        messages.info(request, f"La cuenta de {usuario.email} ya no está pendiente de activación.")
+        return redirect(destino)
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.EDITAR, entidad="usuario", entidad_id=usuario.pk,
+        detalle=f"{usuario.username} · invitación al portal reenviada",
+    )
+    if activacion.enviar_invitacion(request, usuario):
+        messages.success(request, f"Invitación reenviada a {usuario.email}.")
+    else:
+        messages.warning(request, f"No se pudo enviar el correo a {usuario.email}. Copia el enlace de activación y envíaselo por otro medio.")
+    return redirect(destino)
 
 
 @solo_equipo

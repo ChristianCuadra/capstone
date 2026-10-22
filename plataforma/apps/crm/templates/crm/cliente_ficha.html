@@ -80,6 +80,63 @@
   </div>
 
   <div class="space-y-6">
+    {% if puede_invitar %}
+    <section class="rounded-2xl border border-gris-borde bg-white p-5" id="acceso-portal">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="font-serif text-xl text-vino">Acceso al portal</h2>
+        <a href="{% url 'crm:usuarios' %}?q={{ cliente.nombre|urlencode }}" class="text-xs text-malva hover:underline">Ver en Usuarios</a>
+      </div>
+      <p class="mt-1 text-sm">Cuentas de este cliente para entrar al portal. La persona elige su propia contraseña desde el enlace que recibe por correo.</p>
+
+      {% if cuentas_portal %}
+      <ul class="mt-4 divide-y divide-gris-borde">
+        {% for c in cuentas_portal %}
+        <li class="py-3 text-sm">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="font-semibold text-vino">{{ c.usuario.get_full_name|default:c.usuario.username }}</p>
+              <p class="text-xs">{{ c.usuario.email }} · {{ c.usuario.get_rol_display|default:"sin rol" }}</p>
+            </div>
+            <span class="rounded-full px-2.5 py-1 text-xs font-medium {% if c.estado == 'activa' %}bg-fondo-suave text-vino ring-1 ring-inset ring-gris-borde{% elif c.estado == 'pendiente' %}bg-rubor text-vino{% else %}bg-gris-borde/60 text-[#5A5A63]{% endif %}">{{ c.etiqueta }}</span>
+          </div>
+          {% if c.estado == 'pendiente' %}
+          <p class="mt-1 text-xs">Invitada el {{ c.usuario.date_joined|date:"j M Y, H:i" }}. No puede iniciar sesión hasta activar su cuenta.</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <form method="post" action="{% url 'crm:cliente_reenviar_invitacion' cliente.pk c.usuario.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Reenviar correo</button>
+            </form>
+            <button type="button" data-copiar="{{ c.enlace }}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Copiar enlace de activación</button>
+          </div>
+          {% elif c.estado == 'activa' and c.usuario.last_login %}
+          <p class="mt-1 text-xs">Último ingreso: {{ c.usuario.last_login|date:"j M Y, H:i" }}</p>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="mt-3 rounded-xl bg-fondo-suave px-4 py-3 text-sm">Este cliente todavía no tiene cuentas para el portal.</p>
+      {% endif %}
+
+      {% if cliente.activo %}
+      <form method="post" action="{% url 'crm:cliente_invitar' cliente.pk %}" class="mt-5 space-y-3 border-t border-gris-borde pt-5" data-confirmar-titulo="¿Crear la cuenta y enviar la invitación?" data-confirmar="Se crea la cuenta pendiente de activación y se envía un correo con el enlace para que la persona elija su contraseña." data-confirmar-boton="Sí, invitar">
+        {% csrf_token %}
+        <p class="text-sm font-medium text-vino">Dar acceso al portal</p>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-sm">{{ invitacion_form.first_name.label }}{{ invitacion_form.first_name }}</label>
+          <label class="block text-sm">{{ invitacion_form.last_name.label }} <span class="text-xs">(opcional)</span>{{ invitacion_form.last_name }}</label>
+        </div>
+        <label class="block text-sm">{{ invitacion_form.email.label }}{{ invitacion_form.email }}</label>
+        <label class="block text-sm">{{ invitacion_form.rol.label }}{{ invitacion_form.rol }}</label>
+        <p class="text-xs">La cuenta queda «Pendiente de activación». El enlace sirve una vez y vence en {{ dias_activacion }} día{{ dias_activacion|pluralize }}; puedes reenviarlo cuando quieras.</p>
+        <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Crear cuenta y enviar invitación</button>
+      </form>
+      {% else %}
+      <p class="mt-4 text-xs">El cliente está inactivo: actívalo para darle acceso al portal.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     <section class="rounded-2xl border border-gris-borde bg-white p-5" id="kpis">
       <h2 class="font-serif text-xl text-vino">KPIs</h2>
       {% if kpis %}
@@ -182,4 +239,18 @@
     </section>
   </div>
 </div>
+
+{% if puede_invitar %}
+<script>
+  // Copiar el enlace de activación (para enviarlo por otro medio si el correo no sale).
+  document.querySelectorAll("[data-copiar]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      var texto = boton.textContent;
+      var listo = function () { boton.textContent = "¡Enlace copiado!"; setTimeout(function () { boton.textContent = texto; }, 2000); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(boton.dataset.copiar).then(listo); }
+      else { window.prompt("Copia el enlace de activación:", boton.dataset.copiar); }
+    });
+  });
+</script>
+{% endif %}
 {% endblock %}

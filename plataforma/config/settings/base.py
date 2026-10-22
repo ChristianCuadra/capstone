@@ -234,3 +234,15 @@ AI_API_KEY = config("AI_API_KEY", default="")
 # Flash-Lite: borradores de igual calidad en ~3 s; gemini-3.8-flash tardaba 18-50 s según la demanda.
 AI_MODEL = config("AI_MODEL", default="") or "gemini-3.5-flash-lite"
 EMAIL_API_KEY = config("EMAIL_API_KEY", default="")
+
+# Correo saliente: activación de cuentas (PC-AUT-07), recuperar contraseña y envío de cotizaciones.
+# Para conectar un proveedor por SMTP (p. ej. Brevo) basta con definir estas variables en el entorno
+# y EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend (ver settings/prod.py). En dev y tests
+# el correo se muestra en la consola.
+EMAIL_HOST = config("EMAIL_HOST", default="localhost")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_TIMEOUT = 10  # segundos: si el proveedor no responde, no se cuelga la página
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Agencia Cosmopolitan <contacto@agenciacosmopolitan.cl>")

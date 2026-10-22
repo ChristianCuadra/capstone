@@ -4,10 +4,13 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
+from apps.accounts.views import activar_cuenta
 from apps.website.sitemaps import NovedadesSitemap, SitioPublicoSitemap
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # PC-AUT-07: activación de la cuenta del cliente invitado (antes de allauth para que no la tape).
+    path("accounts/activar/<uidb64>/<token>/", activar_cuenta, name="cuenta_activar"),
     path("accounts/", include("allauth.urls")),
     path("panel/", include("apps.crm.urls")),
     path("portal/", include("apps.content.urls")),

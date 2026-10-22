@@ -36,7 +36,7 @@
     {% for u in usuarios %}
     <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
       <div>
-        <p class="font-semibold text-vino">{{ u.username }}{% if not u.is_active %} · <span class="text-xs font-normal">inactivo</span>{% endif %}</p>
+        <p class="font-semibold text-vino">{{ u.username }}{% if not u.is_active %} · <span class="text-xs font-normal">inactivo</span>{% elif not u.has_usable_password and not u.last_login %} · <span class="rounded-full bg-rubor px-2 py-0.5 text-xs font-medium">pendiente de activación</span>{% endif %}</p>
         <p class="text-xs">{{ u.email }} · {{ u.get_rol_display|default:"sin rol" }}{% if u.cliente %} · {{ u.cliente.nombre }}{% endif %}{% if u.is_staff %} · equipo agencia{% endif %}{% if u.is_superuser %} · superusuario{% endif %}</p>
       </div>
       <div class="flex gap-2 text-sm">

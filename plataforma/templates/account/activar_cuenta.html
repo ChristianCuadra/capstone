@@ -1,0 +1,35 @@
+{% extends "allauth/layouts/base.html" %}
+{# PC-AUT-07: la persona invitada por la agencia define su contraseña y entra al portal. #}
+{% block head_title %}{% if enlace_invalido %}Enlace no válido{% else %}Activa tu cuenta{% endif %}{% endblock head_title %}
+{% block content %}
+{% if enlace_invalido %}
+  <h1>Este enlace ya no es válido</h1>
+  <p>Puede que ya hayas activado tu cuenta o que el enlace haya vencido.</p>
+  <p>Si ya la activaste, entra con tu correo y tu contraseña. Si no, pide un enlace nuevo a tu contacto en la agencia.</p>
+  <p><a href="{% url 'account_login' %}">Ir a iniciar sesión</a></p>
+{% else %}
+  <p class="!mt-0 text-xs font-semibold uppercase tracking-widest text-malva">Portal de clientes</p>
+  <h1 class="mt-1">Activa tu cuenta</h1>
+  <p>Hola{% if usuario_invitado.first_name %} {{ usuario_invitado.first_name }}{% endif %}, la agencia creó tu acceso al portal de <strong class="text-vino">{{ usuario_invitado.cliente.nombre|default:"tu empresa" }}</strong>. Solo falta que elijas tu contraseña.</p>
+
+  <dl class="mt-5 grid gap-3 rounded-2xl bg-fondo-suave px-4 py-4 text-sm">
+    <div><dt class="text-xs uppercase tracking-widest text-malva">Correo de acceso</dt><dd class="mt-0.5 font-medium text-vino">{{ usuario_invitado.email }}</dd></div>
+    <div><dt class="text-xs uppercase tracking-widest text-malva">Tu rol</dt>
+      <dd class="mt-0.5"><span class="font-medium text-vino">{{ usuario_invitado.get_rol_display|default:"Cliente" }}</span>
+        {% if usuario_invitado.rol == "cliente_aprobador" %} · podrás revisar, aprobar o pedir cambios al contenido de tu marca.{% elif usuario_invitado.rol == "cliente_lector" %} · podrás consultar el calendario, el avance de tu plan y tus reportes.{% endif %}</dd></div>
+  </dl>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="email" name="email" value="{{ usuario_invitado.email }}" autocomplete="username" readonly hidden>
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <label for="{{ form.new_password1.id_for_label }}">Contraseña nueva{{ form.new_password1 }}</label>
+    {{ form.new_password1.errors }}
+    <label for="{{ form.new_password2.id_for_label }}">Repite la contraseña{{ form.new_password2 }}</label>
+    {{ form.new_password2.errors }}
+    <p class="text-xs">Mínimo 8 caracteres, que no sea solo números ni una contraseña común, y que no se parezca a tu nombre o correo.</p>
+    <button type="submit">Activar cuenta y entrar</button>
+  </form>
+  <p class="text-xs">Este enlace es personal, sirve una sola vez y vence {{ dias }} día{{ dias|pluralize }} después de enviado.</p>
+{% endif %}
+{% endblock content %}
