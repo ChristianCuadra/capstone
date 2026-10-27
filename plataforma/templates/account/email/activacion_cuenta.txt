@@ -1,0 +1,13 @@
+{% autoescape off %}Hola{% if usuario.first_name %} {{ usuario.first_name }}{% endif %}:
+
+Agencia Cosmopolitan creó tu acceso al portal de clientes{% if cliente %} de {{ cliente.nombre }}{% endif %}.
+Tu rol: {{ usuario.get_rol_display }}.
+
+Para activar tu cuenta y elegir tu contraseña, abre este enlace:
+{{ enlace }}
+
+El enlace es personal, sirve una sola vez y vence en {{ dias }} día{{ dias|pluralize }}.
+Si no esperabas este correo, puedes ignorarlo.
+
+Agencia Cosmopolitan
+{% endautoescape %}

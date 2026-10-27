@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activa tu cuenta · Agencia Cosmopolitan</title>
+</head>
+<body style="margin:0;padding:0;background-color:#FBF6F8;font-family:'Jost',system-ui,-apple-system,sans-serif;color:#5A5A63;">
+  <div style="max-width:600px;margin:20px auto;background-color:#FFFFFF;border-radius:16px;border:1px solid #E3D5DC;overflow:hidden;">
+    <div style="background-color:#522136;padding:32px 24px;text-align:center;">
+      <div style="font-family:Georgia,serif;color:#F47FB1;font-size:14px;text-transform:uppercase;letter-spacing:0.25em;font-weight:bold;">Agencia</div>
+      <div style="color:#FFFFFF;font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:0.15em;margin-top:4px;">Cosmopolitan</div>
+    </div>
+    <div style="padding:32px 24px;">
+      <p style="font-size:18px;font-weight:600;color:#522136;margin:0 0 16px;">Hola{% if usuario.first_name %} {{ usuario.first_name }}{% endif %},</p>
+      <p style="margin:0 0 12px;line-height:1.6;">Creamos tu acceso al <strong>portal de clientes</strong>{% if cliente %} de <strong>{{ cliente.nombre }}</strong>{% endif %}. Ahí podrás seguir tu contenido, el avance de tu plan y tus reportes.</p>
+      <div style="background-color:#FBF6F8;border:1px solid #E3D5DC;border-radius:12px;padding:16px 20px;margin:20px 0;font-size:14px;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:#8A5A72;font-weight:600;">Tu cuenta</div>
+        <div style="margin-top:6px;color:#522136;"><strong>{{ usuario.email }}</strong> · {{ usuario.get_rol_display }}</div>
+      </div>
+      <p style="text-align:center;margin:28px 0;">
+        <a href="{{ enlace }}" style="display:inline-block;background-color:#522136;color:#FFFFFF;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:999px;">Activar mi cuenta</a>
+      </p>
+      <p style="margin:0 0 8px;font-size:13px;line-height:1.6;">El enlace es personal, sirve una sola vez y vence en {{ dias }} día{{ dias|pluralize }}. Si el botón no funciona, copia esta dirección en tu navegador:</p>
+      <p style="margin:0;font-size:12px;word-break:break-all;color:#8A5A72;">{{ enlace }}</p>
+    </div>
+    <div style="border-top:1px solid #E3D5DC;padding:20px 24px;text-align:center;font-size:12px;color:#8A5A72;">Si no esperabas este correo, puedes ignorarlo. · Agencia Cosmopolitan</div>
+  </div>
+</body>
+</html>
