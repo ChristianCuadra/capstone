@@ -16,4 +16,14 @@ Cada sprint tiene su carpeta (`Sprint 0`, `Sprint 1`, ...) con los 9 documentos:
 | Acta de Sprint Review | Word |
 | Acta de Sprint Retrospective | Word |
 
-También se incluye el Plan de Pruebas de la plataforma.
+La carpeta `Documentos generales` reúne los documentos transversales del proyecto:
+
+| Documento | Formato |
+|---|---|
+| Product Backlog | Excel |
+| Carta Gantt | Excel |
+| Planilla de Riesgos | Excel |
+| Plan de Pruebas | Excel |
+| Documento de Arquitectura | Word |
+
+El modelo de datos está en `Evidencias Proyecto/Base de datos` y la presentación en `Evidencias Proyecto/Presentación Proyecto.pptx`.
