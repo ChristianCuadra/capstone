@@ -3,14 +3,42 @@
 {% block page_title %}Aprobaciones{% endblock %}
 
 {% block content %}
-{# Piezas en revisión desde content_pieces + versiones + comentarios (pendiente: módulo de contenido, Alcance 5.7). #}
 <h1 class="font-serif text-3xl text-vino lg:text-4xl">Aprobaciones</h1>
 <p class="mt-1 text-sm">Aquí apruebas o pides cambios a las publicaciones antes de que salgan.</p>
 
 {% if pendientes %}
-{# El detalle de la pieza (video, copy, versiones, comentarios y botones Aprobar / Solicitar cambios / Reprogramar) se muestra cuando exista el módulo de contenido. #}
-<ul class="mt-6 space-y-2">
-  {% for p in pendientes %}<li class="rounded-2xl border border-gris-borde bg-white px-5 py-4 text-sm text-vino">{{ p.titulo }}</li>{% endfor %}
+<ul class="mt-6 space-y-4">
+  {% for p in pendientes %}
+  <li class="rounded-2xl border border-gris-borde bg-white p-5 text-sm text-vino flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">
+          {{ p.get_red_social_display }}
+        </span>
+        <span class="text-xs text-gris-txt">{{ p.fecha_programada|date:"d-m-Y H:i" }}</span>
+      </div>
+      <h2 class="font-semibold text-base text-vino">{{ p.titulo }}</h2>
+      {% if p.texto %}<p class="text-xs text-gray-600 max-w-xl">{{ p.texto }}</p>{% endif %}
+      {% if p.archivo %}
+        <div class="pt-2">
+          <a href="{{ p.archivo.url }}" target="_blank" class="text-xs text-vino underline font-medium hover:text-rosa">Ver archivo adjunto (CP-046)</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Acciones de Aprobación/Rechazo (CP-040) -->
+    <form method="post" class="flex items-center gap-2 shrink-0">
+      {% csrf_token %}
+      <input type="hidden" name="pieza_id" value="{{ p.id }}">
+      <button type="submit" name="accion" value="aprobar" class="rounded-full bg-vino px-4 py-2 text-xs font-semibold text-white hover:bg-vino/90 transition-colors">
+        Aprobar
+      </button>
+      <button type="submit" name="accion" value="rechazar" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-xs font-semibold text-vino hover:bg-fondo-suave transition-colors">
+        Solicitar cambios
+      </button>
+    </form>
+  </li>
+  {% endfor %}
 </ul>
 {% else %}
 <section class="mt-6 rounded-2xl border border-gris-borde bg-white px-6 py-14 text-center">

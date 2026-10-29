@@ -1,0 +1,354 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Calendario editorial{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Calendario editorial</h1>
+    <p class="mt-1 text-sm">Gestión interna y programación de piezas de contenido para clientes.</p>
+  </div>
+</header>
+
+<!-- Formulario Cargar Nueva Pieza con Live Preview (Idea 3) -->
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white p-5 lg:p-6">
+  <h2 class="font-serif text-xl text-vino mb-4">Cargar Nueva Pieza</h2>
+  
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Formulario -->
+    <form method="post" action="{% url 'content:crear_pieza' %}" enctype="multipart/form-data" class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% csrf_token %}
+      
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Cliente *</label>
+        <select name="cliente_id" required class="w-full rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm text-vino focus:border-malva focus:outline-none">
+          {% for c in clientes %}
+            <option value="{{ c.id }}">{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Título / Concepto *</label>
+        <input type="text" id="input-titulo" name="titulo" required class="w-full rounded-xl border border-gris-borde px-3 py-2 text-sm text-vino focus:border-malva focus:outline-none" placeholder="Ej: Lanzamiento producto X">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Red Social</label>
+        <select id="input-red" name="red_social" class="w-full rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm text-vino focus:border-malva focus:outline-none">
+          <option value="instagram">Instagram</option>
+          <option value="facebook">Facebook</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="tiktok">TikTok</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Fecha y Hora Programada *</label>
+        <input type="datetime-local" id="input-fecha" name="fecha_programada" required class="w-full rounded-xl border border-gris-borde px-3 py-2 text-sm text-vino focus:border-malva focus:outline-none">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Texto / Copy</label>
+        <textarea id="input-texto" name="texto" rows="3" class="w-full rounded-xl border border-gris-borde px-3 py-2 text-sm text-vino focus:border-malva focus:outline-none" placeholder="Escribe el texto de la publicación..."></textarea>
+      </div>
+
+        <div>
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Estado inicial</label>
+        <select id="input-estado" name="estado" class="w-full rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm text-vino focus:border-malva focus:outline-none">
+            {% for cod, label in estados %}
+            <option value="{{ cod }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+        <!-- Leyenda explicativa dinámica del estado -->
+        <p id="leyenda-estado" class="mt-1.5 text-xs text-gris-txt rounded-lg bg-fondo-suave p-2 border border-gris-borde/60">
+            🔒 <strong>Borrador:</strong> Solo visible para el equipo interno. El cliente no puede ver la pieza.
+        </p>
+        </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-[0.12em] text-malva mb-1">Archivo Multimedia (Imagen/Video)</label>
+        <input type="file" id="input-archivo" name="archivo" accept="image/*,video/*" class="w-full text-xs text-vino mt-1.5">
+      </div>
+
+      <div class="md:col-span-2 text-right pt-2">
+        <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro transition-colors">
+          Guardar y Procesar
+        </button>
+      </div>
+    </form>
+
+    <!-- Caja de Previsualización en Vivo (Idea 3) -->
+    <div class="rounded-2xl border border-gris-borde bg-fondo-suave/40 p-4 flex flex-col justify-between">
+      <div>
+        <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-malva block mb-2">Vista Previa Instantánea</span>
+        
+        <div id="preview-contenedor-media" class="w-full h-48 rounded-xl bg-white border border-gris-borde flex items-center justify-center overflow-hidden mb-3">
+          <p id="preview-placeholder" class="text-xs text-gris-txt text-center px-4">Selecciona un archivo multimedia para visualizarlo aquí</p>
+          <img id="preview-img" class="w-full h-full object-cover hidden" alt="Previsualización">
+          <video id="preview-video" class="w-full h-full object-cover hidden" controls></video>
+        </div>
+
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span id="preview-red" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">INSTAGRAM</span>
+            <span id="preview-fecha" class="text-xs text-gris-txt">Sin fecha</span>
+          </div>
+          <h3 id="preview-titulo" class="font-semibold text-sm text-vino truncate">Título de la publicación</h3>
+          <p id="preview-texto" class="text-xs text-gray-600 line-clamp-3 italic">El copy o texto del post aparecerá aquí...</p>
+        </div>
+      </div>
+      <p class="text-[11px] text-malva mt-3 border-t border-gris-borde pt-2">Así se estructurará el post en el portal del cliente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Listado de Piezas Cargadas -->
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 lg:px-6">
+    <div>
+      <h2 class="font-serif text-xl text-vino">Piezas Registradas</h2>
+      <p class="text-xs text-gris-txt mt-0.5">{{ piezas|length }} publicación(es) encontrada(s)</p>
+    </div>
+
+    <!-- Filtros sobre la tabla -->
+    <form method="get" class="flex flex-wrap items-center gap-2">
+      <select name="cliente_id" onchange="this.form.submit()" class="rounded-full border border-gris-borde bg-white px-3.5 py-1.5 text-xs font-medium text-vino focus:border-malva focus:outline-none">
+        <option value="">Todos los clientes</option>
+        {% for c in clientes %}
+          <option value="{{ c.id }}" {% if cliente_seleccionado and cliente_seleccionado.id == c.id %}selected{% endif %}>
+            {{ c.nombre }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <select name="estado" onchange="this.form.submit()" class="rounded-full border border-gris-borde bg-white px-3.5 py-1.5 text-xs font-medium text-vino focus:border-malva focus:outline-none">
+        <option value="">Todos los estados</option>
+        {% for cod, label in estados %}
+          <option value="{{ cod }}" {% if estado_seleccionado == cod %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+
+      {% if cliente_seleccionado or estado_seleccionado %}
+        <a href="{% url 'content:interna_calendario' %}" class="text-xs text-vino underline decoration-rosa underline-offset-2 ml-1">Limpiar</a>
+      {% endif %}
+    </form>
+  </div>
+  
+  <div class="relative overflow-x-auto border-t border-gris-borde">
+    <table class="w-full min-w-[760px] text-left text-sm">
+      <thead class="border-b border-gris-borde bg-fondo-suave text-[11px] uppercase tracking-[0.14em] text-malva">
+        <tr>
+          <th scope="col" class="px-5 py-3 font-semibold lg:px-6">Título</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Cliente</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Red Social</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Fecha Programada</th>
+          <th scope="col" class="px-5 py-3 font-semibold">Estado</th>
+          <th scope="col" class="px-5 py-3 text-right font-semibold lg:px-6">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gris-borde">
+        {% for pieza in piezas %}
+          <tr class="hover:bg-fondo-suave/60">
+            <td class="px-5 py-3.5 lg:px-6 font-semibold text-vino">{{ pieza.titulo }}</td>
+            <td class="px-5 py-3.5 text-gris-txt">{{ pieza.cliente.nombre }}</td>
+            <td class="px-5 py-3.5 capitalize text-vino">{{ pieza.get_red_social_display }}</td>
+            <td class="px-5 py-3.5 text-gris-txt tabular-nums">{{ pieza.fecha_programada|date:"d M Y, H:i" }}</td>
+            <td class="px-5 py-3.5">
+              <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold
+                {% if pieza.estado == 'aprobado' %}bg-vino text-white
+                {% elif pieza.estado == 'en_revision' %}bg-rosa/20 text-vino ring-1 ring-inset ring-rosa/50
+                {% else %}bg-fondo-suave text-gris-txt ring-1 ring-inset ring-gris-borde{% endif %}">
+                <span class="h-1.5 w-1.5 rounded-full {% if pieza.estado == 'en_revision' %}bg-rosa{% elif pieza.estado == 'aprobado' %}bg-white/80{% else %}bg-current{% endif %}"></span>
+                {{ pieza.get_estado_display }}
+              </span>
+            </td>
+            <td class="px-5 py-3.5 text-right lg:px-6">
+              <!-- Botón con Data Attributes para evitar comillas rotas -->
+              <button type="button" 
+                      class="btn-ver-cliente rounded-full border border-gris-borde bg-white px-3 py-1 text-xs font-medium text-vino hover:bg-fondo-suave transition-colors inline-flex items-center gap-1"
+                      data-titulo="{{ pieza.titulo }}"
+                      data-cliente="{{ pieza.cliente.nombre }}"
+                      data-red="{{ pieza.get_red_social_display }}"
+                      data-fecha="{{ pieza.fecha_programada|date:'d M Y, H:i' }}"
+                      data-copy="{{ pieza.texto }}"
+                      data-archivo="{% if pieza.archivo %}{{ pieza.archivo.url }}{% endif %}"
+                      data-estado="{{ pieza.get_estado_display }}">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Ver cliente
+              </button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="px-5 py-14 text-center text-sm text-gris-txt">
+              {% if cliente_seleccionado or estado_seleccionado %}
+                No hay publicaciones que coincidan con los filtros aplicados.
+              {% else %}
+                No hay publicaciones registradas.
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Modal: Previsualización de Cliente -->
+<dialog id="modal-preview-cliente" class="w-[90vw] max-w-lg rounded-2xl border border-gris-borde bg-white p-0 backdrop:bg-black/40 shadow-xl">
+  <div class="p-4 border-b border-gris-borde flex items-center justify-between bg-fondo-suave/60">
+    <div>
+      <span class="text-[10px] font-bold uppercase tracking-wider text-rosa">Simulación Portal Cliente</span>
+      <h3 id="modal-cliente-nombre" class="font-serif text-lg text-vino">Nombre Cliente</h3>
+    </div>
+    <button type="button" id="btn-cerrar-modal" class="grid h-8 w-8 place-items-center rounded-full text-gris-txt hover:bg-white">✕</button>
+  </div>
+
+  <div class="p-6 space-y-4">
+    <div id="modal-media-container" class="w-full h-64 rounded-xl bg-black/5 border border-gris-borde flex items-center justify-center overflow-hidden">
+      <p id="modal-sin-archivo" class="text-xs text-gris-txt">Esta pieza no incluye archivo adjunto.</p>
+      <img id="modal-img" class="w-full h-full object-contain hidden" alt="Archivo">
+      <video id="modal-video" class="w-full h-full object-contain hidden" controls></video>
+    </div>
+
+    <div class="space-y-2">
+      <div class="flex items-center justify-between">
+        <span id="modal-red" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">Instagram</span>
+        <span id="modal-fecha" class="text-xs text-gris-txt tabular-nums">01 Ene 2026, 10:00</span>
+      </div>
+
+      <h4 id="modal-titulo" class="font-semibold text-base text-vino">Título del post</h4>
+      <p id="modal-copy" class="text-xs text-gray-700 whitespace-pre-line leading-relaxed">Copy o texto de la publicación...</p>
+    </div>
+
+    <div class="pt-4 border-t border-gris-borde flex items-center justify-between">
+      <span id="modal-estado" class="text-xs font-semibold text-vino">Estado: En revisión</span>
+      <div class="flex gap-2">
+        <span class="rounded-full bg-vino px-3 py-1 text-xs font-semibold text-white opacity-80 cursor-not-allowed">Aprobar</span>
+        <span class="rounded-full border border-gris-borde bg-white px-3 py-1 text-xs font-semibold text-vino opacity-80 cursor-not-allowed">Solicitar cambios</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Script Limpio sin errores de Linter -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // 1. Live Preview en el Formulario
+    const inputTitulo = document.getElementById('input-titulo');
+    const inputTexto = document.getElementById('input-texto');
+    const inputRed = document.getElementById('input-red');
+    const inputFecha = document.getElementById('input-fecha');
+    const inputArchivo = document.getElementById('input-archivo');
+
+    const previewTitulo = document.getElementById('preview-titulo');
+    const previewTexto = document.getElementById('preview-texto');
+    const previewRed = document.getElementById('preview-red');
+    const previewFecha = document.getElementById('preview-fecha');
+    const previewImg = document.getElementById('preview-img');
+    const previewVideo = document.getElementById('preview-video');
+    const previewPlaceholder = document.getElementById('preview-placeholder');
+
+    if (inputTitulo) inputTitulo.addEventListener('input', (e) => previewTitulo.textContent = e.target.value || 'Título de la publicación');
+    if (inputTexto) inputTexto.addEventListener('input', (e) => previewTexto.textContent = e.target.value || 'El copy o texto del post aparecerá aquí...');
+    if (inputRed) inputRed.addEventListener('change', (e) => previewRed.textContent = e.target.value.toUpperCase());
+    if (inputFecha) inputFecha.addEventListener('change', (e) => previewFecha.textContent = e.target.value ? e.target.value.replace('T', ' ') : 'Sin fecha');
+
+    if (inputArchivo) {
+      inputArchivo.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const fileURL = URL.createObjectURL(file);
+          previewPlaceholder.classList.add('hidden');
+          
+          if (file.type.startsWith('video/')) {
+            previewImg.classList.add('hidden');
+            previewVideo.src = fileURL;
+            previewVideo.classList.remove('hidden');
+          } else {
+            previewVideo.classList.add('hidden');
+            previewImg.src = fileURL;
+            previewImg.classList.remove('hidden');
+          }
+        } else {
+          previewImg.classList.add('hidden');
+          previewVideo.classList.add('hidden');
+          previewPlaceholder.classList.remove('hidden');
+        }
+      });
+    }
+
+    // 2. Modal Ver como Cliente
+    const modal = document.getElementById('modal-preview-cliente');
+    const modalClienteNombre = document.getElementById('modal-cliente-nombre');
+    const modalRed = document.getElementById('modal-red');
+    const modalFecha = document.getElementById('modal-fecha');
+    const modalTitulo = document.getElementById('modal-titulo');
+    const modalCopy = document.getElementById('modal-copy');
+    const modalEstado = document.getElementById('modal-estado');
+    const modalImg = document.getElementById('modal-img');
+    const modalVideo = document.getElementById('modal-video');
+    const modalSinArchivo = document.getElementById('modal-sin-archivo');
+    const btnCerrar = document.getElementById('btn-cerrar-modal');
+
+    document.querySelectorAll('.btn-ver-cliente').forEach(button => {
+      button.addEventListener('click', function () {
+        const d = this.dataset;
+        modalClienteNombre.textContent = d.cliente;
+        modalTitulo.textContent = d.titulo;
+        modalRed.textContent = d.red;
+        modalFecha.textContent = d.fecha;
+        modalCopy.textContent = d.copy || 'Sin texto registrado.';
+        modalEstado.textContent = 'Estado: ' + d.estado;
+
+        modalImg.classList.add('hidden');
+        modalVideo.classList.add('hidden');
+        modalSinArchivo.classList.add('hidden');
+
+        if (d.archivo) {
+          const ext = d.archivo.split('.').pop().toLowerCase();
+          if (['mp4', 'webm', 'mov'].includes(ext)) {
+            modalVideo.src = d.archivo;
+            modalVideo.classList.remove('hidden');
+          } else {
+            modalImg.src = d.archivo;
+            modalImg.classList.remove('hidden');
+          }
+        } else {
+          modalSinArchivo.classList.remove('hidden');
+        }
+
+        modal.showModal();
+      });
+    });
+
+    if (btnCerrar) {
+      btnCerrar.addEventListener('click', function() {
+        if (modalVideo) modalVideo.pause();
+        modal.close();
+      });
+    }
+  });
+    // Explicación dinámica del comportamiento de los estados
+    const inputEstado = document.getElementById('input-estado');
+    const leyendaEstado = document.getElementById('leyenda-estado');
+
+    const textosEstados = {
+    'borrador': '🔒 <strong>Borrador:</strong> Solo visible para el equipo interno. El cliente no puede ver esta pieza.',
+    'en_revision': '📩 <strong>En revisión:</strong> Visible para el cliente. Se envía notificación para que pueda Aprobar o Rechazar.',
+    'aprobado': '✅ <strong>Aprobado:</strong> Validada por el cliente. Queda lista para su programación o publicación.',
+    'rechazado': '⚠️ <strong>Rechazado:</strong> Requiere ajustes o correcciones por parte del equipo antes de volver a enviarse.',
+    'publicado': '🚀 <strong>Publicado:</strong> Contenido subido y visible en la red social correspondiente.'
+    };
+
+    if (inputEstado && leyendaEstado) {
+    inputEstado.addEventListener('change', function (e) {
+        const val = e.target.value;
+        leyendaEstado.innerHTML = textosEstados[val] || 'Selecciona un estado para ver sus permisos.';
+    });
+    }
+</script>
+{% endblock %}

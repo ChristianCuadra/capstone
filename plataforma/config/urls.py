@@ -13,7 +13,10 @@ urlpatterns = [
     path("accounts/activar/<uidb64>/<token>/", activar_cuenta, name="cuenta_activar"),
     path("accounts/", include("allauth.urls")),
     path("panel/", include("apps.crm.urls")),
-    path("portal/", include("apps.content.urls")),
+    
+    # Rutas del Sprint 3 (content/portal) cargadas sin prefijo para que respondan /panel/... y /portal/...
+    path("", include("apps.content.urls")),
+    
     # PC-SEO-01 / PC-SEO-01b: sitemap.xml del sitio publico (paginas fijas y novedades publicadas).
     path("sitemap.xml", sitemap, {"sitemaps": {"sitio": SitioPublicoSitemap, "novedades": NovedadesSitemap}}, name="sitemap"),
     path("", include("apps.website.urls")),
