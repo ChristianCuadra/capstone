@@ -4,12 +4,14 @@ from . import views
 app_name = "content"
 
 urlpatterns = [
-    # Rutas Portal Cliente (PC-POR-01)
+    # Rutas Portal Cliente 
     path("portal/calendario/", views.calendario, name="calendario"),
     path("portal/aprobaciones/", views.aprobacion, name="aprobacion"),
     path("portal/metricas/", views.metricas, name="metricas"),
     
-    # Rutas Panel Interno / Colaboradoras (PC-CAL-01, PC-CAL-02)
+    # Rutas Panel Interno / Colaboradoras 
     path("panel/calendario/", views.interna_calendario, name="interna_calendario"),
     path("panel/calendario/crear/", views.crear_pieza, name="crear_pieza"),
+    path("panel/calendario/editar/<int:pieza_id>/", views.editar_pieza, name="editar_pieza"),
+    path("panel/calendario/historial/<int:pieza_id>/", views.obtener_historial_pieza, name="obtener_historial_pieza"),
 ]

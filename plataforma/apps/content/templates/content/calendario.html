@@ -3,8 +3,6 @@
 {% block page_title %}Calendario editorial{% endblock %}
 
 {% block content %}
-{# Piezas desde content_pieces (pendiente: módulo de contenido). Sin piezas, la grilla se muestra vacía. #}
-
 <header class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
   <div>
     <h1 class="font-serif text-3xl text-vino lg:text-4xl">Calendario editorial</h1>
@@ -22,7 +20,6 @@
       <span class="min-w-[9rem] text-center text-sm font-semibold capitalize text-vino">{{ mes_nombre }} {{ anio }}</span>
       <a href="?mes={{ mes_siguiente }}&vista={{ vista }}" class="grid h-9 w-9 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Mes siguiente">›</a>
     </div>
-    {# Toggle Mes/Lista resuelto en el servidor (?vista=lista). En móvil siempre se muestra la lista. #}
     <div class="hidden rounded-full border border-gris-borde bg-white p-1 text-sm font-medium md:flex">
       <a href="?mes={{ mes_param }}&vista=mes" class="rounded-full px-4 py-1.5 {% if vista == 'mes' %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Mes</a>
       <a href="?mes={{ mes_param }}&vista=lista" class="rounded-full px-4 py-1.5 {% if vista == 'lista' %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Lista</a>
@@ -54,7 +51,18 @@
         </span>
       </p>
       <div class="space-y-1">
-        {% for pieza in dia.piezas %}{% include "content/_chip_pieza.html" %}{% endfor %}
+        {% for pieza in dia.piezas %}
+          <div class="btn-pieza-calendario cursor-pointer"
+               data-titulo="{{ pieza.titulo }}"
+               data-red="{{ pieza.get_red_social_display }}"
+               data-fecha="{{ pieza.fecha_programada|date:'d M Y, H:i' }}"
+               data-copy="{{ pieza.texto }}"
+               data-archivo="{% if pieza.archivo %}{{ pieza.archivo.url }}{% endif %}"
+               data-estado-cod="{{ pieza.estado }}"
+               data-estado-nombre="{{ pieza.get_estado_display }}">
+            {% include "content/_chip_pieza.html" %}
+          </div>
+        {% endfor %}
       </div>
     </div>
     {% endfor %}{% endfor %}
@@ -70,11 +78,165 @@
       <span class="block font-serif text-2xl text-vino">{{ dia.fecha.day }}</span>
     </p>
     <div class="space-y-2">
-      {% for pieza in dia.piezas %}{% include "content/_chip_pieza.html" with grande=True %}{% endfor %}
+      {% for pieza in dia.piezas %}
+        <div class="btn-pieza-calendario cursor-pointer"
+             data-titulo="{{ pieza.titulo }}"
+             data-red="{{ pieza.get_red_social_display }}"
+             data-fecha="{{ pieza.fecha_programada|date:'d M Y, H:i' }}"
+             data-copy="{{ pieza.texto }}"
+             data-archivo="{% if pieza.archivo %}{{ pieza.archivo.url }}{% endif %}"
+             data-estado-cod="{{ pieza.estado }}"
+             data-estado-nombre="{{ pieza.get_estado_display }}">
+          {% include "content/_chip_pieza.html" with grande=True %}
+        </div>
+      {% endfor %}
     </div>
   </div>
   {% empty %}
   <p class="rounded-2xl border border-gris-borde bg-white px-5 py-12 text-center text-sm">Aún no hay publicaciones en {{ mes_nombre }}. Cuando la agencia planifique tu contenido, aparecerá aquí.</p>
   {% endfor %}
 </section>
+
+{# ── Modal Interactivo de Vista Previa Completa de Pieza ─────────── #}
+<dialog id="modal-pieza-cliente" class="w-[90vw] max-w-lg rounded-2xl border border-gris-borde bg-white p-0 backdrop:bg-black/40 shadow-xl">
+  <div class="p-4 border-b border-gris-borde flex items-center justify-between bg-fondo-suave/60">
+    <span id="modal-cal-red" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rosa/20 text-vino">INSTAGRAM</span>
+    <button type="button" onclick="document.getElementById('modal-pieza-cliente').close()" class="grid h-8 w-8 place-items-center rounded-full text-gris-txt hover:bg-white transition-colors">✕</button>
+  </div>
+
+  <div class="p-6 space-y-4">
+    <!-- Bloque de Borrador (Oculto por defecto) -->
+    <div id="modal-cal-bloque-borrador" class="hidden text-center py-6 space-y-3">
+      <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-gray-100 text-gray-500 text-xl font-bold">🔒</div>
+      <h3 id="modal-cal-titulo-borrador" class="font-serif text-lg text-vino">Título</h3>
+      <p class="text-xs text-gray-500 leading-relaxed px-4">Esta publicación se encuentra en fase de borrador por el equipo creativo y aún no está disponible para previsualización.</p>
+    </div>
+
+    <!-- Bloque de Vista Previa Completa (En revisión / Rechazado / Aprobado) -->
+    <div id="modal-cal-bloque-preview" class="space-y-4">
+      <div id="modal-cal-media-container" class="w-full h-64 rounded-xl bg-black/5 border border-gris-borde flex items-center justify-center overflow-hidden">
+        <p id="modal-cal-sin-archivo" class="text-xs text-gris-txt">Esta publicación no tiene recurso multimedia adjunto.</p>
+        <img id="modal-cal-img" class="w-full h-full object-contain hidden" alt="Pieza multimedia">
+        <video id="modal-cal-video" class="w-full h-full object-contain hidden" controls></video>
+      </div>
+
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <h3 id="modal-cal-titulo" class="font-serif text-lg text-vino">Título del post</h3>
+          <span id="modal-cal-fecha" class="text-xs text-gris-txt tabular-nums">01 Ene 2026</span>
+        </div>
+        <p id="modal-cal-copy" class="text-xs text-gray-700 whitespace-pre-line leading-relaxed">Copy o texto de la publicación...</p>
+      </div>
+
+      <div class="pt-3 border-t border-gris-borde flex items-center justify-between">
+        <span id="modal-cal-badge-estado" class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold">
+          Estado
+        </span>
+
+        <a id="modal-cal-btn-aprobacion" href="{% url 'content:aprobacion' %}" class="rounded-full bg-vino px-4 py-1.5 text-xs font-semibold text-white hover:bg-vino-oscuro transition-colors hidden">
+          Ir a Evaluar / Aprobar
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-4 bg-fondo-suave/40 border-t border-gris-borde text-right">
+    <button type="button" onclick="document.getElementById('modal-pieza-cliente').close()" class="rounded-full border border-gris-borde bg-white px-5 py-1.5 text-xs font-semibold text-vino hover:bg-fondo-suave transition-colors">
+      Cerrar
+    </button>
+  </div>
+</dialog>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('modal-pieza-cliente');
+    const bloqueBorrador = document.getElementById('modal-cal-bloque-borrador');
+    const bloquePreview = document.getElementById('modal-cal-bloque-preview');
+    
+    const tituloBorrador = document.getElementById('modal-cal-titulo-borrador');
+    const redEl = document.getElementById('modal-cal-red');
+    const tituloEl = document.getElementById('modal-cal-titulo');
+    const fechaEl = document.getElementById('modal-cal-fecha');
+    const copyEl = document.getElementById('modal-cal-copy');
+    const badgeEstado = document.getElementById('modal-cal-badge-estado');
+    const btnAprobacion = document.getElementById('modal-cal-btn-aprobacion');
+
+    const imgEl = document.getElementById('modal-cal-img');
+    const videoEl = document.getElementById('modal-cal-video');
+    const sinArcEl = document.getElementById('modal-cal-sin-archivo');
+
+    // Manejador global de clics
+    document.addEventListener('click', function (e) {
+      // 1. Si presionas "Ir a Evaluar / Aprobar", dejamos que el botón te lleve a aprobaciones normalmente
+      if (e.target.closest('#modal-cal-btn-aprobacion')) {
+        return; 
+      }
+
+      // 2. Buscamos si el clic fue sobre una pieza del calendario
+      const btn = e.target.closest('.btn-pieza-calendario');
+      if (!btn) return;
+
+      // 3. Frenamos la redirección automática del chip para abrir el popup
+      e.preventDefault();
+      e.stopPropagation();
+
+      const d = btn.dataset;
+      redEl.textContent = d.red;
+
+      if (d.estadoCod === 'borrador') {
+        bloqueBorrador.classList.remove('hidden');
+        bloquePreview.classList.add('hidden');
+        tituloBorrador.textContent = d.titulo;
+      } else {
+        bloqueBorrador.classList.add('hidden');
+        bloquePreview.classList.remove('hidden');
+
+        tituloEl.textContent = d.titulo;
+        fechaEl.textContent = d.fecha;
+        copyEl.textContent = d.copy || 'Sin texto o copy registrado.';
+
+        // Estilos del Badge por estado
+        badgeEstado.className = 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ';
+        if (d.estadoCod === 'aprobado') {
+          badgeEstado.className += 'bg-green-100 text-green-800 border border-green-200';
+          badgeEstado.innerHTML = '✅ Aprobado';
+          btnAprobacion.classList.add('hidden');
+        } else if (d.estadoCod === 'en_revision') {
+          badgeEstado.className += 'bg-rosa/20 text-vino border border-rosa/50';
+          badgeEstado.innerHTML = '📩 En revisión';
+          btnAprobacion.classList.remove('hidden');
+          btnAprobacion.style.display = 'inline-block';
+        } else if (d.estadoCod === 'rechazado') {
+          badgeEstado.className += 'bg-red-100 text-red-800 border border-red-200';
+          badgeEstado.innerHTML = '⚠️ Cambios Solicitados';
+          btnAprobacion.classList.add('hidden');
+        } else {
+          badgeEstado.className += 'bg-blue-100 text-blue-800 border border-blue-200';
+          badgeEstado.innerHTML = '🚀 ' + d.estadoNombre;
+          btnAprobacion.classList.add('hidden');
+        }
+
+        // Carga de la imagen o video
+        imgEl.classList.add('hidden');
+        videoEl.classList.add('hidden');
+        sinArcEl.classList.add('hidden');
+
+        if (d.archivo) {
+          const ext = d.archivo.split('.').pop().toLowerCase();
+          if (['mp4', 'mov', 'webm'].includes(ext)) {
+            videoEl.src = d.archivo;
+            videoEl.classList.remove('hidden');
+          } else {
+            imgEl.src = d.archivo;
+            imgEl.classList.remove('hidden');
+          }
+        } else {
+          sinArcEl.classList.remove('hidden');
+        }
+      }
+
+      modal.showModal();
+    }, true);
+  });
+</script>
 {% endblock %}

@@ -9,7 +9,7 @@ from apps.website.sitemaps import NovedadesSitemap, SitioPublicoSitemap
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # PC-AUT-07: activación de la cuenta del cliente invitado (antes de allauth para que no la tape).
+    # activación de la cuenta del cliente invitado (antes de allauth para que no la tape).
     path("accounts/activar/<uidb64>/<token>/", activar_cuenta, name="cuenta_activar"),
     path("accounts/", include("allauth.urls")),
     path("panel/", include("apps.crm.urls")),
@@ -17,7 +17,7 @@ urlpatterns = [
     # Rutas del Sprint 3 (content/portal) cargadas sin prefijo para que respondan /panel/... y /portal/...
     path("", include("apps.content.urls")),
     
-    # PC-SEO-01 / PC-SEO-01b: sitemap.xml del sitio publico (paginas fijas y novedades publicadas).
+    # sitemap.xml del sitio publico (paginas fijas y novedades publicadas).
     path("sitemap.xml", sitemap, {"sitemaps": {"sitio": SitioPublicoSitemap, "novedades": NovedadesSitemap}}, name="sitemap"),
     path("", include("apps.website.urls")),
 ]

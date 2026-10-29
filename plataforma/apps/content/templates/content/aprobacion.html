@@ -3,51 +3,315 @@
 {% block page_title %}Aprobaciones{% endblock %}
 
 {% block content %}
-<h1 class="font-serif text-3xl text-vino lg:text-4xl">Aprobaciones</h1>
-<p class="mt-1 text-sm">Aquí apruebas o pides cambios a las publicaciones antes de que salgan.</p>
+<div class="space-y-8">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Aprobación de Contenidos</h1>
+    <p class="mt-1 text-sm text-gray-600">Revisa, aprueba o solicita cambios sobre el contenido de tu marca antes de su publicación.</p>
+  </div>
 
-{% if pendientes %}
-<ul class="mt-6 space-y-4">
-  {% for p in pendientes %}
-  <li class="rounded-2xl border border-gris-borde bg-white p-5 text-sm text-vino flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-    <div class="space-y-1">
-      <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">
-          {{ p.get_red_social_display }}
-        </span>
-        <span class="text-xs text-gris-txt">{{ p.fecha_programada|date:"d-m-Y H:i" }}</span>
+  <!-- SECCIÓN 1: PENDIENTES URGENTES DE APROBACIÓN -->
+  <section class="space-y-6">
+    <h2 class="font-serif text-xl text-vino border-b border-gris-borde pb-2">⚠️ Pendientes de Aprobación</h2>
+
+    {% if pendientes %}
+      <div class="space-y-6">
+        {% for p in pendientes %}
+          <div class="rounded-2xl border border-gris-borde bg-white p-5 lg:p-6 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gris-borde pb-3">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rosa/20 text-vino">
+                  {{ p.get_red_social_display }}
+                </span>
+                <span class="text-xs font-semibold text-malva">Versión {{ p.version }}</span>
+              </div>
+              <span class="text-xs text-gris-txt tabular-nums">Fecha programada: <strong>{{ p.fecha_programada|date:"d-m-Y H:i" }}</strong></span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="w-full h-64 rounded-xl bg-fondo-suave border border-gris-borde flex items-center justify-center overflow-hidden">
+                {% if p.archivo %}
+                  {% if ".mp4" in p.archivo.url or ".mov" in p.archivo.url %}
+                    <video src="{{ p.archivo.url }}" class="w-full h-full object-contain" controls></video>
+                  {% else %}
+                    <img src="{{ p.archivo.url }}" class="w-full h-full object-contain" alt="{{ p.titulo }}">
+                  {% endif %}
+                {% else %}
+                  <p class="text-xs text-gris-txt">Sin recurso multimedia adjunto</p>
+                {% endif %}
+              </div>
+
+              <div class="flex flex-col justify-between space-y-4">
+                <div>
+                  <h3 class="font-serif text-lg text-vino font-semibold mb-1">{{ p.titulo }}</h3>
+                  <label class="block text-[11px] font-semibold uppercase tracking-wider text-malva mb-1">Texto / Copy sugerido</label>
+                  <div class="p-3 bg-fondo-suave/60 rounded-xl border border-gris-borde text-xs text-gray-800 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto">
+                    {{ p.texto|default:"Sin texto asignado." }}
+                  </div>
+                </div>
+
+                {% if p.comentarios.all %}
+                  <div class="space-y-2 border-t border-gris-borde pt-3 max-h-36 overflow-y-auto">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-malva">Hilo de discusión</span>
+                    {% for c in p.comentarios.all %}
+                      <div class="text-xs bg-white p-2.5 rounded-xl border border-gris-borde">
+                        <div class="flex justify-between items-center mb-1">
+                          <strong class="text-vino">{{ c.usuario.get_full_name|default:c.usuario.username }}</strong>
+                          <span class="text-[10px] text-gray-400 tabular-nums">{{ c.creado_en|date:"d M, H:i" }}</span>
+                        </div>
+                        <p class="text-gray-700 leading-normal">{{ c.comentario }}</p>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                {% if user.rol == "cliente_aprobador" %}
+                  <form method="post" action="{% url 'content:aprobacion' %}" class="space-y-3 pt-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="pieza_id" value="{{ p.id }}">
+                    
+                    <div>
+                      <label for="comentario-{{ p.id }}" class="block text-[11px] font-semibold uppercase tracking-wider text-malva mb-1">
+                        Comentario / Observaciones <span class="normal-case text-gray-400 font-normal">(obligatorio si solicitas cambios)</span>
+                      </label>
+                      <textarea id="comentario-{{ p.id }}" name="comentario" rows="2" class="w-full rounded-xl border border-gris-borde p-2.5 text-xs text-vino focus:border-malva focus:outline-none" placeholder="Escribe observaciones o solicita correcciones..."></textarea>
+                    </div>
+
+                    <div class="flex items-center gap-2 justify-end">
+                      <button type="submit" name="accion" value="rechazar" class="rounded-full border border-vino px-4 py-2 text-xs font-semibold text-vino hover:bg-fondo-suave transition-colors">
+                        Solicitar Cambios
+                      </button>
+
+                      <button type="submit" name="accion" value="aprobar" onclick="return confirm('¿Estás seguro de que deseas APROBAR la publicación «{{ p.titulo|escapejs }}»?');" class="rounded-full bg-vino px-5 py-2 text-xs font-semibold text-white hover:bg-vino/90 transition-colors">
+                        Aprobar Pieza
+                      </button>
+                    </div>
+                  </form>
+                {% else %}
+                  <div class="rounded-xl bg-amber-50 p-3 border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+                    <svg class="w-4 h-4 shrink-0 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Tu cuenta tiene rol <strong>Cliente Lector</strong>. Puedes previsualizar el contenido pero no tienes permisos para aprobar o rechazar.</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
       </div>
-      <h2 class="font-semibold text-base text-vino">{{ p.titulo }}</h2>
-      {% if p.texto %}<p class="text-xs text-gray-600 max-w-xl">{{ p.texto }}</p>{% endif %}
-      {% if p.archivo %}
-        <div class="pt-2">
-          <a href="{{ p.archivo.url }}" target="_blank" class="text-xs text-vino underline font-medium hover:text-rosa">Ver archivo adjunto (CP-046)</a>
-        </div>
-      {% endif %}
+    {% else %}
+      <div class="rounded-2xl border border-gris-borde bg-white px-6 py-8 text-center">
+        <p class="text-xs text-gris-txt">No tienes publicaciones pendientes por revisar en este momento.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- SECCIÓN 2: PUBLICACIONES ACTIVAS (PRÓXIMAS) -->
+  <section class="space-y-4 pt-4">
+    <h2 class="font-serif text-xl text-vino">📌 Piezas Activas (Próximas Publicaciones)</h2>
+    <div class="rounded-2xl border border-gris-borde bg-white overflow-hidden shadow-sm">
+      <div class="relative overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-fondo-suave border-b border-gris-borde text-[10px] uppercase tracking-wider text-malva font-semibold">
+            <tr>
+              <th scope="col" class="px-5 py-3">Publicación</th>
+              <th scope="col" class="px-5 py-3">Estado</th>
+              <th scope="col" class="px-5 py-3">Fecha Programada</th>
+              <th scope="col" class="px-5 py-3 text-center">Versión</th>
+              <th scope="col" class="px-5 py-3 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gris-borde">
+            {% for a in piezas_activas %}
+              <tr class="hover:bg-fondo-suave/40 transition-colors">
+                <td class="px-5 py-3.5 font-semibold text-vino">{{ a.titulo }}</td>
+                <td class="px-5 py-3.5">
+                  <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-bold
+                    {% if a.estado == 'aprobado' %}bg-green-100 text-green-800
+                    {% elif a.estado == 'en_revision' %}bg-rosa/20 text-vino
+                    {% else %}bg-amber-100 text-amber-800{% endif %}">
+                    {{ a.get_estado_display }}
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-gray-600 tabular-nums">{{ a.fecha_programada|date:"d-m-Y H:i" }}</td>
+                <td class="px-5 py-3.5 text-center font-mono text-xs text-malva">v{{ a.version }}</td>
+                <td class="px-5 py-3.5 text-right">
+                  <button type="button" 
+                          class="btn-ver-historico rounded-full border border-gris-borde bg-white px-3 py-1 text-xs font-medium text-vino hover:bg-fondo-suave transition-colors"
+                          data-id="{{ a.id }}">
+                    👁️ Ver detalle
+                  </button>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-5 py-6 text-center text-xs text-gris-txt">No hay publicaciones activas programadas.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 3: REGISTRO HISTÓRICO COMPLETO (INCLUYE BORRADORES Y EVALUADAS) -->
+  <section class="space-y-4 pt-6 border-t border-gris-borde">
+    <div>
+      <h2 class="font-serif text-xl text-vino">Registro Histórico de Aprobaciones</h2>
+      <p class="text-xs text-gris-txt">Trazabilidad inmutable de quién autorizó cada pieza y en qué fecha.</p>
     </div>
 
-    <!-- Acciones de Aprobación/Rechazo (CP-040) -->
-    <form method="post" class="flex items-center gap-2 shrink-0">
-      {% csrf_token %}
-      <input type="hidden" name="pieza_id" value="{{ p.id }}">
-      <button type="submit" name="accion" value="aprobar" class="rounded-full bg-vino px-4 py-2 text-xs font-semibold text-white hover:bg-vino/90 transition-colors">
-        Aprobar
-      </button>
-      <button type="submit" name="accion" value="rechazar" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-xs font-semibold text-vino hover:bg-fondo-suave transition-colors">
-        Solicitar cambios
-      </button>
-    </form>
-  </li>
-  {% endfor %}
-</ul>
-{% else %}
-<section class="mt-6 rounded-2xl border border-gris-borde bg-white px-6 py-14 text-center">
-  <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rosa/15 text-vino">
-    <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>
-  </span>
-  <h2 class="mt-4 font-serif text-2xl text-vino">No tienes publicaciones por revisar</h2>
-  <p class="mx-auto mt-2 max-w-md text-sm">Cada semana la agencia te enviará las piezas para aprobar. Te avisaremos cuando haya algo nuevo.</p>
-  <a href="{% url 'content:calendario' %}" class="mt-6 inline-block rounded-full border border-vino px-5 py-2.5 text-sm font-semibold text-vino hover:bg-fondo-suave">Ver calendario</a>
-</section>
-{% endif %}
+    <div class="rounded-2xl border border-gris-borde bg-white overflow-hidden shadow-sm">
+      <div class="relative overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-fondo-suave border-b border-gris-borde text-[10px] uppercase tracking-wider text-malva font-semibold">
+            <tr>
+              <th scope="col" class="px-5 py-3">Publicación</th>
+              <th scope="col" class="px-5 py-3">Estado</th>
+              <th scope="col" class="px-5 py-3">Aprobado / Evaluado por</th>
+              <th scope="col" class="px-5 py-3">Fecha y Hora</th>
+              <th scope="col" class="px-5 py-3 text-center">Versión</th>
+              <th scope="col" class="px-5 py-3 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gris-borde">
+            {% for r in revisadas %}
+              <tr class="hover:bg-fondo-suave/40 transition-colors">
+                <td class="px-5 py-3.5 font-semibold text-vino">{{ r.titulo }}</td>
+                <td class="px-5 py-3.5">
+                  <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-bold
+                    {% if r.estado == 'aprobado' %}bg-green-100 text-green-800
+                    {% elif r.estado == 'rechazado' %}bg-amber-100 text-amber-800
+                    {% elif r.estado == 'en_revision' %}bg-rosa/20 text-vino
+                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                    {% if r.estado == 'borrador' %}En preparación{% else %}{{ r.get_estado_display }}{% endif %}
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-gray-700 font-medium">
+                  {% if r.aprobado_por and r.estado != 'borrador' %}
+                    {{ r.aprobado_por.get_full_name|default:r.aprobado_por.username }}
+                  {% else %}
+                    <span class="text-gray-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-5 py-3.5 text-gray-500 tabular-nums">
+                  {% if r.fecha_aprobacion %}
+                    {{ r.fecha_aprobacion|date:"d-m-Y H:i" }}
+                  {% else %}
+                    {{ r.actualizado_en|date:"d-m-Y H:i" }}
+                  {% endif %}
+                </td>
+                <td class="px-5 py-3.5 text-center font-mono text-xs text-malva">v{{ r.version }}</td>
+                <td class="px-5 py-3.5 text-right">
+                  <button type="button" 
+                          class="btn-ver-historico rounded-full border border-gris-borde bg-white px-3 py-1 text-xs font-medium text-vino hover:bg-fondo-suave transition-colors"
+                          data-id="{{ r.id }}">
+                    👁️ Ver detalle
+                  </button>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="px-5 py-8 text-center text-xs text-gris-txt">Aún no hay publicaciones en el historial.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal Unificado: Muestra la Versión Activa Arriba y las Versiones Anteriores Abajo -->
+  <dialog id="modal-detalle-historico" class="w-[90vw] max-w-2xl rounded-2xl border border-gris-borde bg-white p-0 backdrop:bg-black/40 shadow-xl">
+    <div class="p-4 border-b border-gris-borde flex items-center justify-between bg-fondo-suave/60">
+      <h3 id="modal-titulo" class="font-serif text-lg text-vino font-bold">Detalle de la Publicación</h3>
+      <button type="button" onclick="document.getElementById('modal-detalle-historico').close()" class="grid h-8 w-8 place-items-center rounded-full text-gris-txt hover:bg-white">✕</button>
+    </div>
+
+    <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+      <!-- BLOQUE 1: VERSIÓN ACTUAL VIVA DE LA PIEZA -->
+      <div id="bloque-version-actual" class="space-y-3">
+        <!-- Se llena dinámicamente con JS -->
+      </div>
+
+      <!-- BLOQUE 2: HISTORIAL DE VERSIONES ANTERIORES -->
+      <div class="pt-4 border-t border-gris-borde space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-malva">📜 Trazabilidad y Versiones Anteriores</h4>
+        <div id="bloque-versiones-anteriores" class="space-y-3">
+          <p class="text-xs text-gray-400 italic">Cargando versiones...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 border-t border-gris-borde flex justify-end bg-fondo-suave/30">
+      <button type="button" onclick="document.getElementById('modal-detalle-historico').close()" class="rounded-full bg-vino px-5 py-1.5 text-xs font-semibold text-white">Cerrar</button>
+    </div>
+  </dialog>
+
+  <script>
+    document.querySelectorAll('.btn-ver-historico').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const piezaId = this.dataset.id;
+        const modal = document.getElementById('modal-detalle-historico');
+        const bloqueActual = document.getElementById('bloque-version-actual');
+        const bloqueAnteriores = document.getElementById('bloque-versiones-anteriores');
+
+        bloqueActual.innerHTML = '<p class="text-xs text-gray-400 italic">Cargando datos de la pieza...</p>';
+        bloqueAnteriores.innerHTML = '<p class="text-xs text-gray-400 italic">Cargando historial...</p>';
+
+        modal.showModal();
+
+        fetch(`/panel/calendario/historial/${piezaId}/`)
+          .then(res => res.json())
+          .then(data => {
+            const act = data.actual;
+            document.getElementById('modal-titulo').textContent = act.titulo;
+
+            // Renderizar la versión actual viva (destacada arriba)
+            const esVideoAct = act.archivo && ['mp4', 'mov', 'webm'].includes(act.archivo.split('?')[0].split('.').pop().toLowerCase());
+
+            bloqueActual.innerHTML = `
+              <div class="flex items-center justify-between text-xs">
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">${act.red_social}</span>
+                <span class="font-bold text-malva">Versión Actual: v${act.version} (${act.estado})</span>
+              </div>
+
+              <div class="w-full h-64 rounded-xl bg-black/5 border border-gris-borde overflow-hidden flex items-center justify-center">
+                ${act.archivo ? (esVideoAct ? `<video src="${act.archivo}" class="w-full h-full object-contain" controls></video>` : `<img src="${act.archivo}" class="w-full h-full object-contain" alt="${act.titulo}">`) : '<p class="text-xs text-gray-400 italic">Sin archivo multimedia adjunto</p>'}
+              </div>
+
+              <div class="p-3 bg-fondo-suave/60 rounded-xl border border-gris-borde space-y-1.5 text-xs">
+                <p class="text-gray-800 whitespace-pre-line"><strong>Copy:</strong> ${act.texto}</p>
+                <div class="flex justify-between items-center text-[11px] text-gray-500 pt-1 border-t border-gris-borde/50">
+                  <span><strong>Evaluado por:</strong> ${act.evaluado_por}</span>
+                  <span><strong>Programado:</strong> ${act.fecha_programada}</span>
+                </div>
+              </div>
+            `;
+
+            // Renderizar el historial de versiones anteriores (abajo)
+            if (data.historial && data.historial.length > 0) {
+              bloqueAnteriores.innerHTML = data.historial.map(v => {
+                const esVideoV = v.archivo && ['mp4', 'mov', 'webm'].includes(v.archivo.split('?')[0].split('.').pop().toLowerCase());
+                return `
+                  <div class="p-3 bg-white rounded-xl border border-gris-borde space-y-2 text-xs shadow-sm">
+                    <div class="flex justify-between items-center font-semibold text-vino border-b border-gris-borde pb-1">
+                      <span>Versión v${v.version} (${v.estado_al_guardar})</span>
+                      <span class="text-[10px] text-gray-400 tabular-nums">${v.creado_en}</span>
+                    </div>
+                    <p class="text-gray-700 text-[11px]"><strong>Registrado por:</strong> ${v.evaluado_por}</p>
+                    <p class="text-gray-800 whitespace-pre-line text-[11px]"><strong>Copy:</strong> ${v.texto || 'Sin copy'}</p>
+                    ${v.archivo ? `
+                      <div class="w-full h-32 rounded-lg bg-black/5 border border-gris-borde overflow-hidden flex items-center justify-center mt-1">
+                        ${esVideoV ? `<video src="${v.archivo}" class="w-full h-full object-contain" controls></video>` : `<img src="${v.archivo}" class="w-full h-full object-contain" alt="v${v.version}">`}
+                      </div>
+                    ` : '<p class="text-gray-400 italic text-[10px]">Sin archivo en esta versión</p>'}
+                  </div>
+                `;
+              }).join('');
+            } else {
+              bloqueAnteriores.innerHTML = '<p class="text-xs text-gray-400 italic">No hay modificaciones o versiones anteriores registradas.</p>';
+            }
+          });
+      });
+    });
+  </script>
 {% endblock %}
