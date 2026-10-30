@@ -9,7 +9,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.conf import settings
-from apps.accounts.decorators import requiere_rol_cliente
+from apps.accounts.decorators import requiere_equipo, requiere_rol_cliente
+from apps.core.access import clientes_visibles
 from apps.accounts.models import Rol
 from apps.clients.models import Cliente
 from apps.content.models import PiezaContenido, EstadoPieza, ComentarioPieza, HistorialVersionPieza
@@ -17,6 +18,16 @@ from django.http import JsonResponse
 
 import os
 ESTADOS = EstadoPieza.choices
+
+# Estados que el equipo de la agencia puede asignar desde el panel. «Aprobado» queda fuera a propósito:
+# solo el cliente aprobador aprueba desde el portal (PC-APR-01), y así la trazabilidad de PC-APR-02 no se puede saltar.
+ESTADOS_AL_CREAR = {EstadoPieza.BORRADOR, EstadoPieza.EN_REVISION}
+ESTADOS_AL_EDITAR = {EstadoPieza.BORRADOR, EstadoPieza.EN_REVISION, EstadoPieza.RECHAZADO}
+
+
+def _piezas_visibles(user):
+    """Piezas de los clientes que el usuario puede ver (misma regla que PC-AUT-04 / PC-AUT-05)."""
+    return PiezaContenido.objects.filter(cliente__in=clientes_visibles(user))
 MESES = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio", 
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
@@ -253,7 +264,7 @@ def metricas(request):
 # 2. PANEL INTERNO / COLABORADORAS 
 # ==========================================
 
-@login_required
+@requiere_equipo
 def interna_calendario(request):
     user = request.user
     
@@ -327,24 +338,24 @@ def notificar_pieza_en_revision(request, pieza):
         except Exception:
             pass
 
-@login_required
+@requiere_equipo
 def crear_pieza(request):
     if request.method == "POST":
-        cliente_id = request.POST.get("cliente_id")
         user = request.user
+        # 404 si el cliente no existe o no es de los que el usuario puede ver (colaboradora: solo asignados).
+        cliente = get_object_or_404(clientes_visibles(user), id=request.POST.get("cliente_id"))
 
-        if user.rol == Rol.COLABORADORA and not user.clientes_asignados.filter(id=cliente_id).exists():
-            messages.error(request, "No tienes permiso para cargar contenido en este cliente.")
+        estado = request.POST.get("estado", EstadoPieza.BORRADOR)
+        if estado not in ESTADOS_AL_CREAR:
+            messages.error(request, "Al crear una pieza solo se puede guardar como Borrador o enviarla a En revisión.")
             return redirect("content:interna_calendario")
-
-        cliente = get_object_or_404(Cliente, id=cliente_id)
 
         pieza = PiezaContenido(
             cliente=cliente,
             titulo=request.POST.get("titulo"),
             texto=request.POST.get("texto"),
             red_social=request.POST.get("red_social"),
-            estado=request.POST.get("estado", EstadoPieza.BORRADOR),
+            estado=estado,
             fecha_programada=request.POST.get("fecha_programada"),
             archivo=request.FILES.get("archivo"),
             creado_por=user,
@@ -361,8 +372,15 @@ def crear_pieza(request):
 
 @login_required
 def obtener_historial_pieza(request, pieza_id):
-    """Endpoint AJAX que devuelve la versión actual viva + el historial de versiones anteriores."""
-    pieza = get_object_or_404(PiezaContenido, pk=pieza_id)
+    """Endpoint AJAX que devuelve la versión actual viva + el historial de versiones anteriores.
+
+    Lo usan el panel (equipo) y el portal (cliente): cada uno solo ve piezas de sus clientes visibles,
+    y un cliente nunca ve una pieza en Borrador (es solo interna).
+    """
+    piezas = _piezas_visibles(request.user)
+    if request.user.es_cliente:
+        piezas = piezas.exclude(estado=EstadoPieza.BORRADOR)
+    pieza = get_object_or_404(piezas, pk=pieza_id)
     
     def resolver_url(archivo_obj):
         if not archivo_obj:
@@ -420,10 +438,10 @@ def obtener_historial_pieza(request, pieza_id):
         "historial": versiones_anteriores
     })
 
-@login_required
+@requiere_equipo
 def editar_pieza(request, pieza_id):
     user = request.user
-    pieza = get_object_or_404(PiezaContenido, pk=pieza_id)
+    pieza = get_object_or_404(_piezas_visibles(user), pk=pieza_id)
 
     if request.method == "POST":
         # Bloquear edición si la pieza ya se encuentra en estado APROBADO
@@ -431,6 +449,14 @@ def editar_pieza(request, pieza_id):
             messages.error(
                 request, 
                 f"La pieza '{pieza.titulo}' ya está aprobada y no puede ser modificada. Para hacer cambios, crea una nueva publicación."
+            )
+            return redirect("content:interna_calendario")
+
+        nuevo_estado = request.POST.get("estado")
+        if nuevo_estado not in ESTADOS_AL_EDITAR:
+            messages.error(
+                request,
+                "Estado no permitido. Solo el cliente aprobador puede aprobar una pieza desde su portal.",
             )
             return redirect("content:interna_calendario")
 
@@ -450,8 +476,6 @@ def editar_pieza(request, pieza_id):
         pieza.texto = request.POST.get("texto")
         pieza.red_social = request.POST.get("red_social")
         pieza.fecha_programada = request.POST.get("fecha_programada")
-        
-        nuevo_estado = request.POST.get("estado")
         pieza.estado = nuevo_estado
 
         if request.FILES.get("archivo"):
