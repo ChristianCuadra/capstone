@@ -105,14 +105,7 @@
   </div>
 
   <div class="p-6 space-y-4">
-    <!-- Bloque de Borrador (Oculto por defecto) -->
-    <div id="modal-cal-bloque-borrador" class="hidden text-center py-6 space-y-3">
-      <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-gray-100 text-gray-500 text-xl font-bold">🔒</div>
-      <h3 id="modal-cal-titulo-borrador" class="font-serif text-lg text-vino">Título</h3>
-      <p class="text-xs text-gray-500 leading-relaxed px-4">Esta publicación se encuentra en fase de borrador por el equipo creativo y aún no está disponible para previsualización.</p>
-    </div>
-
-    <!-- Bloque de Vista Previa Completa (En revisión / Rechazado / Aprobado) -->
+    <!-- Vista previa completa (En revisión / Rechazado / Aprobado / Publicado; los borradores no llegan al portal) -->
     <div id="modal-cal-bloque-preview" class="space-y-4">
       <div id="modal-cal-media-container" class="w-full h-64 rounded-xl bg-black/5 border border-gris-borde flex items-center justify-center overflow-hidden">
         <p id="modal-cal-sin-archivo" class="text-xs text-gris-txt">Esta publicación no tiene recurso multimedia adjunto.</p>
@@ -150,10 +143,6 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('modal-pieza-cliente');
-    const bloqueBorrador = document.getElementById('modal-cal-bloque-borrador');
-    const bloquePreview = document.getElementById('modal-cal-bloque-preview');
-    
-    const tituloBorrador = document.getElementById('modal-cal-titulo-borrador');
     const redEl = document.getElementById('modal-cal-red');
     const tituloEl = document.getElementById('modal-cal-titulo');
     const fechaEl = document.getElementById('modal-cal-fecha');
@@ -183,56 +172,47 @@
       const d = btn.dataset;
       redEl.textContent = d.red;
 
-      if (d.estadoCod === 'borrador') {
-        bloqueBorrador.classList.remove('hidden');
-        bloquePreview.classList.add('hidden');
-        tituloBorrador.textContent = d.titulo;
+      tituloEl.textContent = d.titulo;
+      fechaEl.textContent = d.fecha;
+      copyEl.textContent = d.copy || 'Sin texto o copy registrado.';
+
+      // Estilos del Badge por estado
+      badgeEstado.className = 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ';
+      if (d.estadoCod === 'aprobado') {
+        badgeEstado.className += 'bg-green-100 text-green-800 border border-green-200';
+        badgeEstado.innerHTML = '✅ Aprobado';
+        btnAprobacion.classList.add('hidden');
+      } else if (d.estadoCod === 'en_revision') {
+        badgeEstado.className += 'bg-rosa/20 text-vino border border-rosa/50';
+        badgeEstado.innerHTML = '📩 En revisión';
+        btnAprobacion.classList.remove('hidden');
+        btnAprobacion.style.display = 'inline-block';
+      } else if (d.estadoCod === 'rechazado') {
+        badgeEstado.className += 'bg-red-100 text-red-800 border border-red-200';
+        badgeEstado.innerHTML = '⚠️ Cambios Solicitados';
+        btnAprobacion.classList.add('hidden');
       } else {
-        bloqueBorrador.classList.add('hidden');
-        bloquePreview.classList.remove('hidden');
+        badgeEstado.className += 'bg-blue-100 text-blue-800 border border-blue-200';
+        badgeEstado.textContent = '🚀 ' + d.estadoNombre;
+        btnAprobacion.classList.add('hidden');
+      }
 
-        tituloEl.textContent = d.titulo;
-        fechaEl.textContent = d.fecha;
-        copyEl.textContent = d.copy || 'Sin texto o copy registrado.';
+      // Carga de la imagen o video
+      imgEl.classList.add('hidden');
+      videoEl.classList.add('hidden');
+      sinArcEl.classList.add('hidden');
 
-        // Estilos del Badge por estado
-        badgeEstado.className = 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ';
-        if (d.estadoCod === 'aprobado') {
-          badgeEstado.className += 'bg-green-100 text-green-800 border border-green-200';
-          badgeEstado.innerHTML = '✅ Aprobado';
-          btnAprobacion.classList.add('hidden');
-        } else if (d.estadoCod === 'en_revision') {
-          badgeEstado.className += 'bg-rosa/20 text-vino border border-rosa/50';
-          badgeEstado.innerHTML = '📩 En revisión';
-          btnAprobacion.classList.remove('hidden');
-          btnAprobacion.style.display = 'inline-block';
-        } else if (d.estadoCod === 'rechazado') {
-          badgeEstado.className += 'bg-red-100 text-red-800 border border-red-200';
-          badgeEstado.innerHTML = '⚠️ Cambios Solicitados';
-          btnAprobacion.classList.add('hidden');
+      if (d.archivo) {
+        const ext = d.archivo.split('?')[0].split('.').pop().toLowerCase();
+        if (['mp4', 'mov', 'webm'].includes(ext)) {
+          videoEl.src = d.archivo;
+          videoEl.classList.remove('hidden');
         } else {
-          badgeEstado.className += 'bg-blue-100 text-blue-800 border border-blue-200';
-          badgeEstado.innerHTML = '🚀 ' + d.estadoNombre;
-          btnAprobacion.classList.add('hidden');
+          imgEl.src = d.archivo;
+          imgEl.classList.remove('hidden');
         }
-
-        // Carga de la imagen o video
-        imgEl.classList.add('hidden');
-        videoEl.classList.add('hidden');
-        sinArcEl.classList.add('hidden');
-
-        if (d.archivo) {
-          const ext = d.archivo.split('.').pop().toLowerCase();
-          if (['mp4', 'mov', 'webm'].includes(ext)) {
-            videoEl.src = d.archivo;
-            videoEl.classList.remove('hidden');
-          } else {
-            imgEl.src = d.archivo;
-            imgEl.classList.remove('hidden');
-          }
-        } else {
-          sinArcEl.classList.remove('hidden');
-        }
+      } else {
+        sinArcEl.classList.remove('hidden');
       }
 
       modal.showModal();

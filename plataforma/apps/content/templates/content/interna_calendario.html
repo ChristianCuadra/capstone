@@ -116,9 +116,9 @@
             <span class="text-xs text-gris-txt">· Programado: {{ pieza.fecha_programada|date:"d M Y" }}</span>
           </div>
           <h3 class="font-semibold text-sm text-vino">{{ pieza.titulo }}</h3>
-          {% if pieza.comentarios.last %}
+          {% if pieza.observacion_cliente %}
             <p class="text-xs text-red-800 bg-red-50 p-2 rounded-lg border border-red-100 mt-1">
-              💬 <strong>Observación cliente:</strong> "{{ pieza.comentarios.last.comentario }}"
+              💬 <strong>Observación cliente:</strong> "{{ pieza.observacion_cliente.comentario }}"
             </p>
           {% endif %}
         </div>
@@ -171,6 +171,12 @@
           <option value="{{ c.id }}" {% if cliente_seleccionado and cliente_seleccionado.id == c.id %}selected{% endif %}>
             {{ c.nombre }}
           </option>
+        {% endfor %}
+      </select>
+      <select name="estado" onchange="this.form.submit()" class="rounded-full border border-gris-borde bg-white px-3.5 py-1.5 text-xs font-medium text-vino focus:border-malva focus:outline-none">
+        <option value="">Todos los estados</option>
+        {% for clave, nombre in estados %}
+          <option value="{{ clave }}" {% if estado_seleccionado == clave %}selected{% endif %}>{{ nombre }}</option>
         {% endfor %}
       </select>
     </form>
@@ -360,10 +366,6 @@
       </div>
     </div>
 
-    <p id="aviso-aprobacion-preventivo" class="text-[11px] text-gray-500 italic">
-      ⚠️ <strong>Atención:</strong> Al marcar esta pieza como <strong>Aprobada</strong>, se congelará su contenido y no podrá volver a modificarse.
-    </p>
-
     <!-- NAVEGADOR DE VERSIONES ANTERIORES -->
     <details class="border border-gris-borde rounded-xl p-3 bg-fondo-suave/40">
       <summary class="text-xs font-bold uppercase text-malva cursor-pointer">📜 Consultar Versiones Anteriores (Trazabilidad)</summary>
@@ -460,7 +462,7 @@
         modalSinArchivo.classList.add('hidden');
 
         if (d.archivo) {
-          const ext = d.archivo.split('.').pop().toLowerCase();
+          const ext = d.archivo.split('?')[0].split('.').pop().toLowerCase();
           if (['mp4', 'webm', 'mov'].includes(ext)) {
             modalVideo.src = d.archivo;
             modalVideo.classList.remove('hidden');
@@ -490,8 +492,14 @@
     const videoEl = document.getElementById('edit-preview-video');
     const sinArchivoEl = document.getElementById('edit-sin-archivo');
     const bannerAprobada = document.getElementById('banner-pieza-aprobada');
-    const avisoPreventivo = document.getElementById('aviso-aprobacion-preventivo');
     const btnSubmitEditar = document.getElementById('btn-submit-editar');
+
+    // El historial llega como JSON con textos escritos por usuarios: se escapan antes de insertarlos como HTML.
+    function esc(valor) {
+      const div = document.createElement('div');
+      div.textContent = valor == null ? '' : String(valor);
+      return div.innerHTML.replace(/"/g, '&quot;');
+    }
 
     function cargarPrevisualizacion(url) {
       imgEl.classList.add('hidden');
@@ -522,17 +530,8 @@
       });
     }
 
-    // Confirmación al intentar Guardar con estado Aprobado
     if (formEdicion) {
-      formEdicion.addEventListener('submit', function(e) {
-        const selectEstado = document.getElementById('edit-estado');
-        if (selectEstado && selectEstado.value === 'aprobado') {
-          const confirmar = confirm('⚠️ Al marcar esta pieza como APROBADA, quedará bloqueada de forma definitiva y no podrás volver a modificarla. ¿Deseas continuar?');
-          if (!confirmar) {
-            e.preventDefault();
-            return false;
-          }
-        }
+      formEdicion.addEventListener('submit', function() {
         btnSubmitEditar.disabled = true;
         btnSubmitEditar.innerText = 'Guardando...';
       });
@@ -560,37 +559,39 @@
 
         if (esAprobado) {
           bannerAprobada.classList.remove('hidden');
-          avisoPreventivo.classList.add('hidden');
           btnSubmitEditar.classList.add('hidden');
         } else {
           bannerAprobada.classList.add('hidden');
-          avisoPreventivo.classList.remove('hidden');
           btnSubmitEditar.classList.remove('hidden');
         }
 
         // Cargar trazabilidad de versiones vía AJAX
+        const contenedor = document.getElementById('contenedor-historial-versiones');
+        contenedor.innerHTML = '<p class="text-gray-400 italic">Cargando versiones...</p>';
         fetch(`/panel/calendario/historial/${d.id}/`)
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error(res.status);
+            return res.json();
+          })
           .then(data => {
-            const contenedor = document.getElementById('contenedor-historial-versiones');
             if (data.historial && data.historial.length > 0) {
               contenedor.innerHTML = data.historial.map(v => {
                 const esVideo = v.archivo && ['mp4', 'mov', 'webm'].includes(v.archivo.split('?')[0].split('.').pop().toLowerCase());
-                
+
                 return `
                   <div class="p-3 bg-white rounded-xl border border-gris-borde space-y-2">
                     <div class="flex justify-between font-semibold text-vino">
-                      <span>Versión v${v.version} (${v.estado_al_guardar})</span>
-                      <span class="text-[10px] text-gray-400">${v.creado_en}</span>
+                      <span>Versión v${esc(v.version)} (${esc(v.estado_al_guardar)})</span>
+                      <span class="text-[10px] text-gray-400">${esc(v.creado_en)}</span>
                     </div>
-                    <p class="text-xs text-gray-700"><strong>Modificado por:</strong> ${v.evaluado_por}</p>
-                    <p class="text-xs text-gray-700 whitespace-pre-line"><strong>Copy:</strong> ${v.texto || 'Sin copy registrado'}</p>
-                    
+                    <p class="text-xs text-gray-700"><strong>Registrado por:</strong> ${esc(v.evaluado_por)}</p>
+                    <p class="text-xs text-gray-700 whitespace-pre-line"><strong>Copy:</strong> ${esc(v.texto || 'Sin copy registrado')}</p>
+
                     ${v.archivo ? `
                       <div class="mt-2 w-full h-32 rounded-lg bg-black/5 border border-gris-borde overflow-hidden flex items-center justify-center">
-                        ${esVideo ? 
-                          `<video src="${v.archivo}" class="w-full h-full object-contain" controls></video>` : 
-                          `<img src="${v.archivo}" class="w-full h-full object-contain" alt="Recurso v${v.version}">`
+                        ${esVideo ?
+                          `<video src="${esc(v.archivo)}" class="w-full h-full object-contain" controls></video>` :
+                          `<img src="${esc(v.archivo)}" class="w-full h-full object-contain" alt="Recurso v${esc(v.version)}">`
                         }
                       </div>
                     ` : '<p class="text-gray-400 text-[11px] italic">Sin archivo multimedia en esta versión</p>'}
@@ -598,8 +599,11 @@
                 `;
               }).join('');
             } else {
-              contenedor.innerHTML = '<p class="text-gray-400 italic">Esta es la primera versión (v1) de la publicación.</p>';
+              contenedor.innerHTML = '<p class="text-gray-400 italic">No hay versiones anteriores registradas.</p>';
             }
+          })
+          .catch(() => {
+            contenedor.innerHTML = '<p class="text-red-700 italic">No se pudo cargar el historial de versiones.</p>';
           });
 
         document.getElementById('modal-editar-pieza').showModal();

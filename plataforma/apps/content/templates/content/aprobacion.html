@@ -68,6 +68,8 @@
                   <form method="post" action="{% url 'content:aprobacion' %}" class="space-y-3 pt-2">
                     {% csrf_token %}
                     <input type="hidden" name="pieza_id" value="{{ p.id }}">
+                    {# Versión que el cliente tiene en pantalla: si la agencia la cambió mientras tanto, no se aprueba. #}
+                    <input type="hidden" name="version" value="{{ p.version }}">
                     
                     <div>
                       <label for="comentario-{{ p.id }}" class="block text-[11px] font-semibold uppercase tracking-wider text-malva mb-1">
@@ -152,7 +154,7 @@
     </div>
   </section>
 
-  <!-- SECCIÓN 3: REGISTRO HISTÓRICO COMPLETO (INCLUYE BORRADORES Y EVALUADAS) -->
+  <!-- SECCIÓN 3: REGISTRO HISTÓRICO COMPLETO (PASADAS Y EVALUADAS; LOS BORRADORES SON SOLO INTERNOS) -->
   <section class="space-y-4 pt-6 border-t border-gris-borde">
     <div>
       <h2 class="font-serif text-xl text-vino">Registro Histórico de Aprobaciones</h2>
@@ -182,11 +184,11 @@
                     {% elif r.estado == 'rechazado' %}bg-amber-100 text-amber-800
                     {% elif r.estado == 'en_revision' %}bg-rosa/20 text-vino
                     {% else %}bg-gray-100 text-gray-700{% endif %}">
-                    {% if r.estado == 'borrador' %}En preparación{% else %}{{ r.get_estado_display }}{% endif %}
+                    {{ r.get_estado_display }}
                   </span>
                 </td>
                 <td class="px-5 py-3.5 text-gray-700 font-medium">
-                  {% if r.aprobado_por and r.estado != 'borrador' %}
+                  {% if r.aprobado_por %}
                     {{ r.aprobado_por.get_full_name|default:r.aprobado_por.username }}
                   {% else %}
                     <span class="text-gray-400">—</span>
@@ -247,6 +249,13 @@
   </dialog>
 
   <script>
+    // El historial llega como JSON con textos escritos por usuarios: se escapan antes de insertarlos como HTML.
+    function esc(valor) {
+      const div = document.createElement('div');
+      div.textContent = valor == null ? '' : String(valor);
+      return div.innerHTML.replace(/"/g, '&quot;');
+    }
+
     document.querySelectorAll('.btn-ver-historico').forEach(btn => {
       btn.addEventListener('click', function() {
         const piezaId = this.dataset.id;
@@ -260,7 +269,10 @@
         modal.showModal();
 
         fetch(`/panel/calendario/historial/${piezaId}/`)
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error(res.status);
+            return res.json();
+          })
           .then(data => {
             const act = data.actual;
             document.getElementById('modal-titulo').textContent = act.titulo;
@@ -270,19 +282,19 @@
 
             bloqueActual.innerHTML = `
               <div class="flex items-center justify-between text-xs">
-                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">${act.red_social}</span>
-                <span class="font-bold text-malva">Versión Actual: v${act.version} (${act.estado})</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-rosa/20 text-vino">${esc(act.red_social)}</span>
+                <span class="font-bold text-malva">Versión Actual: v${esc(act.version)} (${esc(act.estado)})</span>
               </div>
 
               <div class="w-full h-64 rounded-xl bg-black/5 border border-gris-borde overflow-hidden flex items-center justify-center">
-                ${act.archivo ? (esVideoAct ? `<video src="${act.archivo}" class="w-full h-full object-contain" controls></video>` : `<img src="${act.archivo}" class="w-full h-full object-contain" alt="${act.titulo}">`) : '<p class="text-xs text-gray-400 italic">Sin archivo multimedia adjunto</p>'}
+                ${act.archivo ? (esVideoAct ? `<video src="${esc(act.archivo)}" class="w-full h-full object-contain" controls></video>` : `<img src="${esc(act.archivo)}" class="w-full h-full object-contain" alt="${esc(act.titulo)}">`) : '<p class="text-xs text-gray-400 italic">Sin archivo multimedia adjunto</p>'}
               </div>
 
               <div class="p-3 bg-fondo-suave/60 rounded-xl border border-gris-borde space-y-1.5 text-xs">
-                <p class="text-gray-800 whitespace-pre-line"><strong>Copy:</strong> ${act.texto}</p>
+                <p class="text-gray-800 whitespace-pre-line"><strong>Copy:</strong> ${esc(act.texto)}</p>
                 <div class="flex justify-between items-center text-[11px] text-gray-500 pt-1 border-t border-gris-borde/50">
-                  <span><strong>Evaluado por:</strong> ${act.evaluado_por}</span>
-                  <span><strong>Programado:</strong> ${act.fecha_programada}</span>
+                  <span><strong>Evaluado por:</strong> ${esc(act.evaluado_por)}${act.fecha_aprobacion ? ` · ${esc(act.fecha_aprobacion)}` : ''}</span>
+                  <span><strong>Programado:</strong> ${esc(act.fecha_programada)}</span>
                 </div>
               </div>
             `;
@@ -294,14 +306,14 @@
                 return `
                   <div class="p-3 bg-white rounded-xl border border-gris-borde space-y-2 text-xs shadow-sm">
                     <div class="flex justify-between items-center font-semibold text-vino border-b border-gris-borde pb-1">
-                      <span>Versión v${v.version} (${v.estado_al_guardar})</span>
-                      <span class="text-[10px] text-gray-400 tabular-nums">${v.creado_en}</span>
+                      <span>Versión v${esc(v.version)} (${esc(v.estado_al_guardar)})</span>
+                      <span class="text-[10px] text-gray-400 tabular-nums">${esc(v.creado_en)}</span>
                     </div>
-                    <p class="text-gray-700 text-[11px]"><strong>Registrado por:</strong> ${v.evaluado_por}</p>
-                    <p class="text-gray-800 whitespace-pre-line text-[11px]"><strong>Copy:</strong> ${v.texto || 'Sin copy'}</p>
+                    <p class="text-gray-700 text-[11px]"><strong>Registrado por:</strong> ${esc(v.evaluado_por)}</p>
+                    <p class="text-gray-800 whitespace-pre-line text-[11px]"><strong>Copy:</strong> ${esc(v.texto || 'Sin copy')}</p>
                     ${v.archivo ? `
                       <div class="w-full h-32 rounded-lg bg-black/5 border border-gris-borde overflow-hidden flex items-center justify-center mt-1">
-                        ${esVideoV ? `<video src="${v.archivo}" class="w-full h-full object-contain" controls></video>` : `<img src="${v.archivo}" class="w-full h-full object-contain" alt="v${v.version}">`}
+                        ${esVideoV ? `<video src="${esc(v.archivo)}" class="w-full h-full object-contain" controls></video>` : `<img src="${esc(v.archivo)}" class="w-full h-full object-contain" alt="v${esc(v.version)}">`}
                       </div>
                     ` : '<p class="text-gray-400 italic text-[10px]">Sin archivo en esta versión</p>'}
                   </div>
@@ -310,6 +322,10 @@
             } else {
               bloqueAnteriores.innerHTML = '<p class="text-xs text-gray-400 italic">No hay modificaciones o versiones anteriores registradas.</p>';
             }
+          })
+          .catch(() => {
+            bloqueActual.innerHTML = '<p class="text-xs text-red-700 italic">No se pudo cargar el detalle de la publicación.</p>';
+            bloqueAnteriores.innerHTML = '';
           });
       });
     });
