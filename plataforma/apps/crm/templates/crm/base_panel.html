@@ -4,8 +4,9 @@
 
 {% block body %}
 {# ── Sidebar fijo (off-canvas en móvil) ─────────────────────────────── #}
-<div id="fondo-sidebar" class="fixed inset-0 z-40 hidden bg-vino-oscuro/50 lg:hidden"></div>
-<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-vino transition-transform lg:translate-x-0" aria-label="Navegación del panel">
+<div id="fondo-sidebar" class="fixed inset-0 z-40 hidden bg-vino-oscuro/50 backdrop-blur-sm lg:hidden"></div>
+<aside id="sidebar" class="menu-lateral fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col overflow-hidden shadow-2xl shadow-vino-oscuro/30 transition-transform duration-300 lg:translate-x-0" aria-label="Navegación del panel">
+  <div class="fondo-grilla pointer-events-none absolute inset-0 -z-10 opacity-60" aria-hidden="true"></div>
   <div class="flex h-16 items-center justify-between px-5 lg:h-20">
     <a href="{% url 'crm:dashboard' %}">{% include "partials/logo.html" with claro=True subtitulo="Panel interno" %}</a>
     <button type="button" id="cerrar-sidebar" class="grid h-9 w-9 place-items-center rounded-md text-lila hover:text-white lg:hidden" aria-label="Cerrar menú">
@@ -46,7 +47,7 @@
   {% endif %}
 
   <div class="flex items-center gap-3 border-t border-white/10 px-5 py-4">
-    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rosa text-sm font-bold text-vino-oscuro">{{ panel_usuario.iniciales }}</span>
+    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rosa text-sm font-bold text-vino-oscuro shadow-lg shadow-rosa/30 ring-2 ring-white/20">{{ panel_usuario.iniciales }}</span>
     <div class="min-w-0 flex-1 leading-tight">
       <p class="truncate text-sm font-semibold text-white">{{ panel_usuario.nombre }}</p>
       <p class="truncate text-xs text-lila">{{ panel_usuario.cargo }}</p>
@@ -67,7 +68,7 @@
 
 {# ── Área de contenido ──────────────────────────────────────────────── #}
 <div class="lg:pl-64">
-  <div class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gris-borde bg-white px-4 lg:hidden">
+  <div class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gris-borde/70 bg-white/80 px-4 backdrop-blur-xl lg:hidden">
     <button type="button" id="abrir-sidebar" class="grid h-10 w-10 place-items-center rounded-md text-vino hover:bg-fondo-suave" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú">
       <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
@@ -75,7 +76,7 @@
     <span class="grid h-9 w-9 place-items-center rounded-full bg-rosa text-xs font-bold text-vino-oscuro">{{ panel_usuario.iniciales }}</span>
   </div>
 
-  <main class="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+  <main class="app-main mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
     {% if messages %}
     <ul class="mb-6 space-y-2" role="status">
       {% for m in messages %}
@@ -88,7 +89,7 @@
 </div>
 
 {# Confirmación propia del panel (reemplaza el confirm() del navegador). Se activa con data-confirmar en un <form> o en su botón. #}
-<dialog id="dlg-confirmar" class="w-[90vw] max-w-md rounded-2xl border border-gris-borde bg-white p-6 backdrop:bg-black/40" aria-labelledby="dlg-confirmar-titulo">
+<dialog id="dlg-confirmar" class="w-[90vw] max-w-md rounded-3xl border border-gris-borde bg-white p-7" aria-labelledby="dlg-confirmar-titulo">
   <h2 id="dlg-confirmar-titulo" class="font-serif text-xl text-vino"></h2>
   <p id="dlg-confirmar-texto" class="mt-2 text-sm"></p>
   <div class="mt-5 flex gap-3">

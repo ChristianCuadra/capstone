@@ -3,65 +3,201 @@
 
 {% block meta_description %}{{ hero.subtitulo }} {{ agencia.nombre }}: {{ agencia.descriptor }} en {{ agencia.ciudad }}.{% endblock %}
 
+{% block head %}
+<style>
+  /* ── Logo AC en 3D: la tarjeta se inclina hacia el mouse y sus capas se separan en profundidad ── */
+  .logo-escena { perspective: 1100px; }
+  .logo-flotar { animation: logo-flotar 7s ease-in-out infinite; }
+  @keyframes logo-flotar { 50% { transform: translateY(-14px); } }
+  .logo-tarjeta {
+    transform-style: preserve-3d;
+    transform: rotateX(var(--rx, 6deg)) rotateY(var(--ry, -10deg));
+    transition: transform .6s cubic-bezier(.16, .84, .3, 1);
+  }
+  .logo-escena.siguiendo .logo-tarjeta { transition: transform .12s linear; }
+  .logo-capa { position: absolute; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.16, .84, .3, 1), opacity .6s; }
+  .logo-letra { transform: translateZ(var(--z)); transition: transform .6s cubic-bezier(.16, .84, .3, 1), text-shadow .6s; }
+  .logo-escena:hover .logo-letra { transform: translateZ(calc(var(--z) * 1.7)); }
+  .logo-escena:hover .letra-a { text-shadow: 0 0 40px rgb(244 127 177 / .65); }
+  .logo-brillo {
+    background: radial-gradient(420px circle at var(--bx, 30%) var(--by, 20%), rgb(255 255 255 / .22), transparent 55%);
+    mix-blend-mode: soft-light;
+  }
+  .logo-anillo { animation: logo-girar 30s linear infinite; }
+  .logo-escena:hover .logo-anillo { animation-duration: 9s; }
+  @keyframes logo-girar { to { transform: translateZ(30px) rotate(360deg); } }
+  .logo-chip { transform: translateZ(var(--z)); animation: chip-flotar 6s ease-in-out infinite; animation-delay: var(--retraso, 0s); }
+  @keyframes chip-flotar { 50% { translate: 0 -10px; } }
+  /* En pantallas táctiles no hay mouse que seguir: el logo se balancea solo. */
+  @media (hover: none) {
+    .logo-tarjeta { animation: logo-balanceo 9s ease-in-out infinite; }
+    @keyframes logo-balanceo {
+      0%, 100% { transform: rotateX(6deg) rotateY(-12deg); }
+      50% { transform: rotateX(-4deg) rotateY(12deg); }
+    }
+  }
+  .logo-sombra { transform: translateX(calc(var(--ry-num, -10) * -1.2px)) scaleX(.85); transition: transform .6s cubic-bezier(.16, .84, .3, 1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-flotar, .logo-anillo, .logo-chip, .logo-tarjeta { animation: none; }
+    .logo-tarjeta, .logo-letra, .logo-escena:hover .logo-letra { transition: none; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {# ── Hero ───────────────────────────────────────────────────────────── #}
 {# TODO: Supabase - sitio_contenido (hero) #}
-<section class="bg-fondo-suave">
-  <div class="mx-auto grid max-w-7xl items-center gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8 lg:py-24">
+<section id="hero" class="relative isolate overflow-hidden bg-vino-oscuro" data-foco>
+  {% include "website/_fondo_oscuro.html" %}
+
+  <div class="mx-auto grid max-w-7xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:pb-28 lg:pt-24">
     <div>
-      <h1 class="font-serif text-4xl leading-[1.1] text-vino sm:text-5xl lg:text-6xl">
-        {{ hero.titulo }} <em class="text-malva">{{ hero.titulo_cursiva }}</em>{{ hero.titulo_final }}
+      <p data-revelar class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-lila backdrop-blur">
+        <span class="relative flex h-2 w-2" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rosa opacity-60 motion-reduce:animate-none"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-rosa"></span></span>
+        Agencia de {{ agencia.descriptor|lower }}
+      </p>
+      <h1 data-revelar style="--retraso: 80ms" class="mt-6 font-serif text-[2.6rem] leading-[1.05] text-white sm:text-6xl lg:text-7xl">
+        {{ hero.titulo }} <em class="bg-gradient-to-r from-rosa to-rosa-viejo bg-clip-text text-transparent">{{ hero.titulo_cursiva }}</em>{{ hero.titulo_final }}
       </h1>
-      <p class="mt-6 max-w-lg text-lg leading-relaxed">{{ hero.subtitulo }}</p>
-      <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-        <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-vino px-7 py-3.5 text-center font-semibold text-white hover:bg-vino-oscuro">Solicitar cotización</a>
-        {% if casos %}
-        <a href="#casos" class="rounded-full border border-vino px-7 py-3.5 text-center font-semibold text-vino hover:bg-white">Ver casos de clientes</a>
-        {% else %}
-        <a href="{% url 'website:planes' %}" class="rounded-full border border-vino px-7 py-3.5 text-center font-semibold text-vino hover:bg-white">Ver planes</a>
-        {% endif %}
+      <p data-revelar style="--retraso: 160ms" class="mt-6 max-w-lg text-lg leading-relaxed text-lila">{{ hero.subtitulo }}</p>
+
+      <div data-revelar style="--retraso: 240ms" class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <a href="{% url 'website:cotizacion' %}" data-magnetico class="boton-brillo rounded-full bg-rosa px-7 py-3.5 text-center font-semibold text-vino-oscuro shadow-lg shadow-rosa/25 hover:bg-white">
+          Solicitar cotización <span class="flecha" aria-hidden="true">→</span>
+        </a>
+        <a href="{% url 'website:asesoria' %}" data-magnetico class="rounded-full border border-white/25 bg-white/5 px-7 py-3.5 text-center font-semibold text-white backdrop-blur transition hover:border-white/60 hover:bg-white/10">
+          Asesoría gratuita
+        </a>
       </div>
+      {% if casos %}
+      <a data-revelar style="--retraso: 300ms" href="#casos" class="mt-5 inline-block text-sm font-semibold text-white underline decoration-rosa decoration-2 underline-offset-4 hover:text-rosa">Ver casos de clientes →</a>
+      {% elif plan_desde %}
+      <a data-revelar style="--retraso: 300ms" href="{% url 'website:planes' %}" class="mt-5 inline-block text-sm text-lila hover:text-white">Planes mensuales desde <strong class="text-white">{{ plan_desde|clp }}</strong> + IVA · <span class="font-semibold text-white underline decoration-rosa decoration-2 underline-offset-4">Ver planes</span></a>
+      {% endif %}
+
+      {# Compromisos del proceso (Documento de Alcance), no cifras de ejemplo. #}
+      <ul data-revelar style="--retraso: 360ms" class="mt-10 grid gap-3 text-sm text-lila sm:grid-cols-3 sm:gap-4">
+        <li class="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[.04] p-3.5 backdrop-blur">
+          <span class="mt-0.5 text-rosa" aria-hidden="true">✦</span><span><strong class="block font-semibold text-white">3 días hábiles</strong>Cotización con diagnóstico</span>
+        </li>
+        <li class="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[.04] p-3.5 backdrop-blur">
+          <span class="mt-0.5 text-rosa" aria-hidden="true">✦</span><span><strong class="block font-semibold text-white">Tu portal</strong>Apruebas cada pieza antes de publicar</span>
+        </li>
+        <li class="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[.04] p-3.5 backdrop-blur">
+          <span class="mt-0.5 text-rosa" aria-hidden="true">✦</span><span><strong class="block font-semibold text-white">Reporte mensual</strong>Métricas y próximos pasos</span>
+        </li>
+      </ul>
     </div>
 
-    <div class="relative {% if hero.caso_destacado %}pb-10 sm:pb-0{% endif %}">
-      {# TODO: Supabase Storage - imagen del hero #}
-      <div class="placeholder-rayado grid aspect-[4/3] place-items-center rounded-3xl border border-gris-borde sm:aspect-[5/4] lg:aspect-[4/5]">
-        <span class="rounded-full bg-white/80 px-3 py-1 text-xs uppercase tracking-widest text-malva">Imagen principal</span>
+    {# Monograma AC interactivo: se inclina hacia el mouse; al pasar por encima, las letras se separan en profundidad. #}
+    {# TODO: reemplazar las letras por el SVG oficial (AC con la copa) cuando la agencia entregue los archivos. #}
+    <div data-revelar="escala" style="--retraso: 200ms" class="relative mx-auto w-full max-w-[30rem] {% if hero.caso_destacado %}pb-12{% endif %}">
+      <div id="logo-escena" class="logo-escena logo-flotar">
+        <div id="logo-tarjeta" class="logo-tarjeta relative aspect-square w-full">
+          {# Fondo de la tarjeta #}
+          <div class="logo-capa inset-0 overflow-hidden rounded-[2.75rem] border border-white/15 bg-gradient-to-br from-vino via-vino to-vino-oscuro sombra-3">
+            <div class="fondo-grilla absolute inset-0 opacity-60"></div>
+            <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-rosa/30 blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-rosa-viejo/20 blur-3xl"></div>
+          </div>
+          {# Anillo que gira #}
+          <div class="logo-capa inset-[12%]" style="transform: translateZ(30px)">
+            <div class="logo-anillo h-full w-full rounded-full border border-dashed border-rosa/35"></div>
+          </div>
+          <div class="logo-capa inset-[22%] rounded-full border border-white/10" style="transform: translateZ(45px)"></div>
+          {# Letras #}
+          <div class="logo-capa inset-0 grid place-items-center" aria-hidden="true">
+            <span class="flex items-baseline font-serif text-[clamp(8rem,26vw,15rem)] font-bold leading-none" style="transform-style: preserve-3d">
+              <span class="logo-letra letra-a text-rosa" style="--z: 90px">A</span><span class="logo-letra -ml-[0.06em] text-white" style="--z: 60px">C</span>
+            </span>
+          </div>
+          {# Nombre #}
+          <div class="logo-capa inset-x-0 bottom-[9%] text-center" style="transform: translateZ(40px)" aria-hidden="true">
+            <span class="block font-serif text-sm uppercase tracking-[0.42em] text-rosa">Agencia</span>
+            <span class="mt-1 block text-base font-semibold uppercase tracking-[0.3em] text-white">Cosmopolitan</span>
+          </div>
+          {# Reflejo que sigue al mouse #}
+          <div id="logo-brillo" class="logo-capa logo-brillo inset-0 rounded-[2.75rem]" style="transform: translateZ(100px)"></div>
+
+          {# Servicios reales del catálogo flotando alrededor #}
+          {% for servicio in servicios|slice:":3" %}
+          <span class="logo-capa logo-chip hidden whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-black/20 backdrop-blur-md sm:block
+            {% if forloop.counter == 1 %}-left-6 top-[14%]{% elif forloop.counter == 2 %}-right-8 top-[22%]{% else %}bottom-[20%] -left-10{% endif %}"
+            style="--z: {% if forloop.counter == 2 %}150px{% else %}120px{% endif %}; --retraso: -{{ forloop.counter }}s">
+            <span class="text-rosa" aria-hidden="true">●</span> {{ servicio.nombre|sin_detalle }}
+          </span>
+          {% endfor %}
+        </div>
       </div>
+      <div id="logo-sombra" class="logo-sombra mx-auto mt-6 h-6 w-3/4 rounded-[50%] bg-black/40 blur-xl" aria-hidden="true"></div>
+      <span class="sr-only">Agencia Cosmopolitan</span>
+
       {% if hero.caso_destacado %}
-      <div class="absolute bottom-0 left-4 right-4 rounded-2xl border border-gris-borde bg-white p-4 shadow-lg shadow-vino/10 sm:-left-6 sm:bottom-8 sm:right-auto sm:max-w-xs">
+      <div class="absolute bottom-0 left-4 right-4 rounded-2xl border border-white/15 bg-white/10 p-4 text-white shadow-2xl shadow-black/30 backdrop-blur-xl sm:-left-6 sm:right-auto sm:max-w-xs">
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-rosa">{{ hero.caso_destacado.etiqueta }}</p>
-        <p class="mt-1 font-serif text-lg leading-snug text-vino">{{ hero.caso_destacado.texto }}</p>
+        <p class="mt-1 font-serif text-lg leading-snug">{{ hero.caso_destacado.texto }}</p>
       </div>
       {% endif %}
     </div>
   </div>
+
+  {# Indicador para bajar #}
+  <a href="#asesoria-gratis" class="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-lila/80 transition hover:text-white lg:flex">
+    <span class="grid h-9 w-6 justify-center rounded-full border border-white/30 pt-2" aria-hidden="true"><span class="rueda-mouse block h-2 w-1 rounded-full bg-rosa"></span></span>
+    Descubre más
+  </a>
 </section>
+
+{# ── Cinta con los servicios del catálogo ──────────────────────────── #}
+{% if servicios %}
+<div class="cinta-contenedor overflow-hidden border-b border-gris-borde bg-rubor/60 py-4" aria-hidden="true">
+  <div class="cinta">
+    {% for vuelta in "12" %}
+    <ul class="flex shrink-0 items-center gap-10 pr-10 font-serif text-2xl text-vino/80">
+      {% for servicio in servicios %}
+      <li class="flex items-center gap-10 whitespace-nowrap">{{ servicio.nombre|sin_detalle }} <span class="text-base text-rosa">✦</span></li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 {# ── Asesoría gratuita (destacado) ─────────────────────────────────── #}
 {# «Más información» lleva a la página de la asesoría gratuita (contenido entregado por la agencia, 11 oct 2026). #}
-<section id="asesoria-gratis" aria-labelledby="asesoria-titulo" class="border-y border-gris-borde bg-vino">
-  <div class="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8 lg:py-10">
-    <div class="flex items-start gap-4">
-      <span class="mt-1 grid h-12 w-12 shrink-0 place-items-center rounded-full bg-rosa font-serif text-xl text-vino" aria-hidden="true">★</span>
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Sin costo</p>
-        <h2 id="asesoria-titulo" class="mt-1 font-serif text-2xl text-white sm:text-3xl">Asesoría gratuita para tu marca</h2>
-        <p class="mt-2 max-w-xl text-lila">Conversa con nosotras y descubre cómo potenciar tu marca, sin compromiso.</p>
+<section id="asesoria-gratis" aria-labelledby="asesoria-titulo" class="scroll-mt-20 bg-fondo-suave px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+  <div data-revelar="escala" class="tarjeta-viva oscura relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-vino to-vino-oscuro sombra-3">
+    <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-rosa/25 blur-3xl" aria-hidden="true"></div>
+    <div class="relative flex flex-col items-start gap-8 px-6 py-10 sm:px-10 md:flex-row md:items-center md:justify-between lg:px-14 lg:py-12">
+      <div class="flex items-start gap-5">
+        <span class="relative mt-1 grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-rosa font-serif text-2xl text-vino shadow-lg shadow-rosa/30" aria-hidden="true">
+          ★<span class="absolute inset-0 animate-ping rounded-2xl bg-rosa/40 [animation-duration:2.4s] motion-reduce:animate-none"></span>
+        </span>
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Sin costo</p>
+          <h2 id="asesoria-titulo" class="mt-1 font-serif text-3xl text-white sm:text-4xl">Asesoría gratuita para tu marca</h2>
+          <p class="mt-2 max-w-xl text-lila">Conversa con nosotras y descubre cómo potenciar tu marca, sin compromiso.</p>
+        </div>
+      </div>
+      <div class="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row">
+        <a href="{% url 'website:asesoria' %}" id="asesoria-mas-info" data-magnetico class="boton-brillo rounded-full bg-rosa px-7 py-3.5 text-center font-semibold text-vino-oscuro hover:bg-white">Más información <span class="flecha" aria-hidden="true">→</span></a>
+        {% if agencia.whatsapp %}
+        <a href="https://wa.me/{{ agencia.whatsapp }}?text=Hola%2C%20quiero%20pedir%20la%20asesor%C3%ADa%20gratuita%20para%20mi%20marca." target="_blank" rel="noopener" class="rounded-full border border-white/25 px-7 py-3.5 text-center font-semibold text-white transition hover:border-white hover:bg-white/10">Escríbenos por WhatsApp</a>
+        {% endif %}
       </div>
     </div>
-    <a href="{% url 'website:asesoria' %}" id="asesoria-mas-info" class="shrink-0 rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Más información</a>
   </div>
 </section>
 
 {# ── Stats (solo con cifras reales) ─────────────────────────────────── #}
 {# TODO: Supabase - sitio_stats #}
 {% if stats %}
-<section class="border-y border-gris-borde">
+<section class="border-y border-gris-borde bg-white">
   <dl class="mx-auto grid max-w-7xl divide-y divide-gris-borde px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6 lg:px-8">
     {% for stat in stats %}
-    <div class="py-8 text-center sm:py-10">
+    <div data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="py-8 text-center sm:py-10">
       <dt class="sr-only">{{ stat.etiqueta }}</dt>
       <dd class="font-serif text-4xl text-vino lg:text-5xl">{{ stat.valor }}</dd>
       <dd class="mt-2 text-sm">{{ stat.etiqueta }}</dd>
@@ -73,69 +209,94 @@
 
 {# ── Servicios ──────────────────────────────────────────────────────── #}
 {# Desde la base: catalog.Service (visibles en el sitio) y el precio más bajo de catalog.Plan #}
-<section id="servicios" class="scroll-mt-20 py-16 lg:py-24">
+<section id="servicios" class="relative scroll-mt-20 overflow-hidden py-16 lg:py-28">
+  <div class="pointer-events-none absolute -right-40 top-20 -z-10 h-96 w-96 rounded-full bg-rubor blur-3xl" aria-hidden="true"></div>
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Servicios</p>
-    <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Lo que hacemos por tu marca</h2>
-    <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas. Valores netos, no incluyen IVA.</p>
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div data-revelar>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Servicios</p>
+        <h2 class="mt-3 font-serif text-4xl text-vino sm:text-5xl">Lo que hacemos por tu marca</h2>
+        <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas. Valores netos, no incluyen IVA.</p>
+      </div>
+      <a data-revelar href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-4 hover:text-rosa">Armar mi cotización →</a>
+    </div>
 
-    <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {% for servicio in servicios %}
-      <article class="flex flex-col rounded-2xl border border-gris-borde bg-white p-6 transition hover:border-lila hover:shadow-lg hover:shadow-vino/5">
-        <span class="font-serif text-sm text-lila">{{ forloop.counter|stringformat:"02d" }}</span>
-        <h3 class="mt-3 font-serif text-xl text-vino">{{ servicio.nombre }}</h3>
+      <article data-revelar style="--retraso: {% widthratio forloop.counter0 1 90 %}ms" class="tarjeta-viva flex flex-col rounded-3xl border border-gris-borde bg-white p-6 sombra-1">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-rubor font-serif text-base text-vino">{{ forloop.counter|stringformat:"02d" }}</span>
+        <h3 class="mt-5 font-serif text-2xl text-vino">{{ servicio.nombre }}</h3>
         {% if servicio.descripcion %}<p class="mt-3 text-sm leading-relaxed">{{ servicio.descripcion }}</p>{% endif %}
         <div class="flex-1"></div>
-        <p class="mt-6 border-t border-gris-borde pt-4 text-sm text-vino">
-          <strong class="text-base">{{ servicio.precio|clp }}</strong>{{ servicio.sufijo_precio }}
-        </p>
+        <div class="mt-6 flex items-end justify-between gap-3 border-t border-gris-borde pt-4">
+          <p class="text-sm text-vino"><strong class="text-base">{{ servicio.precio|clp }}</strong>{{ servicio.sufijo_precio }}</p>
+          <a href="{% url 'website:cotizacion' %}" class="shrink-0 text-xs font-semibold uppercase tracking-[0.14em] text-malva transition hover:text-vino" aria-label="Cotizar {{ servicio.nombre }}">Cotizar →</a>
+        </div>
       </article>
       {% endfor %}
       {% if plan_desde %}
-      <a href="{% url 'website:planes' %}" class="group flex flex-col justify-between rounded-2xl bg-vino p-6 text-lila transition hover:bg-vino-oscuro">
-        <span class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
-        <span class="mt-3 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
-        <span class="mt-1 text-xs text-lila">+ IVA</span>
-        <span class="mt-6 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
+      <a data-revelar style="--retraso: {% widthratio servicios|length 1 90 %}ms" href="{% url 'website:planes' %}" class="tarjeta-viva oscura group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-vino to-vino-oscuro p-6 text-lila sombra-2">
+        <span class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-rosa/30 blur-2xl transition duration-700 group-hover:scale-150" aria-hidden="true"></span>
+        <span class="relative text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
+        <span class="relative mt-3 font-serif text-3xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
+        <span class="relative mt-1 text-xs text-lila">+ IVA</span>
+        <span class="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
       </a>
       {% endif %}
+    </div>
+
+    {# CTA intermedio: para quien no sabe qué elegir #}
+    <div data-revelar class="mt-12 flex flex-col items-start justify-between gap-5 rounded-3xl border border-dashed border-lila bg-fondo-suave px-6 py-6 sm:flex-row sm:items-center sm:px-8">
+      <p class="font-serif text-2xl leading-snug text-vino">¿No sabes por dónde partir? <span class="text-malva">Te ayudamos a elegir, sin costo.</span></p>
+      <a href="{% url 'website:asesoria' %}" data-magnetico class="boton-brillo shrink-0 rounded-full bg-vino px-6 py-3 text-sm font-semibold text-white hover:bg-vino-oscuro">Pedir asesoría gratuita <span class="flecha" aria-hidden="true">→</span></a>
     </div>
   </div>
 </section>
 
 {# ── Nosotras: equipo y metodología ─────────────────────────────────── #}
 {# TODO: Supabase - sitio_contenido (nosotras) + fotos del equipo en Storage #}
-<section id="nosotras" class="scroll-mt-20 border-t border-gris-borde py-16 lg:py-24">
-  <div class="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_1.2fr] lg:gap-16 lg:px-8">
+<section id="nosotras" class="relative scroll-mt-20 overflow-hidden border-t border-gris-borde bg-gradient-to-b from-fondo-suave to-white py-16 lg:py-28">
+  <div class="mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:gap-20 lg:px-8">
     <div>
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Nosotras</p>
-      <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Dos socias, un proceso claro</h2>
-      <p class="mt-4 max-w-lg leading-relaxed">{{ nosotras.intro }}</p>
-      <ul class="mt-8 grid gap-4 sm:grid-cols-2">
+      <div data-revelar="izquierda">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Nosotras</p>
+        <h2 class="mt-3 font-serif text-4xl text-vino sm:text-5xl">Dos socias, un proceso claro</h2>
+        <p class="mt-4 max-w-lg leading-relaxed">{{ nosotras.intro }}</p>
+      </div>
+      <ul class="mt-10 grid gap-5 sm:grid-cols-2">
         {% for persona in nosotras.equipo %}
-        <li class="rounded-2xl border border-gris-borde p-5">
-          <div class="placeholder-rayado grid aspect-[4/3] place-items-center rounded-xl">
-            <span class="grid h-14 w-14 place-items-center rounded-full bg-vino font-serif text-xl text-white">{{ persona.iniciales }}</span>
+        <li data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="tarjeta-viva rounded-3xl border border-gris-borde bg-white p-5 sombra-1">
+          <div class="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-rubor to-fondo-suave">
+            <div class="placeholder-rayado absolute inset-0 opacity-50"></div>
+            <span class="relative grid h-16 w-16 place-items-center rounded-full bg-vino font-serif text-2xl text-white ring-4 ring-white sombra-2">{{ persona.iniciales }}</span>
           </div>
-          <p class="mt-4 font-serif text-xl text-vino">{{ persona.nombre }}</p>
+          <p class="mt-4 font-serif text-2xl text-vino">{{ persona.nombre }}</p>
           <p class="text-sm">{{ persona.cargo }}</p>
         </li>
         {% endfor %}
       </ul>
     </div>
     <div>
-      <h3 class="font-serif text-2xl text-vino">Cómo trabajamos</h3>
-      <ol class="mt-6 space-y-5">
+      <h3 data-revelar class="font-serif text-3xl text-vino">Cómo trabajamos</h3>
+      <ol class="relative mt-8 space-y-6">
+        {# Línea de tiempo que se llena al bajar #}
+        <span class="absolute bottom-6 left-5 top-5 w-px bg-gris-borde" aria-hidden="true">
+          <span data-linea-progreso class="linea-progreso absolute inset-0 bg-gradient-to-b from-rosa to-vino"></span>
+        </span>
         {% for paso in nosotras.metodologia %}
-        <li class="flex gap-4">
-          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rosa/15 font-serif text-lg text-vino">{{ forloop.counter }}</span>
-          <div class="border-b border-gris-borde pb-5">
+        <li data-revelar="derecha" style="--retraso: {% widthratio forloop.counter0 1 100 %}ms" class="relative flex gap-5">
+          <span class="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-rosa/40 bg-white font-serif text-lg text-vino sombra-1">{{ forloop.counter }}</span>
+          <div class="tarjeta-viva flex-1 rounded-2xl border border-gris-borde bg-white px-5 py-4 sombra-1">
             <p class="font-semibold text-vino">{{ paso.titulo }}</p>
             <p class="mt-1 text-sm leading-relaxed">{{ paso.texto }}</p>
           </div>
         </li>
         {% endfor %}
       </ol>
+      <div data-revelar class="mt-8 flex flex-col gap-3 pl-0 sm:flex-row sm:items-center sm:pl-[3.75rem]">
+        <a href="{% url 'website:cotizacion' %}" data-magnetico class="boton-brillo whitespace-nowrap rounded-full bg-vino px-6 py-3 text-center text-sm font-semibold text-white hover:bg-vino-oscuro">Empezar con mi diagnóstico <span class="flecha" aria-hidden="true">→</span></a>
+        <span class="text-sm text-malva">Paso 1: te enviamos la propuesta en 3 días hábiles.</span>
+      </div>
     </div>
   </div>
 </section>
@@ -145,17 +306,17 @@
 {% if casos %}
 <section id="casos" class="scroll-mt-20 bg-fondo-suave py-16 lg:py-24">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="flex flex-wrap items-end justify-between gap-4">
+    <div data-revelar class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Resultados</p>
-        <h2 class="mt-3 font-serif text-3xl text-vino sm:text-4xl">Casos recientes</h2>
+        <h2 class="mt-3 font-serif text-4xl text-vino sm:text-5xl">Casos recientes</h2>
       </div>
       <a href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-4">Quiero resultados así →</a>
     </div>
 
     <div class="mt-10 grid gap-6 md:grid-cols-3">
       {% for caso in casos %}
-      <article class="overflow-hidden rounded-2xl border border-gris-borde bg-white">
+      <article data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="tarjeta-viva overflow-hidden rounded-3xl border border-gris-borde bg-white sombra-1">
         {# TODO: Supabase Storage - imagen del caso #}
         <div class="placeholder-rayado aspect-[16/10]"></div>
         <div class="p-6">
@@ -180,7 +341,7 @@
 <section class="py-16 lg:py-24">
   <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 md:grid-cols-2 lg:gap-10 lg:px-8">
     {% for testimonio in testimonios %}
-    <figure class="rounded-2xl border border-gris-borde p-7 lg:p-10">
+    <figure data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="tarjeta-viva rounded-3xl border border-gris-borde bg-white p-7 sombra-1 lg:p-10">
       <span class="font-serif text-5xl leading-none text-rosa" aria-hidden="true">“</span>
       <blockquote class="mt-2 font-serif text-xl leading-relaxed text-vino lg:text-2xl">{{ testimonio.cita }}</blockquote>
       <figcaption class="mt-6 flex items-center gap-3">
@@ -196,4 +357,52 @@
 </section>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Hero: el monograma AC se inclina hacia el mouse (el foco de luz del fondo lo maneja _movimiento.html).
+  // Solo con mouse y sin «reducir movimiento».
+  (() => {
+    const hero = document.getElementById('hero');
+    const escena = document.getElementById('logo-escena');
+    const tarjeta = document.getElementById('logo-tarjeta');
+    const brillo = document.getElementById('logo-brillo');
+    const sombra = document.getElementById('logo-sombra');
+    if (!hero || !escena) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    let cuadro = 0;
+    let ultimo = null;
+    const aplicar = () => {
+      cuadro = 0;
+      const e = ultimo;
+      const caja = tarjeta.getBoundingClientRect();
+      // Posición del mouse respecto del centro del logo, de -1 a 1 (más allá se limita).
+      const nx = Math.max(-1, Math.min(1, (e.clientX - (caja.left + caja.width / 2)) / (caja.width * 0.9)));
+      const ny = Math.max(-1, Math.min(1, (e.clientY - (caja.top + caja.height / 2)) / (caja.height * 0.9)));
+      const ry = nx * 18;
+      const rx = -ny * 14;
+      tarjeta.style.setProperty('--rx', `${rx}deg`);
+      tarjeta.style.setProperty('--ry', `${ry}deg`);
+      brillo.style.setProperty('--bx', `${(nx + 1) * 50}%`);
+      brillo.style.setProperty('--by', `${(ny + 1) * 50}%`);
+      sombra.style.setProperty('--ry-num', ry);
+    };
+    hero.addEventListener('pointermove', (e) => {
+      ultimo = e;
+      escena.classList.add('siguiendo');
+      if (!cuadro) cuadro = requestAnimationFrame(aplicar);
+    });
+    hero.addEventListener('pointerleave', () => {
+      escena.classList.remove('siguiendo');
+      tarjeta.style.removeProperty('--rx');
+      tarjeta.style.removeProperty('--ry');
+      brillo.style.removeProperty('--bx');
+      brillo.style.removeProperty('--by');
+      sombra.style.removeProperty('--ry-num');
+    });
+  })();
+</script>
 {% endblock %}

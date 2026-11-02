@@ -3,6 +3,7 @@
 <html lang="es-CL">
 <head>
   {% include "partials/head.html" %}
+  {% include "website/_movimiento_estilos.html" %}
   <title>{% block head_title %}{% endblock head_title %} · {{ agencia.nombre }}</title>
   <style type="text/tailwindcss">
     .cuenta h1 { @apply font-serif text-3xl text-vino; }
@@ -14,16 +15,24 @@
       @apply mt-1.5 w-full rounded-xl border border-gris-borde bg-white px-4 py-3 outline-none focus:border-malva focus:ring-2 focus:ring-lila/40;
     }
     .cuenta input[type=checkbox] { @apply mr-2 h-4 w-4 accent-vino; }
-    .cuenta button[type=submit], .cuenta button:not([type]) { @apply mt-2 w-full rounded-full bg-vino px-6 py-3 font-semibold text-white hover:bg-vino-oscuro; }
+    .cuenta input[type=email], .cuenta input[type=text], .cuenta input[type=password] { @apply transition duration-200 hover:border-lila focus:ring-4 focus:ring-rosa/15; }
+    .cuenta button[type=submit], .cuenta button:not([type]) { @apply mt-2 w-full rounded-full bg-vino px-6 py-3 font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-vino-oscuro hover:shadow-[0_12px_28px_-10px_rgb(82_33_54/.55)]; }
     .cuenta ul.errorlist { @apply mt-1 text-xs font-medium text-[#B3261E]; }
   </style>
   {% block extra_head %}{% endblock extra_head %}
 </head>
-<body class="grid min-h-screen place-items-center bg-fondo-suave px-4 py-10 font-sans antialiased">
+<body class="relative isolate grid min-h-screen place-items-center overflow-x-hidden bg-vino-oscuro px-4 py-10 font-sans antialiased" data-foco>
+  {# Mismo fondo oscuro del sitio público: brillos, rejilla y foco de luz que sigue al mouse. #}
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+    <div class="flotar-lento absolute -left-40 -top-48 h-[36rem] w-[36rem] rounded-full bg-rosa/25 blur-[120px]"></div>
+    <div class="flotar-lento inverso absolute -bottom-56 -right-40 h-[40rem] w-[40rem] rounded-full bg-rosa-viejo/20 blur-[140px]"></div>
+    <div class="fondo-grilla absolute inset-0"></div>
+    <div class="foco-luz absolute inset-0"></div>
+  </div>
   {% block body %}
   <main class="w-full max-w-md">
-    <a href="{% url 'website:home' %}" class="mb-8 flex justify-center">{% include "partials/logo.html" %}</a>
-    <div class="cuenta rounded-3xl border border-gris-borde bg-white p-7 shadow-sm sm:p-9">
+    <a href="{% url 'website:home' %}" data-revelar class="mb-8 flex justify-center">{% include "partials/logo.html" with claro=True %}</a>
+    <div data-revelar="escala" style="--retraso: 100ms" class="cuenta rounded-3xl border border-white/10 bg-white p-7 sombra-3 sm:p-9">
       {% if messages %}
       <ul class="mb-5 space-y-2">
         {% for message in messages %}<li class="rounded-xl bg-fondo-suave px-4 py-2.5 text-sm text-vino">{{ message }}</li>{% endfor %}
@@ -38,12 +47,13 @@
     {# Para el resto (paginas publicas de cuenta: login, registro, recuperar clave), se mantiene #}
     {# el history.back() a la pagina de origen si vino del mismo sitio. #}
     {% if user.is_authenticated and user.is_staff %}
-    <p class="mt-6 text-center text-sm"><a href="{% url 'crm:dashboard' %}" class="text-malva hover:text-vino">← Volver al panel</a></p>
+    <p class="mt-6 text-center text-sm"><a href="{% url 'crm:dashboard' %}" class="text-lila transition hover:text-white">← Volver al panel</a></p>
     {% else %}
-    <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }" class="text-malva hover:text-vino">← Volver al sitio</a></p>
+    <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }" class="text-lila transition hover:text-white">← Volver al sitio</a></p>
     {% endif %}
   </main>
   {% endblock body %}
+  {% include "website/_movimiento.html" %}
   {% block extra_body %}{% endblock extra_body %}
 </body>
 </html>

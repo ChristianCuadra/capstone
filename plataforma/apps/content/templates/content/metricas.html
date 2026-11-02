@@ -4,8 +4,10 @@
 
 {% block content %}
 {# Métricas desde metrics_data (importación por archivo o integración) y reporte mensual (pendiente: Alcance 5.8 y 5.9). #}
-<h1 class="font-serif text-3xl text-vino lg:text-4xl">Métricas</h1>
-<p class="mt-1 text-sm">Alcance, interacciones, seguidores y resultados de campañas de tu marca, mes a mes.</p>
+<header>
+  <h1 class="font-serif text-3xl text-vino lg:text-4xl">Métricas</h1>
+  <p class="mt-1 text-sm">Alcance, interacciones, seguidores y resultados de campañas de tu marca, mes a mes.</p>
+</header>
 
 {% if not hay_datos %}
 <section class="mt-6 rounded-2xl border border-gris-borde bg-white px-6 py-14 text-center">

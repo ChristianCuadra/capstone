@@ -1,0 +1,138 @@
+{# Profundidad y movimiento del sitio público. El JS que los activa está en _movimiento.html. #}
+{# Todo respeta «reducir movimiento» del sistema: sin animaciones, el contenido se ve igual (solo sin transiciones). #}
+<script>document.documentElement.classList.add('js-mov');</script>
+<style>
+  /* El desplazamiento a las anclas (#servicios, «Descubre más»…) lo anima el JS con aceleración suave;
+     scroll-behavior: smooth del navegador se pelearía con esa animación. */
+
+  /* ── Fondo oscuro de marca: rejilla tenue y foco de luz que sigue al mouse (data-foco en la sección) ── */
+  .fondo-grilla {
+    background-image: linear-gradient(rgb(255 255 255 / .05) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .05) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
+            mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
+  }
+  .foco-luz { background: radial-gradient(600px circle at var(--hx, 70%) var(--hy, 30%), rgb(244 127 177 / .18), transparent 60%); }
+
+  section[tabindex="-1"]:focus, div[tabindex="-1"]:focus { outline: none; }
+
+  /* ── Enlaces del menú con subrayado que crece ── */
+  .enlace-nav { position: relative; transition: color .25s; }
+  .enlace-nav::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--rosa);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform .35s cubic-bezier(.16, .84, .3, 1);
+  }
+  .enlace-nav:hover::after, .enlace-nav[aria-current="page"]::after { transform: scaleX(1); transform-origin: left; }
+
+  /* ── Menú móvil que se despliega ── */
+  #menu-movil:not(.hidden) { animation: menu-bajar .3s cubic-bezier(.16, .84, .3, 1); }
+  @keyframes menu-bajar { from { opacity: 0; transform: translateY(-8px); } }
+
+  /* ── Sombras en capas (de sutil a flotante), teñidas con el vino de la marca ── */
+  .sombra-1 { box-shadow: 0 1px 2px rgb(82 33 54 / .05), 0 6px 16px -4px rgb(82 33 54 / .10); }
+  .sombra-2 { box-shadow: 0 2px 4px rgb(82 33 54 / .04), 0 14px 28px -8px rgb(82 33 54 / .14), 0 36px 72px -24px rgb(82 33 54 / .20); }
+  .sombra-3 { box-shadow: 0 4px 10px rgb(61 24 40 / .10), 0 28px 56px -14px rgb(61 24 40 / .38), 0 70px 140px -40px rgb(61 24 40 / .50); }
+
+  /* ── Aparición al hacer scroll (data-revelar). Solo si el JS corre: sin JS todo queda visible. ── */
+  .js-mov [data-revelar] {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+    transition: opacity .9s cubic-bezier(.16, .84, .3, 1), transform .9s cubic-bezier(.16, .84, .3, 1);
+    transition-delay: var(--retraso, 0ms);
+  }
+  .js-mov [data-revelar="izquierda"] { transform: translate3d(-36px, 0, 0); }
+  .js-mov [data-revelar="derecha"] { transform: translate3d(36px, 0, 0); }
+  .js-mov [data-revelar="escala"] { transform: scale(.94); }
+  .js-mov [data-revelar].visible { opacity: 1; transform: none; }
+
+  /* ── Tarjeta que se eleva y tiene un foco de luz que sigue al mouse ── */
+  .tarjeta-viva {
+    position: relative;
+    isolation: isolate;
+    transition: transform .45s cubic-bezier(.16, .84, .3, 1), box-shadow .45s, border-color .45s;
+  }
+  .tarjeta-viva::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), rgb(244 127 177 / .16), transparent 65%);
+    opacity: 0;
+    transition: opacity .45s;
+    pointer-events: none;
+  }
+  .tarjeta-viva:hover {
+    transform: translateY(-6px);
+    border-color: var(--lila);
+    box-shadow: 0 2px 4px rgb(82 33 54 / .04), 0 18px 36px -10px rgb(82 33 54 / .18), 0 44px 88px -28px rgb(82 33 54 / .24);
+  }
+  .tarjeta-viva:hover::before { opacity: 1; }
+  .tarjeta-viva.oscura::before { background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), rgb(244 127 177 / .30), transparent 65%); }
+
+  /* ── Botón con destello que cruza al pasar el mouse ── */
+  .boton-brillo { position: relative; overflow: hidden; isolation: isolate; transition: transform .3s cubic-bezier(.16, .84, .3, 1), box-shadow .3s, background-color .3s, color .3s; }
+  .boton-brillo::after {
+    content: "";
+    position: absolute;
+    inset: -2px auto -2px -60%;
+    width: 45%;
+    z-index: -1;
+    background: linear-gradient(100deg, transparent, rgb(255 255 255 / .45), transparent);
+    transform: skewX(-20deg);
+    transition: left .7s cubic-bezier(.16, .84, .3, 1);
+    pointer-events: none;
+  }
+  .boton-brillo:hover::after { left: 120%; }
+  .boton-brillo:hover { box-shadow: 0 12px 28px -10px rgb(82 33 54 / .55); }
+  .boton-brillo .flecha { display: inline-block; transition: transform .3s; }
+  .boton-brillo:hover .flecha { transform: translateX(4px); }
+
+  /* ── Cabecera: sombra al bajar y barra de progreso de lectura ── */
+  #cabecera { transition: box-shadow .3s, background-color .3s; }
+  #cabecera.con-scroll { box-shadow: 0 10px 30px -18px rgb(82 33 54 / .35); background-color: rgb(255 255 255 / .82); }
+  #progreso-scroll { transform: scaleX(var(--progreso, 0)); transform-origin: left; }
+
+  /* ── Cinta de servicios que se desplaza sola ── */
+  .cinta { display: flex; width: max-content; animation: cinta 45s linear infinite; }
+  .cinta-contenedor:hover .cinta { animation-play-state: paused; }
+  @keyframes cinta { to { transform: translateX(-50%); } }
+
+  /* ── Brillos de fondo que respiran ── */
+  .flotar-lento { animation: flotar-lento 14s ease-in-out infinite alternate; }
+  .flotar-lento.inverso { animation-direction: alternate-reverse; animation-duration: 18s; }
+  @keyframes flotar-lento {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(6%, 8%, 0) scale(1.12); }
+  }
+
+  /* ── Línea de la metodología que se llena al bajar ── */
+  .linea-progreso { transform: scaleY(var(--avance, 0)); transform-origin: top; transition: transform .2s linear; }
+
+  /* ── Indicador «desliza» ── */
+  .rueda-mouse { animation: rueda-mouse 1.8s cubic-bezier(.65, 0, .35, 1) infinite; }
+  @keyframes rueda-mouse {
+    0% { transform: translateY(0); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: translateY(10px); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #menu-movil:not(.hidden) { animation: none; }
+    .enlace-nav::after { transition: none; }
+    .js-mov [data-revelar] { opacity: 1; transform: none; transition: none; }
+    .tarjeta-viva, .tarjeta-viva:hover, .boton-brillo, .boton-brillo:hover { transform: none; transition: none; }
+    .boton-brillo::after { display: none; }
+    .cinta, .flotar-lento, .rueda-mouse { animation: none; }
+    .linea-progreso { transform: none; }
+  }
+</style>

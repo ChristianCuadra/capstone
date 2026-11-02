@@ -9,6 +9,7 @@
 {% block page_title %}SEO de las páginas{% endblock %}
 
 {% block content %}
+<header>
 <nav aria-label="Ruta" class="text-sm">
   <ol class="flex items-center gap-2">
     <li><a href="{% url 'crm:contenidos' %}" class="hover:text-vino">Contenido del sitio</a></li>
@@ -21,6 +22,7 @@
   Título y descripción con que cada página aparece en Google y al compartirla en redes. Si dejas un campo vacío,
   la página sigue usando su texto actual. Las novedades tienen su propio SEO dentro de cada contenido.
 </p>
+</header>
 
 <form method="post" class="mt-6 max-w-4xl space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').textContent = 'Guardando…';">
   {% csrf_token %}

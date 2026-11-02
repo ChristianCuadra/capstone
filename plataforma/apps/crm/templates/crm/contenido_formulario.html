@@ -9,6 +9,7 @@
 {% block page_title %}{% if contenido %}Editar contenido{% else %}Nuevo contenido{% endif %}{% endblock %}
 
 {% block content %}
+<header>
 <nav aria-label="Ruta" class="text-sm">
   <ol class="flex items-center gap-2">
     <li><a href="{% url 'crm:contenidos' %}" class="hover:text-vino">Contenido del sitio</a></li>
@@ -17,6 +18,7 @@
   </ol>
 </nav>
 <h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">{% if contenido %}Editar «{{ contenido.titulo }}»{% else %}Nuevo contenido{% endif %}</h1>
+</header>
 
 <section class="mt-6 max-w-3xl rounded-2xl border border-gris-borde bg-white p-6">
   <form method="post" enctype="multipart/form-data" class="space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').textContent = 'Guardando…';">

@@ -3,12 +3,20 @@
 <html lang="es-CL">
 <head>
   {% include "partials/head.html" %}
+  {% include "website/_movimiento_estilos.html" %}
+  {% include "partials/estetica_app.html" %}
   <title>{% block title %}{{ agencia.nombre }}{% endblock %}</title>
   <meta name="robots" content="noindex">
   {% block head %}{% endblock %}
 </head>
 <body class="font-sans antialiased {% block body_class %}bg-fondo-suave{% endblock %}">
+  <div class="app-fondo" aria-hidden="true"></div>
   {% block body %}{% endblock %}
+  <script>
+    // La cabecera de cada página (primera <header> del contenido) sigue al mouse con su foco de luz.
+    document.querySelector('.app-main > header')?.setAttribute('data-foco', '');
+  </script>
+  {% include "website/_movimiento.html" %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,5 +1,7 @@
 """Filtros de formato chileno: los montos viajan como enteros y se formatean solo al mostrarse."""
 
+import re
+
 from django import template
 
 register = template.Library()
@@ -30,6 +32,12 @@ def clp(valor):
         return ""
     signo = "-" if int(valor) < 0 else ""
     return f"{signo}${_miles(abs(int(valor)))}"
+
+
+@register.filter
+def sin_detalle(texto):
+    """'Contenido audiovisual (4 reels)' -> 'Contenido audiovisual' (nombre corto para cintas y etiquetas)."""
+    return re.sub(r"\s*\([^)]*\)", "", str(texto or "")).strip()
 
 
 @register.filter
