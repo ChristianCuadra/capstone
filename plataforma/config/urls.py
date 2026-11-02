@@ -4,8 +4,12 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
-from apps.accounts.views import activar_cuenta
+from apps.accounts.views import activar_cuenta, login_admin
 from apps.website.sitemaps import NovedadesSitemap, SitioPublicoSitemap
+
+# El admin de Django no tiene login propio: se entra por el de allauth (con 2FA, límite de intentos y auditoría).
+# Antes /admin/login/ aceptaba solo usuario y contraseña, saltándose esas protecciones.
+admin.site.login = login_admin
 
 urlpatterns = [
     path("admin/", admin.site.urls),

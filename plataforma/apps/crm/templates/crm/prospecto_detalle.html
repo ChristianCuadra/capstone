@@ -277,4 +277,24 @@
   </div>
 </div>
 {% endif %}
+
+{# ── Datos personales (Ley 21.719): acceso, portabilidad y supresión. Solo administración. ─────── #}
+{% if panel_puede_administrar %}
+<section class="mt-8 rounded-2xl border border-gris-borde bg-white p-6">
+  <h2 class="font-serif text-xl text-vino">Datos personales</h2>
+  <p class="mt-1 max-w-3xl text-sm">Si la persona pide ver, llevarse o eliminar sus datos (Ley 21.719), responde desde aquí. Ambas acciones quedan en el registro de auditoría.</p>
+  <div class="mt-4 flex flex-wrap gap-2">
+    <a href="{% url 'crm:prospecto_datos_personales' prospecto.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Descargar sus datos (JSON)</a>
+    {% if not prospecto.cliente %}
+    <form method="post" action="{% url 'crm:prospecto_anonimizar' prospecto.pk %}"
+          data-confirmar-titulo="¿Eliminar los datos personales de «{{ prospecto.empresa }}»?"
+          data-confirmar="Se borran nombre, correo, teléfono, RUT, redes, el texto de su caso y el historial de interacciones. No se puede deshacer."
+          data-confirmar-boton="Sí, eliminar sus datos" data-confirmar-peligro>
+      {% csrf_token %}
+      <button type="submit" class="rounded-full border border-[#B3261E]/40 bg-white px-4 py-2 text-sm font-medium text-[#B3261E] hover:bg-[#B3261E]/5">Eliminar sus datos personales</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

@@ -88,6 +88,21 @@ def _catalogo_como_texto():
     return "\n".join(lineas)
 
 
+# Datos de contacto que la persona pueda haber escrito en su caso: no hacen falta para el diagnóstico y no
+# deben salir hacia Google (minimización, Ley 21.719). El nombre, correo y teléfono del formulario no se envían.
+_PATRONES_DATOS_PERSONALES = [
+    (re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), "[correo]"),
+    (re.compile(r"\b\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]\b"), "[RUT]"),
+    (re.compile(r"(?<!\d)(?:\+?56[\s.-]?)?(?:\(?\d{1,2}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}(?!\d)"), "[teléfono]"),
+]
+
+
+def ocultar_datos_personales(texto):
+    for patron, reemplazo in _PATRONES_DATOS_PERSONALES:
+        texto = patron.sub(reemplazo, texto)
+    return texto
+
+
 def construir_prompt_diagnostico(prospecto):
     servicios = ", ".join(s.nombre for s in prospecto.servicios_requeridos.all()) or "No indicó"
     datos = "\n".join([
@@ -103,7 +118,7 @@ def construir_prompt_diagnostico(prospecto):
         f"Sitio web: {prospecto.sitio_web or 'No indicó'}",
         f"Servicios que le interesan: {servicios}",
         f"Plan que eligió en el sitio: {prospecto.plan_interes.nombre if prospecto.plan_interes else 'Ninguno'}",
-        f"Situación actual (texto libre): {prospecto.situacion_actual or 'No escribió'}",
+        f"Situación actual (texto libre): {ocultar_datos_personales(prospecto.situacion_actual) or 'No escribió'}",
     ])
     sugerido = prospecto.plan_sugerido.nombre if prospecto.plan_sugerido else "ninguno (presupuesto bajo el plan más económico)"
     return (

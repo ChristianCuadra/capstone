@@ -1,9 +1,11 @@
-"""Activación de la cuenta del cliente desde el enlace de invitación (PC-AUT-07)."""
+"""Activación de la cuenta del cliente (PC-AUT-07) y entrada al admin de Django por el login de allauth."""
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 
@@ -47,3 +49,24 @@ def activar_cuenta(request, uidb64, token):
         return redirect(CuentaAdapter(request).get_login_redirect_url(request))
 
     return render(request, "account/activar_cuenta.html", {"form": form, "usuario_invitado": usuario, "dias": dias_vigencia()})
+
+
+def login_admin(request, extra_context=None):
+    """Reemplaza el login propio del admin de Django (admin.site.login).
+
+    Nunca recibe contraseñas: sin sesión se va al login de allauth (2FA, límite de intentos, auditoría);
+    con sesión y permiso, al admin; con sesión pero sin permiso, a su propia vista.
+    """
+    from django.contrib import admin
+
+    from apps.accounts.decorators import _redirigir_segun_rol
+
+    destino = request.GET.get("next", "")
+    if not url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}):
+        destino = ""
+    if not request.user.is_authenticated:
+        return redirect_to_login(destino or request.path.replace("login/", ""))
+    if admin.site.has_permission(request):
+        return redirect(destino or "admin:index")
+    messages.error(request, "No tienes acceso al administrador del sistema.")
+    return redirect(_redirigir_segun_rol(request))

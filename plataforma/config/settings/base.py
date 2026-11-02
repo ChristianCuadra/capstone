@@ -65,6 +65,9 @@ MIDDLEWARE = [
     # PC-CAP-01: guarda en la sesión el origen de la visita (UTM / sitio de referencia) para el prospecto.
     "apps.website.middleware.OrigenVisitaMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # El equipo de la agencia debe tener 2FA activo para entrar al panel y al admin (ver EXIGIR_2FA_EQUIPO).
+    # Va después de MessageMiddleware: avisa con un mensaje por qué se le pide configurarlo.
+    "apps.accounts.middleware.Exigir2FAEquipoMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
 ]
@@ -140,9 +143,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 # Aviso por correo (sin incluir los codigos) cuando se activa/desactiva 2FA
 # o se generan nuevos codigos de recuperacion (PC-AUT-02).
@@ -156,6 +158,20 @@ LOGIN_REDIRECT_URL = "/"
 # Sin webauthn/passkeys por ahora para no depender de esas librerías extra.
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 MFA_TOTP_ISSUER = "Cosmopolitan"
+# El equipo (administradora y colaboradoras) ve datos personales de todos los clientes y prospectos:
+# sin 2FA activo no entra al panel ni al admin, se le pide configurarlo primero (Ley 21.719, medidas de seguridad).
+# Solo para una emergencia (p. ej. nadie puede configurar la app) se puede apagar con EXIGIR_2FA_EQUIPO=False.
+EXIGIR_2FA_EQUIPO = config("EXIGIR_2FA_EQUIPO", default=True, cast=bool)
+
+# Sesiones: se cierran tras 8 horas sin actividad (cada visita renueva el plazo). Sin «Recordarme»,
+# al cerrar el navegador. Antes duraban 2 semanas.
+SESSION_COOKIE_AGE = 60 * 60 * 8
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Caché compartida en la base de datos: en Vercel cada instancia tiene su propia memoria, así que los límites
+# de intentos de inicio de sesión (allauth) y de los formularios públicos no se cumplían entre instancias.
+# La tabla se crea al migrar (apps.core.apps); si aún no existe, se usa la memoria de la instancia como antes.
+CACHES = {"default": {"BACKEND": "apps.core.cache.CacheBaseDatosTolerante", "LOCATION": "cache_django"}}
 
 # Analitica con consentimiento (PC-SEO-02, Alcance 4.5): IDs reales via variables de
 # entorno (Esteban los confirma con la agencia). Vacio = esa herramienta no se carga.

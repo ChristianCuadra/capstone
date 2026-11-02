@@ -20,10 +20,12 @@
       </select>
       <button type="submit" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Ver</button>
     </form>
+    {% if panel_puede_administrar %}
     <a href="{% url 'crm:prospectos_exportar' %}" class="inline-flex items-center gap-2 rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">
       <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
       Exportar prospectos
     </a>
+    {% endif %}
     {# Ingreso manual (p. ej. un prospecto que llegó por WhatsApp) desde el admin #}
     <a href="{% url 'crm:prospecto_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
   </div>

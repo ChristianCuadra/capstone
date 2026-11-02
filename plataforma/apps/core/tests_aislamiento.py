@@ -23,12 +23,14 @@ User = get_user_model()
 
 # Vistas del panel que cualquier usuario del equipo puede abrir, y las exclusivas de la administradora.
 PANEL_EQUIPO = [
-    ("crm:dashboard", []), ("crm:prospectos", []), ("crm:prospectos_exportar", []), ("crm:prospecto_nuevo", []),
+    ("crm:dashboard", []), ("crm:prospectos", []), ("crm:prospecto_nuevo", []),
     ("crm:cotizaciones", []), ("crm:clientes", []), ("crm:contenidos", []),
     ("crm:prospecto_detalle", [1]), ("crm:cotizacion_editar", [1]), ("crm:cliente_ficha", [1]),
     ("crm:cliente_documento_descargar", [1, 1]),
 ]
 PANEL_SOLO_ADMIN = [
+    # Descarga masiva de datos personales: solo administración (Ley 21.719).
+    ("crm:prospectos_exportar", []), ("crm:prospecto_datos_personales", [1]),
     ("crm:usuarios", []), ("crm:usuario_nuevo", []), ("crm:usuario_editar", [1]), ("crm:auditoria", []),
     ("crm:usuario_alternar_activo", [1]), ("crm:usuario_restablecer_2fa", [1]), ("crm:usuario_eliminar", [1]),
     ("crm:planes_servicios", []), ("crm:plan_nuevo", []), ("crm:plan_editar", [1]),

@@ -215,7 +215,7 @@
           <div>
             <label class="flex items-start gap-3 text-sm">
               <input type="checkbox" name="acepta_privacidad" required {% if form.acepta_privacidad.value %}checked{% endif %} class="mt-0.5 h-4 w-4 rounded border-gris-borde accent-vino">
-              <span>Acepto que {{ agencia.nombre }} trate mis datos para responder esta solicitud, según su política de privacidad.</span>
+              <span>Acepto que {{ agencia.nombre }} trate mis datos para responder esta solicitud, según su <a href="{% url 'website:privacidad' %}" target="_blank" class="font-medium text-vino underline decoration-rosa underline-offset-2">política de privacidad</a>.</span>
             </label>
             {% if form.acepta_privacidad.errors %}<p class="error">{{ form.acepta_privacidad.errors.0 }}</p>{% endif %}
           </div>

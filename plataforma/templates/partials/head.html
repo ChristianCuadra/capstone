@@ -1,3 +1,4 @@
+{% load static %}
 {# Recursos comunes a sitio público, panel y portal: paleta, tipografía y Tailwind (CDN). #}
 {# Identidad según el Manual de marca AC: #522136 · #F47FB1 · #E18BA6, Cormorant Garamond + Cocomat Pro. #}
 <meta charset="utf-8">
@@ -32,7 +33,9 @@
     background: repeating-linear-gradient(135deg, var(--fondo-suave) 0 14px, var(--gris-borde) 14px 15px);
   }
 </style>
-<script src="https://cdn.tailwindcss.com"></script>
+{# Tailwind (Play CDN 3.4.17, licencia MIT) servido desde el propio sitio: sin scripts de terceros en el panel ni en el #}
+{# portal, que muestran datos personales. Para actualizarlo, descargar la versión nueva a apps/core/static/vendor/. #}
+<script src="{% static 'vendor/tailwindcss-play-3.4.17.js' %}"></script>
 <script>
   // Mantener sincronizado con las variables de :root
   tailwind.config = {

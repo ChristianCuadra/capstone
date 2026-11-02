@@ -1,6 +1,6 @@
 {# Chart.js con los defaults de la marca. Incluir en {% block scripts %} de las páginas con gráficos. #}
 {# Paleta validada para daltonismo: 2 series = vino #522136 + rosa viejo #E18BA6. Nunca rosa y rosa viejo como series distintas. #}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% load static %}<script src="{% static 'vendor/chart-4.4.7.umd.min.js' %}"></script>{# Chart.js 4.4.7 (MIT), servido desde el sitio #}
 <script>
   Chart.defaults.font.family = '"Cocomat Pro", Jost, system-ui, sans-serif';
   Chart.defaults.font.size = 12;

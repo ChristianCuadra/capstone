@@ -1,6 +1,8 @@
 """Formularios de gestión de usuarios (panel interno, solo Administradora)."""
 
 from django import forms
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError
 
 from .models import Rol, User
 
@@ -87,7 +89,34 @@ class UsuarioForm(forms.ModelForm):
             self.add_error("is_staff", "Un usuario cliente no puede tener acceso al panel interno.")
         if rol == Rol.COLABORADORA and clientes_asignados is not None and not clientes_asignados:
             self.add_error("clientes_asignados", "La colaboradora debe tener al menos un cliente asignado.")
+        # PC-AUT-07: la agencia nunca conoce ni escribe la contraseña de un cliente. Su cuenta se crea con
+        # invitación desde la ficha del cliente, y si olvida la contraseña la recupera él mismo desde el login.
+        if rol in (Rol.CLIENTE_APROBADOR, Rol.CLIENTE_LECTOR):
+            if self.es_nuevo:
+                self.add_error(
+                    "rol",
+                    "Las cuentas de cliente se crean desde la ficha del cliente («Acceso al portal»), con una "
+                    "invitación por correo: así la agencia nunca conoce su contraseña.",
+                )
+            elif cleaned.get("password"):
+                self.add_error(
+                    "password",
+                    "La agencia no define contraseñas de clientes. Si la olvidó, puede recuperarla desde el inicio "
+                    "de sesión, o reenvíale la invitación desde la ficha del cliente.",
+                )
         return cleaned
+
+    def _post_clean(self):
+        super()._post_clean()
+        # La contraseña que define la administradora cumple las mismas reglas que cualquier otra (largo mínimo,
+        # no común, no solo números, no parecida al nombre o correo). Se valida aquí porque recién ahora la
+        # instancia tiene los datos nuevos con que comparar.
+        password = self.cleaned_data.get("password")
+        if password:
+            try:
+                password_validation.validate_password(password, self.instance)
+            except ValidationError as error:
+                self.add_error("password", error)
 
     def save(self, commit=True):
         usuario = super().save(commit=False)

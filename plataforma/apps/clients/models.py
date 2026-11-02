@@ -112,7 +112,7 @@ class KPICliente(TenantModel):
         ordering = ["indicador"]
         constraints = [
             models.UniqueConstraint(fields=["cliente", "indicador"], name="kpi_unico_por_cliente_e_indicador"),
-            models.CheckConstraint(check=models.Q(meta__gt=models.F("valor_inicial")), name="kpi_meta_mayor_que_inicial"),
+            models.CheckConstraint(condition=models.Q(meta__gt=models.F("valor_inicial")), name="kpi_meta_mayor_que_inicial"),
         ]
 
     def __str__(self):

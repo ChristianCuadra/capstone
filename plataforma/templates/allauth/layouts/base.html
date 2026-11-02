@@ -18,6 +18,8 @@
     .cuenta input[type=email], .cuenta input[type=text], .cuenta input[type=password] { @apply transition duration-200 hover:border-lila focus:ring-4 focus:ring-rosa/15; }
     .cuenta button[type=submit], .cuenta button:not([type]) { @apply mt-2 w-full rounded-full bg-vino px-6 py-3 font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-vino-oscuro hover:shadow-[0_12px_28px_-10px_rgb(82_33_54/.55)]; }
     .cuenta ul.errorlist { @apply mt-1 text-xs font-medium text-[#B3261E]; }
+    /* Botón secundario de allauth (p. ej. «Cancelar» al pedir el código 2FA): contorno, no relleno. */
+    .cuenta button[form] { @apply border border-gris-borde bg-white text-vino hover:bg-fondo-suave hover:shadow-none; }
   </style>
   {% block extra_head %}{% endblock extra_head %}
 </head>

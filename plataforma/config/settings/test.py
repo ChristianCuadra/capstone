@@ -13,5 +13,10 @@ STORAGES = {
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
+# Caché en memoria (sin tabla) y sin exigir 2FA: los tests del panel inician sesión con force_login.
+# Los tests de la exigencia de 2FA la activan con override_settings.
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+EXIGIR_2FA_EQUIPO = False
+
 # Los tests nunca llaman a Gemini aunque .env tenga clave: los que prueban la IA la simulan con override_settings.
 AI_API_KEY = ""

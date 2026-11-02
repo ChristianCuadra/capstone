@@ -71,10 +71,13 @@ Variables de entorno del proyecto en Vercel (Settings → Environment Variables)
 | `DATABASE_URL` | La del pooler de Supabase (`...pooler.supabase.com`), idealmente en modo transacción (puerto 6543) |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL`, `AWS_S3_REGION_NAME` | Supabase Storage (documentos y CMS) |
 | `AI_API_KEY` | Clave de Gemini (opcional; sin ella la IA queda desactivada) |
-| `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | Solo si se usa un dominio propio (por defecto `.vercel.app`) |
+| `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | Solo si se usa un dominio propio. Sin ellas se aceptan solo las URLs de este proyecto que entrega Vercel (no cualquier `*.vercel.app`) |
+| `EXIGIR_2FA_EQUIPO` | No definirla (queda en `True`). Solo en una emergencia, `False` desactiva el 2FA obligatorio del equipo |
 
 No copiar `DEBUG` ni `ALLOWED_HOSTS=localhost` del `.env` local. Las migraciones se aplican desde un equipo local
-(`manage.py migrate` con el `DATABASE_URL` de Supabase), no en Vercel. Mientras no haya proveedor de correo,
+(`manage.py migrate` con el `DATABASE_URL` de Supabase), no en Vercel. Al terminar, `migrate` también crea la tabla de
+la caché compartida (límites de intentos de inicio de sesión) y activa RLS en las tablas de Supabase para que su API
+pública no pueda leerlas (ver `apps/core/seguridad_bd.py`). Mientras no haya proveedor de correo,
 los correos quedan en los logs de Vercel.
 
 ## Notas

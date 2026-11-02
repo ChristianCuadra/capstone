@@ -57,9 +57,9 @@ class TenantModel(models.Model):
 class RegistroAuditoria(models.Model):
     """Bitácora de acciones administrativas sensibles (Documento de Alcance 9.2, RNF-01).
 
-    Por ahora se registra manualmente desde las vistas que lo requieren
-    (alta/edición de usuarios, catálogo, contenidos) y en cada intento de entrar al
-    panel sin el rol requerido (CP-019).
+    Se registra desde las vistas que lo requieren (alta/edición de usuarios, catálogo, contenidos,
+    documentos, exportaciones y datos personales), en cada intento de entrar al panel sin el rol
+    requerido (CP-019) y en cada inicio de sesión, exitoso o fallido (apps.accounts.signals).
     """
 
     class Accion(models.TextChoices):
@@ -67,6 +67,10 @@ class RegistroAuditoria(models.Model):
         EDITAR = "editar", "Editar"
         ELIMINAR = "eliminar", "Eliminar"
         ACCESO_DENEGADO = "denegado", "Acceso denegado"
+        INICIO_SESION = "sesion", "Inicio de sesión"
+        SESION_FALLIDA = "fallido", "Inicio de sesión fallido"
+        EXPORTAR = "exportar", "Exportar datos"
+        DESCARGAR = "descargar", "Descargar archivo"
 
     usuario = models.ForeignKey(
         "accounts.User",

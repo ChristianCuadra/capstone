@@ -10,7 +10,9 @@
     <p class="mt-1 text-sm">{{ total }} en total · llegan desde el formulario de cotización del sitio</p>
   </div>
   <div class="flex flex-wrap gap-2">
+    {% if panel_puede_administrar %}
     <a href="{% url 'crm:prospectos_exportar' %}?etapa={{ etapa_activa }}&q={{ q|urlencode }}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Exportar CSV</a>
+    {% endif %}
     <a href="{% url 'crm:prospecto_nuevo' %}" class="rounded-full bg-vino px-4 py-2 text-sm font-semibold text-white hover:bg-vino-oscuro">+ Nuevo prospecto</a>
   </div>
 </header>

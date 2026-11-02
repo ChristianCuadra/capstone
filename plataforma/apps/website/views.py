@@ -9,6 +9,7 @@ from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from apps.core.red import ip_del_cliente
 from apps.catalog.models import Plan
 from apps.catalog.services import comparativa_de_planes, planes_del_sitio, servicios_del_sitio
 from apps.crm.models import Prospecto
@@ -78,9 +79,7 @@ def planes(request):
 LIMITE_SOLICITUDES_POR_HORA = 5
 
 
-def _ip_cliente(request):
-    reenviada = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    return reenviada.split(",")[0].strip() or request.META.get("REMOTE_ADDR", "")
+_ip_cliente = ip_del_cliente
 
 
 def cotizacion(request):
@@ -175,6 +174,13 @@ def asesoria(request):
         ],
     }
     return render(request, "website/asesoria.html", context)
+
+
+def privacidad(request):
+    """Política de privacidad (Ley 19.628 y Ley 21.719). Los formularios la enlazan al pedir el consentimiento."""
+    from .privacidad import VERSION_POLITICA
+
+    return render(request, "website/privacidad.html", {"version_politica": VERSION_POLITICA})
 
 
 # ── Novedades (CMS, PC-WEB-02) ──────────────────────────────────────────────

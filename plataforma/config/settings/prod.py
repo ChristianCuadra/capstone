@@ -4,6 +4,8 @@ Variables de entorno obligatorias en el proyecto de Vercel: SECRET_KEY y DATABAS
 Para archivos subidos: AWS_*; para la IA: AI_API_KEY. Ver README, sección «Despliegue en Vercel».
 """
 
+import os
+
 from decouple import Csv, config
 
 from .base import *  # noqa: F403
@@ -11,9 +13,18 @@ from .base import DATABASES, STORAGES
 
 DEBUG = False
 
-# *.vercel.app cubre la URL del proyecto y las de cada despliegue; el dominio propio se agrega por variable.
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=".vercel.app", cast=Csv())
-CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="https://*.vercel.app", cast=Csv())
+# Solo los dominios de este proyecto: antes se aceptaba cualquier *.vercel.app, incluidos sitios de terceros.
+# Vercel entrega sus URLs en variables de sistema (producción, rama y despliegue); el dominio propio se agrega
+# con ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS. Si Vercel no entregara ninguna, se vuelve al comodín para no quedar fuera.
+_DOMINIOS_VERCEL = sorted({
+    d for d in (os.environ.get(v, "") for v in ("VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_BRANCH_URL", "VERCEL_URL")) if d
+})
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=",".join(_DOMINIOS_VERCEL) or ".vercel.app", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default=",".join(f"https://{d}" for d in _DOMINIOS_VERCEL) or "https://*.vercel.app",
+    cast=Csv(),
+)
 
 # Vercel termina el HTTPS y reenvía la petición: Django debe confiar en ese encabezado para saber que es segura.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -21,8 +32,11 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
-# Vercel ya redirige todo a HTTPS y envía HSTS en sus dominios: hacerlo también en Django sería redundante.
-SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008"]
+# HSTS: el navegador solo usará HTTPS durante un año, también en el dominio propio (Vercel lo envía solo en los suyos).
+SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365
+# Vercel ya redirige todo a HTTPS antes de llegar a Django (W008). HSTS no se extiende a subdominios ni se pide
+# la lista de precarga (W005, W021): otros subdominios de la agencia podrían no tener HTTPS.
+SILENCED_SYSTEM_CHECKS = ["security.W008", "security.W005", "security.W021"]
 
 # Funciones serverless: cada instancia vive poco, así que no se mantienen conexiones abiertas a Supabase.
 if DATABASES:

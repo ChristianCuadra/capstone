@@ -8,8 +8,10 @@ import logging
 
 from django.core.mail import send_mail
 from django.db import transaction
+from django.utils import timezone
 
 from apps.catalog.models import Plan
+from apps.website.privacidad import VERSION_POLITICA
 
 from .models import Interaccion, Prospecto
 
@@ -131,6 +133,11 @@ def _nota_distintos(distintos):
     return " Datos enviados distintos a los registrados (no se aplicaron; revisar): " + "; ".join(distintos) + "."
 
 
+def _nota_consentimiento():
+    """Constancia del consentimiento (Ley 21.719): qué versión de la política aceptó; la fecha es la de la entrada."""
+    return f" Aceptó la política de privacidad (versión {VERSION_POLITICA})."
+
+
 @transaction.atomic
 def registrar_solicitud(form, plan_interes=None, origen=None):
     """Crea (o completa) el Prospecto desde el formulario de cotización, le sugiere un plan y abre su historial.
@@ -171,6 +178,7 @@ def registrar_solicitud(form, plan_interes=None, origen=None):
             f"Plan sugerido por el cotizador: {prospecto.plan_sugerido.nombre if prospecto.plan_sugerido else 'servicios sueltos'}."
             + (" Completó la cotización después de pedir la asesoría gratuita: se completaron sus datos." if existente else "")
             + _nota_distintos(distintos)
+            + _nota_consentimiento()
         ),
     )
     # TODO: notificación "Nuevo prospecto registrado" por correo al equipo (Alcance 5.10) cuando haya EMAIL_API_KEY.
@@ -204,7 +212,7 @@ def registrar_asesoria(form, origen=None):
         prospecto=prospecto,
         tipo=Interaccion.Tipo.SISTEMA,
         titulo="Pidió la asesoría gratuita desde el sitio",
-        descripcion=f"Su caso: {caso}" + _nota_distintos(distintos),
+        descripcion=f"Su caso: {caso}" + _nota_distintos(distintos) + _nota_consentimiento(),
     )
     return prospecto
 
@@ -236,3 +244,68 @@ def notificar_asesoria(prospecto, caso, correo_agencia, url_ficha=""):
     except Exception:  # noqa: BLE001 - el correo nunca debe impedir guardar la solicitud
         logger.exception("No se pudo enviar el correo de la asesoría gratuita (prospecto %s)", prospecto.pk)
         return False
+
+
+# ── Derechos de las personas (Ley 21.719) ─────────────────────────────────────
+
+def _valor_json(valor):
+    if hasattr(valor, "isoformat"):
+        return valor.isoformat()
+    if hasattr(valor, "pk"):
+        return str(valor)
+    return valor
+
+
+def datos_personales_prospecto(prospecto):
+    """Todo lo que la plataforma guarda de una persona (derecho de acceso y portabilidad)."""
+    ficha = {}
+    for campo in prospecto._meta.concrete_fields:
+        valor = getattr(prospecto, campo.name)
+        ficha[campo.verbose_name] = _valor_json(valor)
+    return {
+        "responsable": "Agencia Cosmopolitan",
+        "generado_en": _valor_json(timezone.now()),
+        "ficha": ficha,
+        "servicios_de_interes": [s.nombre for s in prospecto.servicios_requeridos.all()],
+        "historial": [
+            {"fecha": _valor_json(i.creado_en), "tipo": i.get_tipo_display(), "titulo": i.titulo, "detalle": i.descripcion}
+            for i in prospecto.interacciones.all()
+        ],
+        "cotizaciones": [
+            {"numero": c.numero, "estado": c.get_estado_display(), "contacto": c.contacto, "creada": _valor_json(c.creado_en)}
+            for c in prospecto.cotizaciones.all()
+        ],
+    }
+
+
+@transaction.atomic
+def anonimizar_prospecto(prospecto, usuario):
+    """Derecho de supresión: borra lo que identifica a la persona y conserva las cifras (etapa, plan, montos)
+    para las estadísticas comerciales, sin forma de saber de quién eran."""
+    prospecto.nombre = "Datos eliminados"
+    prospecto.empresa = f"Prospecto anonimizado #{prospecto.pk}"
+    prospecto.rut = ""
+    prospecto.correo = f"anonimizado-{prospecto.pk}@eliminado.invalid"
+    prospecto.telefono = ""
+    prospecto.instagram = ""
+    prospecto.instagram_seguidores = None
+    prospecto.sitio_web = ""
+    prospecto.redes_actuales = []
+    prospecto.situacion_actual = ""
+    prospecto.diagnostico_ia = ""
+    prospecto.pagina_entrada = ""
+    prospecto.sitio_referencia = ""
+    prospecto.utm_term = ""
+    prospecto.utm_content = ""
+    prospecto.save()
+    # Notas, correos registrados y tareas pueden nombrar a la persona: se eliminan.
+    prospecto.interacciones.all().delete()
+    prospecto.tareas.all().delete()
+    prospecto.cotizaciones.update(contacto="", diagnostico="")
+    Interaccion.objects.create(
+        prospecto=prospecto,
+        tipo=Interaccion.Tipo.SISTEMA,
+        titulo="Datos personales eliminados",
+        descripcion="Se eliminaron los datos que identificaban a la persona, a su solicitud (Ley 21.719).",
+        autor=usuario,
+    )

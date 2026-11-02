@@ -20,7 +20,7 @@ from django.db import transaction
 from django.utils.text import slugify
 from django.urls import reverse, reverse_lazy
 
-from apps.accounts.decorators import requiere_administradora, requiere_equipo
+from apps.accounts.decorators import _denegar_acceso, requiere_administradora, requiere_equipo
 from apps.accounts import activacion
 from apps.accounts.forms import InvitacionClienteForm, UsuarioForm
 from apps.accounts.models import Rol
@@ -36,6 +36,7 @@ from allauth.mfa.models import Authenticator
 from apps.website.views import cotizacion
 
 from .models import Cotizacion, CotizacionItem, Interaccion, Prospecto, Tarea
+from .services import anonimizar_prospecto, datos_personales_prospecto
 
 from .froms import PlanEntregableFormSet, PlanForm, ProspectoManualForm, ServicioForm
 from apps.website.models import ConfiguracionAgencia, Contenido, MetadatosPagina
@@ -110,6 +111,8 @@ def contexto_panel(request, seccion, **context):
     context["panel_badges"] = {"prospectos": Prospecto.objects.filter(etapa=Prospecto.Etapa.NUEVO).count()}
     context["panel_clientes"] = list(clientes_visibles(u).filter(activo=True).values("pk", "nombre"))
     context["panel_cliente_activo"] = getattr(request, "client_id", None)
+    # Exportar prospectos y gestionar datos personales: solo administración (no colaboradoras).
+    context["panel_puede_administrar"] = puede_aprobar(u)
     context["seccion_panel"] = seccion
     return context
 
@@ -341,8 +344,18 @@ def prospecto_mover(request, pk):
     return _volver(request, "crm:prospectos")
 
 
+def _celda_csv(valor):
+    """Evita la inyección de fórmulas: Excel ejecuta las celdas que empiezan con = + - @ (y los datos vienen
+    del formulario público, que escribe cualquiera). Se antepone un apóstrofo para que queden como texto."""
+    texto = "" if valor is None else str(valor)
+    return f"'{texto}" if texto[:1] in ("=", "+", "-", "@", "\t", "\r") else texto
+
+
 @solo_equipo
 def prospectos_exportar(request):
+    # Descarga masiva de datos personales: solo administración, y queda en la auditoría (Ley 21.719).
+    if not puede_aprobar(request.user):
+        return _denegar_acceso(request)
     lista, etapa, _q = _prospectos_filtrados(request)
     respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
     respuesta["Content-Disposition"] = f'attachment; filename="prospectos-{timezone.localdate().isoformat()}.csv"'
@@ -353,14 +366,20 @@ def prospectos_exportar(request):
         "Plan de interés", "Plan sugerido", "Etapa", "Responsable", "Cómo nos conoció", "Canal",
         "Fuente (UTM)", "Medio (UTM)", "Campaña (UTM)", "Sitio de referencia", "Creado",
     ])
+    total = 0
     for p in lista:
-        escritor.writerow([
+        total += 1
+        escritor.writerow(_celda_csv(v) for v in [
             p.empresa, p.nombre, p.correo, p.telefono, p.rubro, p.region, p.get_tamano_display(), p.get_presupuesto_display(),
             ", ".join(p.objetivos), p.plan_interes.nombre if p.plan_interes else "", p.plan_sugerido.nombre if p.plan_sugerido else "",
             p.get_etapa_display(), _nombre(p.responsable) or "", p.get_como_nos_conocio_display(), p.get_canal_display(),
             p.utm_source, p.utm_medium, p.utm_campaign, p.sitio_referencia,
             timezone.localtime(p.creado_en).strftime("%d-%m-%Y %H:%M"),
         ])
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.EXPORTAR, entidad="prospectos",
+        detalle=f"{total} prospecto(s) en CSV · etapa: {etapa or 'todas'}",
+    )
     return respuesta
 
 
@@ -434,6 +453,44 @@ def prospecto_detalle(request, pk):
         plan_por_defecto=prospecto.plan_interes_id or prospecto.plan_sugerido_id,
     )
     return render(request, "crm/prospecto_detalle.html", context)
+
+
+@solo_equipo
+def prospecto_datos_personales(request, pk):
+    """Derecho de acceso y portabilidad (Ley 21.719): todos los datos de la persona en un archivo JSON."""
+    if not puede_aprobar(request.user):
+        return _denegar_acceso(request)
+    prospecto = get_object_or_404(Prospecto, pk=pk)
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.EXPORTAR, entidad="datos personales de prospecto",
+        entidad_id=prospecto.pk, detalle="Descarga para responder una solicitud de acceso o portabilidad",
+    )
+    respuesta = JsonResponse(datos_personales_prospecto(prospecto), json_dumps_params={"ensure_ascii": False, "indent": 2})
+    respuesta["Content-Disposition"] = f'attachment; filename="datos-prospecto-{prospecto.pk}.json"'
+    return respuesta
+
+
+@solo_equipo
+@require_POST
+def prospecto_anonimizar(request, pk):
+    """Derecho de supresión (Ley 21.719): borra los datos que identifican a la persona."""
+    if not puede_aprobar(request.user):
+        return _denegar_acceso(request)
+    prospecto = get_object_or_404(Prospecto, pk=pk)
+    if prospecto.cliente_id:
+        messages.error(
+            request,
+            "Este prospecto ya es cliente: sus datos se gestionan desde la ficha del cliente mientras el contrato esté vigente.",
+        )
+        return redirect("crm:prospecto_detalle", pk=pk)
+    with transaction.atomic():
+        anonimizar_prospecto(prospecto, request.user)
+        RegistroAuditoria.registrar(
+            usuario=request.user, accion=RegistroAuditoria.Accion.ELIMINAR, entidad="datos personales de prospecto",
+            entidad_id=pk, detalle="Datos personales eliminados (solicitud de supresión)",
+        )
+    messages.success(request, "Se eliminaron los datos personales del prospecto. Las cifras comerciales se conservan sin datos que identifiquen a la persona.")
+    return redirect("crm:prospecto_detalle", pk=pk)
 
 
 def _registrar(prospecto, usuario, titulo, tipo=Interaccion.Tipo.SISTEMA, descripcion=""):
@@ -975,6 +1032,10 @@ def cliente_documento_subir(request, pk):
         documento.cliente = cliente
         documento.subido_por = request.user
         documento.save()
+        RegistroAuditoria.registrar(
+            usuario=request.user, accion=RegistroAuditoria.Accion.CREAR, entidad="documento de cliente",
+            entidad_id=documento.pk, detalle=f"{documento.nombre} · {cliente.nombre}"[:255],
+        )
         messages.success(request, f"Documento «{documento.nombre}» subido.")
     else:
         for errores in form.errors.values():
@@ -1063,6 +1124,10 @@ def cliente_documento_descargar(request, pk, doc_pk):
         archivo = documento.archivo.open("rb")
     except (FileNotFoundError, ValueError):
         raise Http404("El archivo ya no está disponible.")
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.DESCARGAR, entidad="documento de cliente",
+        entidad_id=documento.pk, detalle=f"{documento.nombre} · {cliente.nombre}"[:255],
+    )
     return FileResponse(archivo, as_attachment=True, filename=documento.archivo.name.rsplit("/", 1)[-1])
 
 
@@ -1074,9 +1139,13 @@ def cliente_documento_eliminar(request, pk, doc_pk):
         messages.error(request, "Solo la administradora puede eliminar documentos de la ficha.")
         return redirect("crm:cliente_ficha", pk=cliente.pk)
     documento = get_object_or_404(_documentos_del_cliente(cliente), pk=doc_pk)
-    nombre = documento.nombre
+    nombre, doc_pk = documento.nombre, documento.pk
     documento.archivo.delete(save=False)
     documento.delete()
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.ELIMINAR, entidad="documento de cliente",
+        entidad_id=doc_pk, detalle=f"{nombre} · {cliente.nombre}"[:255],
+    )
     messages.success(request, f"Documento «{nombre}» eliminado.")
     return redirect("crm:cliente_ficha", pk=cliente.pk)
 
@@ -1161,9 +1230,20 @@ def usuario_nuevo(request):
     )
 
 
+def _superusuario_protegido(request, usuario_obj):
+    """Una administradora que no es superusuaria no puede modificar a un superusuario: cambiándole la
+    contraseña o el 2FA obtendría acceso total al admin de Django."""
+    if usuario_obj.is_superuser and not request.user.is_superuser:
+        messages.error(request, "Solo un superusuario puede modificar la cuenta de otro superusuario.")
+        return _volver(request, "crm:usuarios")
+    return None
+
+
 @requiere_administradora
 def usuario_editar(request, pk):
     usuario_obj = get_object_or_404(get_user_model(), pk=pk)
+    if bloqueo := _superusuario_protegido(request, usuario_obj):
+        return bloqueo
     if request.method == "POST":
         form = UsuarioForm(request.POST, instance=usuario_obj)
         if form.is_valid():
@@ -1190,6 +1270,8 @@ def usuario_editar(request, pk):
 @require_POST
 def usuario_alternar_activo(request, pk):
     usuario_obj = get_object_or_404(get_user_model(), pk=pk)
+    if bloqueo := _superusuario_protegido(request, usuario_obj):
+        return bloqueo
     if usuario_obj.pk == request.user.pk:
         messages.error(request, "No puedes desactivar tu propia cuenta.")
         return _volver(request, "crm:usuarios")
@@ -1211,6 +1293,8 @@ def usuario_alternar_activo(request, pk):
 @require_POST
 def usuario_restablecer_2fa(request, pk):
     usuario_obj = get_object_or_404(get_user_model(), pk=pk)
+    if bloqueo := _superusuario_protegido(request, usuario_obj):
+        return bloqueo
     autenticadores = Authenticator.objects.filter(user=usuario_obj)
     if not autenticadores.exists():
         messages.info(request, f"«{usuario_obj.username}» no tiene 2FA activado.")
@@ -1243,6 +1327,8 @@ def usuario_eliminar(request, pk):
     if usuario_obj.pk == request.user.pk:
         messages.error(request, "No puedes eliminar tu propia cuenta.")
         return redirect("crm:usuarios")
+    if bloqueo := _superusuario_protegido(request, usuario_obj):
+        return bloqueo
 
     if request.method == "POST":
         nombre, rol_mostrado = usuario_obj.username, usuario_obj.get_rol_display() or "sin rol"

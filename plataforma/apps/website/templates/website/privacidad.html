@@ -1,0 +1,71 @@
+{% extends "website/base.html" %}
+
+{% block title %}Política de privacidad · {{ agencia.nombre }}{% endblock %}
+{% block meta_description %}Cómo {{ agencia.nombre }} trata los datos personales que entregas en el sitio y en la plataforma, y cómo ejercer tus derechos.{% endblock %}
+
+{% block head %}
+<style>
+  .politica h2 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 1.6rem; color: var(--vino); margin-top: 2.25rem; }
+  .politica h2:first-child { margin-top: 0; }
+  .politica p, .politica li { line-height: 1.75; margin-top: .75rem; }
+  .politica ul { list-style: disc; padding-left: 1.25rem; }
+  .politica strong { color: var(--vino); }
+</style>
+{% endblock %}
+
+{% block content %}
+{# Borrador redactado según lo que hace hoy la plataforma (Ley 19.628 y Ley 21.719). #}
+{# TODO: validar con la agencia, en especial el plazo de conservación. Al cambiar el texto, subir VERSION_POLITICA (apps/website/privacidad.py). #}
+{% include "website/_hero_pagina.html" with etiqueta="Tus datos" titulo="Política de privacidad" texto="Cómo tratamos los datos personales que nos entregas y cómo puedes ejercer tus derechos." espacio_abajo=True %}
+
+<section class="relative -mt-24 pb-16 lg:-mt-32 lg:pb-24">
+  <div data-revelar="escala" class="politica mx-auto max-w-3xl rounded-3xl border border-gris-borde bg-white px-6 py-10 sombra-3 sm:px-10">
+    <p class="!mt-0 text-xs uppercase tracking-[0.14em] text-malva">Versión {{ version_politica }}</p>
+
+    <h2>Quién es responsable de tus datos</h2>
+    <p><strong>{{ agencia.nombre }}</strong>{% if agencia.ciudad %}, {{ agencia.ciudad }}{% endif %}. Para cualquier consulta sobre tus datos escríbenos a <a href="mailto:{{ agencia.correo }}" class="font-medium text-vino underline decoration-rosa underline-offset-2">{{ agencia.correo }}</a>.</p>
+
+    <h2>Qué datos recopilamos</h2>
+    <ul>
+      <li><strong>Formularios de cotización y asesoría:</strong> nombre, empresa o marca, correo, teléfono, rubro, región, tamaño, redes sociales, sitio web, presupuesto, objetivos y lo que nos cuentes de tu caso.</li>
+      <li><strong>Origen de la visita:</strong> la campaña o sitio desde el que llegaste (parámetros UTM), para saber qué canales funcionan.</li>
+      <li><strong>Clientes con acceso a la plataforma:</strong> nombre, correo y rol de cada usuario, el contenido de tu marca que preparamos y tus aprobaciones o comentarios.</li>
+      <li><strong>Seguridad:</strong> los inicios de sesión y acciones sensibles quedan registrados con fecha e IP, para proteger tu cuenta y la información de todos los clientes.</li>
+    </ul>
+
+    <h2>Para qué los usamos</h2>
+    <ul>
+      <li>Responder tu solicitud, preparar tu diagnóstico y enviarte una cotización.</li>
+      <li>Prestar el servicio contratado: planificar, producir y aprobar el contenido de tu marca, y enviarte reportes.</li>
+      <li>Mantener la seguridad de la plataforma.</li>
+    </ul>
+    <p>Los tratamos con tu consentimiento, que entregas al enviar un formulario, y para cumplir el contrato si eres cliente. No vendemos tus datos ni los usamos para fines distintos a los indicados.</p>
+
+    <h2>Con quién los compartimos</h2>
+    <p>Solo con proveedores que necesitamos para operar, que los tratan por encargo nuestro:</p>
+    <ul>
+      <li><strong>Supabase</strong> (base de datos y archivos) y <strong>Vercel</strong> (alojamiento del sitio).</li>
+      <li><strong>Google Gemini</strong>, que nos ayuda a redactar el borrador del diagnóstico. Le enviamos los datos de tu negocio, nunca tu nombre, correo ni teléfono, y antes de enviarlo quitamos los datos de contacto que hayas escrito en tu caso. El equipo revisa siempre el borrador antes de usarlo.</li>
+      <li>El proveedor de correo con que te escribimos.</li>
+      <li><strong>Google Analytics y Meta</strong>, solo si aceptas las cookies de analítica.</li>
+    </ul>
+    <p>Algunos de estos proveedores procesan los datos fuera de Chile, con medidas de seguridad propias de sus servicios.</p>
+
+    <h2>Cuánto tiempo los guardamos</h2>
+    <p>Mientras sean necesarios para responder tu solicitud o prestar el servicio. Si no llegamos a trabajar juntos, eliminamos o anonimizamos tus datos cuando lo pidas o, a más tardar, 24 meses después de tu último contacto.</p>
+
+    <h2>Tus derechos</h2>
+    <p>Puedes pedirnos en cualquier momento <strong>acceder</strong> a tus datos, <strong>rectificarlos</strong>, <strong>eliminarlos</strong>, <strong>oponerte</strong> a su tratamiento, <strong>bloquearlos</strong> o recibirlos en un archivo para llevarlos a otro proveedor (<strong>portabilidad</strong>). Escríbenos a <a href="mailto:{{ agencia.correo }}?subject=Mis%20datos%20personales" class="font-medium text-vino underline decoration-rosa underline-offset-2">{{ agencia.correo }}</a> y te responderemos dentro de los plazos que establece la ley. Si no quedas conforme, puedes recurrir a la Agencia de Protección de Datos Personales.</p>
+
+    <h2>Cómo los protegemos</h2>
+    <p>La conexión al sitio es cifrada (HTTPS). En la plataforma cada persona ve solo lo que su rol permite y cada cliente ve únicamente la información de su propia empresa. El equipo de la agencia entra con verificación en dos pasos, y las acciones sensibles quedan registradas.</p>
+
+    <h2 id="cookies" class="scroll-mt-24">Cookies</h2>
+    <p>Usamos cookies necesarias para que el sitio funcione (por ejemplo, para mantener tu sesión). Las cookies de analítica (Google Analytics y Meta) solo se activan si las aceptas en el aviso, y puedes cambiar tu decisión cuando quieras.</p>
+    <button type="button" class="mt-4 rounded-full border border-vino px-5 py-2.5 text-sm font-semibold text-vino transition hover:bg-vino hover:text-white"
+            onclick="try { localStorage.removeItem('ac_consentimiento'); } catch (e) {} window.location.reload();">
+      Cambiar mis preferencias de cookies
+    </button>
+  </div>
+</section>
+{% endblock %}
