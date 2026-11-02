@@ -9,6 +9,7 @@
 {% block page_title %}{% if plan %}Editar {{ plan.nombre }}{% else %}Nuevo plan{% endif %}{% endblock %}
 
 {% block content %}
+<header>
 <nav aria-label="Ruta" class="text-sm">
   <ol class="flex items-center gap-2">
     <li><a href="{% url 'crm:planes_servicios' %}" class="hover:text-vino">Planes y servicios</a></li>
@@ -17,6 +18,7 @@
   </ol>
 </nav>
 <h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">{% if plan %}Editar plan{% else %}Nuevo plan{% endif %}</h1>
+</header>
 
 {% if form.errors or formset.errors|length %}
 <div class="mt-6 max-w-2xl rounded-2xl border border-[#B3261E]/40 bg-[#B3261E]/5 px-4 py-3 text-sm text-[#B3261E]" role="alert">

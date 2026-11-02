@@ -159,3 +159,15 @@ class AislamientoTests(TransactionTestCase):
         with self.assertRaises(Http404):
             obtener_cliente_visible(self.colab, "no-es-un-id")
         self.assertIsNone(ids_permitidos(self.admin))
+
+
+class FiltroSinDetalleTests(SimpleTestCase):
+    """Nombre corto de un servicio para la cinta del inicio: sin lo que va entre paréntesis."""
+
+    def test_quita_el_detalle_entre_parentesis(self):
+        from .templatetags.formato import sin_detalle
+
+        self.assertEqual(sin_detalle("Contenido audiovisual (4 reels)"), "Contenido audiovisual")
+        self.assertEqual(sin_detalle("Diseño gráfico (20 piezas)"), "Diseño gráfico")
+        self.assertEqual(sin_detalle("Branding / Rebranding"), "Branding / Rebranding")
+        self.assertEqual(sin_detalle(None), "")

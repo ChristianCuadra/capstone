@@ -8,6 +8,7 @@
 {% block page_title %}{% if servicio %}Editar {{ servicio.nombre }}{% else %}Nuevo servicio{% endif %}{% endblock %}
 
 {% block content %}
+<header>
 <nav aria-label="Ruta" class="text-sm">
   <ol class="flex items-center gap-2">
     <li><a href="{% url 'crm:planes_servicios' %}" class="hover:text-vino">Planes y servicios</a></li>
@@ -16,6 +17,7 @@
   </ol>
 </nav>
 <h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">{% if servicio %}Editar servicio{% else %}Nuevo servicio{% endif %}</h1>
+</header>
 
 <form method="post" class="mt-6 max-w-xl space-y-4 rounded-2xl border border-gris-borde bg-white p-6">
   {% csrf_token %}

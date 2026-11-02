@@ -1,0 +1,125 @@
+{# Activa los efectos de _movimiento_estilos.html. Sin dependencias; respeta «reducir movimiento». #}
+<script>
+  (() => {
+    const reducir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const punteroFino = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    // 1. Aparición al hacer scroll: cada elemento se muestra una sola vez al entrar en pantalla.
+    const revelables = document.querySelectorAll('[data-revelar]');
+    if (reducir || !('IntersectionObserver' in window)) {
+      revelables.forEach((el) => el.classList.add('visible'));
+    } else {
+      const observador = new IntersectionObserver((entradas) => {
+        entradas.forEach((entrada) => {
+          if (entrada.isIntersecting) {
+            entrada.target.classList.add('visible');
+            observador.unobserve(entrada.target);
+          }
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+      revelables.forEach((el) => observador.observe(el));
+    }
+
+    // 2. Cabecera con sombra, barra de progreso y líneas que se llenan al bajar (un solo cálculo por cuadro).
+    const cabecera = document.getElementById('cabecera');
+    const progreso = document.getElementById('progreso-scroll');
+    const lineas = document.querySelectorAll('[data-linea-progreso]');
+    let pendiente = false;
+    const alBajar = () => {
+      pendiente = false;
+      const y = window.scrollY;
+      const alto = document.documentElement.scrollHeight - window.innerHeight;
+      cabecera?.classList.toggle('con-scroll', y > 8);
+      progreso?.style.setProperty('--progreso', alto > 0 ? Math.min(1, y / alto) : 0);
+      lineas.forEach((linea) => {
+        const caja = linea.parentElement.getBoundingClientRect();
+        const avance = (window.innerHeight * 0.65 - caja.top) / caja.height;
+        linea.style.setProperty('--avance', Math.max(0, Math.min(1, avance)));
+      });
+    };
+    window.addEventListener('scroll', () => {
+      if (!pendiente) { pendiente = true; requestAnimationFrame(alBajar); }
+    }, { passive: true });
+    alBajar();
+
+    // 3. Enlaces a secciones de la misma página (#servicios, «Descubre más»…): desplazamiento animado con
+    //    aceleración suave, descontando la cabecera fija. Con «reducir movimiento» se salta directo.
+    const suavizar = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    let animacion = 0;
+    const irA = (destino) => {
+      const margen = (cabecera ? cabecera.offsetHeight : 0) + 16;
+      const final = Math.max(0, destino.getBoundingClientRect().top + window.scrollY - margen);
+      const inicio = window.scrollY;
+      const distancia = final - inicio;
+      cancelAnimationFrame(animacion);
+      if (reducir || Math.abs(distancia) < 2) {
+        window.scrollTo(0, final);
+        return;
+      }
+      // Más distancia, algo más de tiempo: entre 0,7 y 1,3 segundos.
+      const duracion = Math.min(1300, Math.max(700, Math.abs(distancia) * 0.6));
+      const t0 = performance.now();
+      const paso = (ahora) => {
+        const t = Math.min(1, (ahora - t0) / duracion);
+        window.scrollTo(0, inicio + distancia * suavizar(t));
+        if (t < 1) animacion = requestAnimationFrame(paso);
+      };
+      animacion = requestAnimationFrame(paso);
+    };
+    // Si la persona usa la rueda o el dedo durante la animación, se detiene y manda ella.
+    ['wheel', 'touchstart', 'keydown'].forEach((evento) =>
+      window.addEventListener(evento, () => cancelAnimationFrame(animacion), { passive: true }));
+    document.addEventListener('click', (e) => {
+      const enlace = e.target.closest('a[href*="#"]');
+      if (!enlace || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      const url = new URL(enlace.href, window.location.href);
+      if (url.pathname !== window.location.pathname || !url.hash) return;
+      const destino = document.getElementById(decodeURIComponent(url.hash.slice(1)));
+      if (!destino) return;
+      e.preventDefault();
+      history.pushState(null, '', url.hash);
+      irA(destino);
+      // Lectores de pantalla y teclado: el foco pasa a la sección elegida.
+      if (!destino.hasAttribute('tabindex')) destino.setAttribute('tabindex', '-1');
+      destino.focus({ preventScroll: true });
+    });
+
+    if (reducir || !punteroFino) return;
+
+    // 4. Foco de luz que sigue al mouse en las secciones oscuras (data-foco).
+    document.querySelectorAll('[data-foco]').forEach((zona) => {
+      let cuadro = 0;
+      let ultimo = null;
+      zona.addEventListener('pointermove', (e) => {
+        ultimo = e;
+        if (cuadro) return;
+        cuadro = requestAnimationFrame(() => {
+          cuadro = 0;
+          const caja = zona.getBoundingClientRect();
+          zona.style.setProperty('--hx', `${ultimo.clientX - caja.left}px`);
+          zona.style.setProperty('--hy', `${ultimo.clientY - caja.top}px`);
+        });
+      });
+    });
+
+    // 5. Foco de luz que sigue al mouse dentro de las tarjetas.
+    document.querySelectorAll('.tarjeta-viva').forEach((tarjeta) => {
+      tarjeta.addEventListener('pointermove', (e) => {
+        const caja = tarjeta.getBoundingClientRect();
+        tarjeta.style.setProperty('--mx', `${e.clientX - caja.left}px`);
+        tarjeta.style.setProperty('--my', `${e.clientY - caja.top}px`);
+      });
+    });
+
+    // 6. Botones «magnéticos»: se acercan un poco al cursor.
+    document.querySelectorAll('[data-magnetico]').forEach((boton) => {
+      boton.addEventListener('pointermove', (e) => {
+        const caja = boton.getBoundingClientRect();
+        const dx = (e.clientX - caja.left - caja.width / 2) / caja.width;
+        const dy = (e.clientY - caja.top - caja.height / 2) / caja.height;
+        boton.style.transform = `translate(${dx * 10}px, ${dy * 8}px)`;
+      });
+      boton.addEventListener('pointerleave', () => { boton.style.transform = ''; });
+    });
+  })();
+</script>

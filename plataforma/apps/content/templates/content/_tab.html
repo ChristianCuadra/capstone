@@ -13,7 +13,7 @@
 {% else %}
 <li>
   <a href="{{ url }}" {% if activa == seccion_portal %}aria-current="page"{% endif %}
-     class="flex h-16 items-center gap-2 border-b-2 text-sm font-medium lg:h-[72px] {% if activa == seccion_portal %}border-vino text-vino{% else %}border-transparent hover:text-vino{% endif %}">
+     class="pestana flex h-16 items-center gap-2 text-sm font-medium lg:h-[72px] {% if activa == seccion_portal %}text-vino{% else %}hover:text-vino{% endif %}">
     {{ etiqueta }}
     {% if badge %}<span class="rounded-full bg-rosa px-1.5 text-[11px] font-bold leading-5 text-vino-oscuro">{{ badge }}</span>{% endif %}
   </a>

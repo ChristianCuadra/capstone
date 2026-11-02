@@ -2,16 +2,18 @@
   CTA de cotización al final de cada página pública (pedido de la agencia, reunión 27/09/2026).
   Solo en el sitio público: no va en el panel interno ni en el portal del cliente.
 {% endcomment %}
-<section class="bg-vino-oscuro" aria-labelledby="cta-cotizacion-titulo">
-  <div class="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:py-24">
-    <h2 id="cta-cotizacion-titulo" class="font-serif text-3xl text-white sm:text-5xl">¿Conversamos sobre tu marca?</h2>
-    <p class="mx-auto mt-4 max-w-xl text-lila">Cuéntanos de tu marca y te enviamos una cotización con diagnóstico en 3 días hábiles.</p>
-    <div class="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-      <a href="{% url 'website:cotizacion' %}" class="rounded-full bg-rosa px-7 py-3.5 font-semibold text-vino-oscuro hover:bg-white">Solicitar cotización</a>
+<section class="relative isolate overflow-hidden bg-vino-oscuro" aria-labelledby="cta-cotizacion-titulo" data-foco>
+  {% include "website/_fondo_oscuro.html" %}
+  <div class="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:py-28">
+    <p data-revelar class="text-xs font-semibold uppercase tracking-[0.22em] text-rosa">Da el primer paso</p>
+    <h2 id="cta-cotizacion-titulo" data-revelar style="--retraso: 80ms" class="mt-4 font-serif text-4xl text-white sm:text-6xl">¿Conversamos sobre tu marca?</h2>
+    <p data-revelar style="--retraso: 160ms" class="mx-auto mt-5 max-w-xl text-lg text-lila">Cuéntanos de tu marca y te enviamos una cotización con diagnóstico en 3 días hábiles.</p>
+    <div data-revelar style="--retraso: 240ms" class="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+      <a href="{% url 'website:cotizacion' %}" data-magnetico class="boton-brillo rounded-full bg-rosa px-8 py-4 font-semibold text-vino-oscuro shadow-lg shadow-rosa/25 hover:bg-white">Solicitar cotización <span class="flecha" aria-hidden="true">→</span></a>
       {% if request.resolver_match.url_name != "planes" %}
-      <a href="{% url 'website:planes' %}" class="rounded-full border border-lila px-7 py-3.5 font-semibold text-white hover:border-white">Ver planes</a>
+      <a href="{% url 'website:planes' %}" data-magnetico class="rounded-full border border-white/25 bg-white/5 px-8 py-4 font-semibold text-white backdrop-blur transition hover:border-white hover:bg-white/10">Ver planes</a>
       {% else %}
-      <a href="{% url 'website:asesoria' %}" class="rounded-full border border-lila px-7 py-3.5 font-semibold text-white hover:border-white">Asesoría gratuita</a>
+      <a href="{% url 'website:asesoria' %}" data-magnetico class="rounded-full border border-white/25 bg-white/5 px-8 py-4 font-semibold text-white backdrop-blur transition hover:border-white hover:bg-white/10">Asesoría gratuita</a>
       {% endif %}
     </div>
   </div>

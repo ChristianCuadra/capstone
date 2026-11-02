@@ -3,6 +3,7 @@
 {% block page_title %}{% if es_nuevo %}Nuevo usuario{% else %}Editar usuario{% endif %}{% endblock %}
 
 {% block content %}
+<header>
 <nav aria-label="Ruta" class="text-sm">
   <ol class="flex items-center gap-2">
     <li><a href="{% url 'crm:usuarios' %}" class="hover:text-vino">Usuarios</a></li>
@@ -11,6 +12,7 @@
   </ol>
 </nav>
 <h1 class="mt-3 font-serif text-3xl text-vino lg:text-4xl">{% if es_nuevo %}Nuevo usuario{% else %}Editar «{{ usuario_editado.username }}»{% endif %}</h1>
+</header>
 
 <section class="mt-6 max-w-2xl rounded-2xl border border-gris-borde bg-white p-6">
   <form method="post" class="space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').textContent = 'Guardando…';">
