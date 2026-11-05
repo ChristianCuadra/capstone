@@ -344,3 +344,111 @@ class RevisionCalendarioAprobacionesTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["apa@x.cl"])
         self.assertIn("20-11-2026 10:00", mail.outbox[0].body)
+
+
+class PendientesPortalYCalendarioTests(TestCase):
+    """Pendientes de la revisión del 30 oct: estado del plan en el portal (PC-POR-01) y vista por mes en el panel (PC-CAL-02)."""
+
+    def setUp(self):
+        from datetime import date, datetime, timedelta
+
+        from django.utils import timezone
+
+        from apps.catalog.models import Plan, PlanEntregable, TipoEntregable
+        from apps.clients.models import Cliente
+        from apps.content.models import EstadoPieza, PiezaContenido
+
+        User = get_user_model()
+        self.EstadoPieza = EstadoPieza
+        tipo = TipoEntregable.objects.create(nombre="Historia de prueba", nombre_plural="historias de prueba", slug="historia-prueba", tiene_cuota=True)
+        self.plan = Plan.objects.create(nombre="Plan de prueba", slug="plan-prueba", precio_mensual=290000)
+        PlanEntregable.objects.create(plan=self.plan, tipo_entregable=tipo, cantidad_mensual=16)
+        self.a = Cliente.objects.create(nombre="Panadería Alfa", plan=self.plan, fecha_inicio_contrato=date(2026, 9, 1))
+        self.b = Cliente.objects.create(nombre="Clínica Beta")
+        self.aprobador = User.objects.create_user("apa", "apa@x.cl", "x", rol=Rol.CLIENTE_APROBADOR, cliente=self.a)
+        self.lector = User.objects.create_user("lea", "lea@x.cl", "x", rol=Rol.CLIENTE_LECTOR, cliente=self.a)
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol=Rol.ADMINISTRADORA, is_staff=True)
+        futuro = timezone.now() + timedelta(days=2)
+        PiezaContenido.objects.create(cliente=self.a, titulo="Revisión A", estado=EstadoPieza.EN_REVISION, fecha_programada=futuro)
+        PiezaContenido.objects.create(cliente=self.a, titulo="Rechazada A", estado=EstadoPieza.RECHAZADO, fecha_programada=futuro)
+        PiezaContenido.objects.create(cliente=self.a, titulo="Borrador A", estado=EstadoPieza.BORRADOR, fecha_programada=futuro)
+        PiezaContenido.objects.create(cliente=self.b, titulo="Revisión B", estado=EstadoPieza.EN_REVISION, fecha_programada=futuro)
+        tz = timezone.get_current_timezone()
+        # Medianoche y media del 1 de diciembre en Chile = 30 de noviembre en UTC: debe contar como diciembre.
+        self.pieza_borde = PiezaContenido.objects.create(
+            cliente=self.a, titulo="Borde diciembre", estado=EstadoPieza.APROBADO,
+            fecha_programada=datetime(2026, 12, 1, 0, 30, tzinfo=tz),
+        )
+        PiezaContenido.objects.create(
+            cliente=self.a, titulo="Enero", estado=EstadoPieza.APROBADO, fecha_programada=datetime(2027, 1, 15, 10, 0, tzinfo=tz)
+        )
+
+    # --- PC-POR-01: estado del plan y pendientes -------------------------------------------------
+
+    def test_portal_muestra_plan_estado_y_pendientes(self):
+        self.client.force_login(self.aprobador)
+        respuesta = self.client.get(reverse("content:calendario"))
+        resumen = respuesta.context["resumen_plan"]
+        self.assertEqual(resumen["plan"], self.plan)
+        self.assertTrue(resumen["activo"])
+        self.assertEqual(resumen["entregables"], ["16 historias de prueba"])
+        self.assertEqual(resumen["por_aprobar"], 1)  # no cuenta la pieza en revisión de otro cliente
+        self.assertEqual(resumen["en_correccion"], 1)
+        self.assertEqual(resumen["proxima"].titulo, "Revisión A")
+        self.assertContains(respuesta, "Activo")
+        self.assertContains(respuesta, "1 pieza por aprobar")
+        self.assertNotContains(respuesta, "Revisión B")
+
+    def test_plan_pausado(self):
+        self.a.activo = False
+        self.a.save()
+        self.client.force_login(self.lector)
+        self.assertContains(self.client.get(reverse("content:calendario")), "Pausado")
+
+    def test_lector_ve_pendientes_sin_link_para_aprobar(self):
+        self.client.force_login(self.lector)
+        respuesta = self.client.get(reverse("content:calendario"))
+        self.assertContains(respuesta, "1 pieza en revisión")
+        self.assertNotContains(respuesta, "por aprobar")
+
+    def test_cliente_sin_plan(self):
+        aprobador_b = get_user_model().objects.create_user("apb", "apb@x.cl", "x", rol=Rol.CLIENTE_APROBADOR, cliente=self.b)
+        self.client.force_login(aprobador_b)
+        self.assertContains(self.client.get(reverse("content:calendario")), "Sin plan asignado")
+
+    # --- PC-CAL-02: vista por mes en el panel ----------------------------------------------------
+
+    def _titulos(self, **params):
+        self.client.force_login(self.admin)
+        respuesta = self.client.get(reverse("content:interna_calendario"), params)
+        return [p.titulo for p in respuesta.context["piezas"]], respuesta
+
+    def test_panel_filtra_por_mes_en_hora_de_chile(self):
+        titulos, respuesta = self._titulos(mes="2026-12")
+        self.assertEqual(titulos, ["Borde diciembre"])
+        self.assertEqual(respuesta.context["mes_anterior"], "2026-11")
+        self.assertEqual(respuesta.context["mes_siguiente"], "2027-01")
+        self.assertEqual(self._titulos(mes="2027-01")[0], ["Enero"])
+
+    def test_panel_por_defecto_muestra_el_mes_actual(self):
+        from django.utils import timezone
+
+        hoy = timezone.localdate()
+        _, respuesta = self._titulos()
+        self.assertEqual(respuesta.context["mes_param"], f"{hoy.year}-{hoy.month:02d}")
+        self.assertFalse(respuesta.context["todos_los_meses"])
+
+    def test_panel_ver_todos_los_meses(self):
+        titulos, _ = self._titulos(mes="todos")
+        self.assertIn("Borde diciembre", titulos)
+        self.assertIn("Enero", titulos)
+        self.assertNotIn("Rechazada A", titulos)  # las rechazadas van en su propia sección
+
+    def test_panel_mes_combinado_con_cliente_y_estado(self):
+        titulos, _ = self._titulos(mes="todos", cliente_id=self.b.pk, estado="en_revision")
+        self.assertEqual(titulos, ["Revisión B"])
+
+    def test_panel_mes_invalido_usa_el_actual(self):
+        _, respuesta = self._titulos(mes="abc")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertFalse(respuesta.context["todos_los_meses"])

@@ -103,6 +103,26 @@ def _mes_desde_parametro(valor, hoy):
         return hoy.replace(day=1)
 
 
+def _resumen_plan(cliente, usuario):
+    """Estado del plan y pendientes del cliente al entrar al portal (PC-POR-01, criterio 1)."""
+    if not cliente:
+        return None
+    piezas = PiezaContenido.objects.filter(cliente=cliente).exclude(estado=EstadoPieza.BORRADOR)
+    plan = cliente.plan
+    return {
+        "plan": plan,
+        "activo": cliente.activo,
+        "inicio": cliente.fecha_inicio_contrato,
+        "entregables": [e.texto for e in plan.entregables.select_related("tipo_entregable")] if plan else [],
+        "por_aprobar": piezas.filter(estado=EstadoPieza.EN_REVISION).count(),
+        "en_correccion": piezas.filter(estado=EstadoPieza.RECHAZADO).count(),
+        "proxima": piezas.filter(
+            estado__in=[EstadoPieza.EN_REVISION, EstadoPieza.APROBADO], fecha_programada__gte=timezone.now()
+        ).order_by("fecha_programada").first(),
+        "puede_aprobar": usuario.rol == Rol.CLIENTE_APROBADOR,
+    }
+
+
 @requiere_rol_cliente
 def calendario(request):
     """Calendario mensual del cliente."""
@@ -147,6 +167,7 @@ def calendario(request):
     context = contexto_portal(
         request,
         "calendario",
+        resumen_plan=_resumen_plan(cliente, request.user),
         mes_nombre=MESES[primero.month - 1],
         anio=primero.year,
         mes_param=f"{primero.year}-{primero.month:02d}",
@@ -333,6 +354,12 @@ def interna_calendario(request):
     else:
         estado_seleccionado = ""
 
+    # Calendario mensual (PC-CAL-02): por defecto el mes actual en hora de Chile; «todos» quita el filtro.
+    todos_los_meses = request.GET.get("mes") == "todos"
+    primero = _mes_desde_parametro(request.GET.get("mes"), timezone.localdate())
+    anterior = (primero - timedelta(days=1)).replace(day=1)
+    siguiente = (primero + timedelta(days=32)).replace(day=1)
+
     piezas_rechazadas = list(
         base_piezas.filter(estado=EstadoPieza.RECHAZADO)
         .select_related("cliente")
@@ -343,9 +370,15 @@ def interna_calendario(request):
         # Última observación del cliente: el hilo también guarda las respuestas de la agencia.
         pieza.observacion_cliente = next((c for c in reversed(pieza.comentarios.all()) if c.usuario.es_cliente), None)
 
-    piezas_generales = base_piezas.exclude(
-        estado=EstadoPieza.RECHAZADO
-    ).select_related("cliente").order_by("-fecha_programada")
+    # Las rechazadas se listan aparte y siempre completas: son trabajo pendiente, sea del mes que sea.
+    piezas_generales = base_piezas.exclude(estado=EstadoPieza.RECHAZADO)
+    if not todos_los_meses:
+        piezas_generales = piezas_generales.filter(
+            fecha_programada__year=primero.year, fecha_programada__month=primero.month
+        )
+    # Un mes se lee en orden de publicación; la lista completa, de lo más nuevo a lo más antiguo.
+    orden = "-fecha_programada" if todos_los_meses else "fecha_programada"
+    piezas_generales = piezas_generales.select_related("cliente").order_by(orden)
 
     nombre_usuario = user.get_full_name() or user.username or user.email
     iniciales = "".join(p[0] for p in nombre_usuario.replace("@", " ").split()[:2]).upper()
@@ -360,6 +393,13 @@ def interna_calendario(request):
             "piezas": piezas_generales,
             "piezas_rechazadas": piezas_rechazadas,
             "estados": EstadoPieza.choices,
+            "todos_los_meses": todos_los_meses,
+            "mes_nombre": MESES[primero.month - 1],
+            "anio": primero.year,
+            "mes_param": "todos" if todos_los_meses else f"{primero.year}-{primero.month:02d}",
+            "mes_actual": f"{primero.year}-{primero.month:02d}",
+            "mes_anterior": f"{anterior.year}-{anterior.month:02d}",
+            "mes_siguiente": f"{siguiente.year}-{siguiente.month:02d}",
             "seccion_panel": "calendario",
             "panel_usuario": {
                 "nombre": nombre_usuario,

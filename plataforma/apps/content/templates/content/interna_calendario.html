@@ -161,10 +161,21 @@
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 lg:px-6">
     <div>
       <h2 class="font-serif text-xl text-vino">Piezas Registradas</h2>
-      <p class="text-xs text-gris-txt mt-0.5">{{ piezas|length }} publicación(es) en lista</p>
+      <p class="text-xs text-gris-txt mt-0.5">{{ piezas|length }} publicación(es) {% if todos_los_meses %}en total{% else %}en <span class="capitalize">{{ mes_nombre }}</span> {{ anio }}{% endif %}</p>
     </div>
 
     <form method="get" class="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="mes" value="{{ mes_param }}">
+      <div class="flex items-center rounded-full border border-gris-borde bg-white" aria-label="Mes">
+        <a href="?mes={{ mes_anterior }}{% if cliente_seleccionado %}&cliente_id={{ cliente_seleccionado.id }}{% endif %}{% if estado_seleccionado %}&estado={{ estado_seleccionado }}{% endif %}" class="grid h-8 w-8 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Mes anterior">‹</a>
+        <span class="min-w-[8.5rem] text-center text-xs font-semibold capitalize text-vino">{% if todos_los_meses %}Todos los meses{% else %}{{ mes_nombre }} {{ anio }}{% endif %}</span>
+        <a href="?mes={{ mes_siguiente }}{% if cliente_seleccionado %}&cliente_id={{ cliente_seleccionado.id }}{% endif %}{% if estado_seleccionado %}&estado={{ estado_seleccionado }}{% endif %}" class="grid h-8 w-8 place-items-center rounded-full text-vino hover:bg-fondo-suave" aria-label="Mes siguiente">›</a>
+      </div>
+      {% if todos_los_meses %}
+      <a href="?mes={{ mes_actual }}{% if cliente_seleccionado %}&cliente_id={{ cliente_seleccionado.id }}{% endif %}{% if estado_seleccionado %}&estado={{ estado_seleccionado }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Ver por mes</a>
+      {% else %}
+      <a href="?mes=todos{% if cliente_seleccionado %}&cliente_id={{ cliente_seleccionado.id }}{% endif %}{% if estado_seleccionado %}&estado={{ estado_seleccionado }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-medium text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Ver todos</a>
+      {% endif %}
       <select name="cliente_id" onchange="this.form.submit()" class="rounded-full border border-gris-borde bg-white px-3.5 py-1.5 text-xs font-medium text-vino focus:border-malva focus:outline-none">
         <option value="">Todos los clientes</option>
         {% for c in clientes %}
@@ -248,7 +259,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" class="px-5 py-14 text-center text-sm text-gris-txt">No hay publicaciones adicionales registradas.</td>
+            <td colspan="6" class="px-5 py-14 text-center text-sm text-gris-txt">{% if todos_los_meses %}No hay publicaciones registradas.{% else %}No hay publicaciones en <span class="capitalize">{{ mes_nombre }}</span> {{ anio }}.{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>
