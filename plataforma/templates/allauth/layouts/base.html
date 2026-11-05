@@ -1,4 +1,4 @@
-{% load i18n %}<!DOCTYPE html>
+{% load i18n cuentas %}<!DOCTYPE html>
 {# Reemplaza el layout de django-allauth (login, cierre de sesión, recuperar contraseña) con la identidad de la agencia. #}
 <html lang="es-CL">
 <head>
@@ -42,17 +42,25 @@
       {% endif %}
       {% block content %}{% endblock content %}
     </div>
-    {# "Volver": el equipo (staff) siempre vuelve al panel, sin importar cuantos pasos tenga #}
-    {# el flujo en el que esta (p. ej. activar/desactivar 2FA, ver codigos de recuperacion). #}
-    {# Usar history.back() ahi se rompe: cada paso del flujo es una entrada de historial distinta, #}
-    {# asi que un solo clic no vuelve al panel sino al paso anterior del mismo flujo. #}
-    {# Para el resto (paginas publicas de cuenta: login, registro, recuperar clave), se mantiene #}
-    {# el history.back() a la pagina de origen si vino del mismo sitio. #}
-    {% if user.is_authenticated and user.is_staff %}
-    <p class="mt-6 text-center text-sm"><a href="{% url 'crm:dashboard' %}" class="text-lila transition hover:text-white">← Volver al panel</a></p>
-    {% else %}
-    <p class="mt-6 text-center text-sm"><a href="{% url 'website:home' %}" onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }" class="text-lila transition hover:text-white">← Volver al sitio</a></p>
-    {% endif %}
+    {# Salida siempre visible en todas las páginas de cuenta (login, confirmar contraseña, activar o pedir el 2FA, #}
+    {# recuperar contraseña): se puede volver al inicio sin terminar el paso. Es un enlace directo y no #}
+    {# history.back(), porque cada paso del flujo es una entrada distinta del historial. #}
+    {# «Ir al panel» solo aparece si la persona puede entrar ya (equipo con 2FA activo, ver entra_al_panel). #}
+    <nav class="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm" aria-label="Salir de esta página">
+      <a href="{% url 'website:home' %}" class="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/5 px-5 py-2.5 font-semibold text-white backdrop-blur transition hover:border-white/60 hover:bg-white/10">
+        <span aria-hidden="true">←</span> Volver al inicio
+      </a>
+      {% if user|entra_al_panel %}
+      <a href="{% url 'crm:dashboard' %}" class="inline-flex items-center gap-2 rounded-full px-4 py-2.5 font-medium text-lila transition hover:text-white">Ir al panel <span aria-hidden="true">→</span></a>
+      {% endif %}
+      {# Con la sesión iniciada (p. ej. a mitad de configurar el 2FA) siempre se puede salir de la cuenta. #}
+      {% if user.is_authenticated and request.resolver_match.url_name != "account_logout" %}
+      <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="inline-flex items-center gap-2 rounded-full px-4 py-2.5 font-medium text-lila transition hover:text-white">Cerrar sesión</button>
+      </form>
+      {% endif %}
+    </nav>
   </main>
   {% endblock body %}
   {% include "website/_movimiento.html" %}

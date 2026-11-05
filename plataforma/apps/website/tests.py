@@ -219,9 +219,11 @@ class PreciosIvaTests(TestCase):
     def test_home_muestra_precios_netos_mas_iva(self):
         respuesta = self.client.get(reverse("website:home"))
         self.assertContains(respuesta, "desde $150.000 al mes")
-        self.assertContains(respuesta, "$35.000")  # Asesorías, neto
         self.assertContains(respuesta, "no incluyen IVA")
         self.assertNotContains(respuesta, "IVA incluido")
+        # El inicio muestra qué hacemos; el precio de cada servicio está en Planes (pedido 05-11-2026).
+        self.assertNotContains(respuesta, "$35.000")
+        self.assertContains(self.client.get(reverse("website:planes")), "$35.000")  # Asesorías, neto
 
     def test_filtro_con_iva_redondea_al_peso(self):
         from apps.core.impuestos import con_iva, iva_de

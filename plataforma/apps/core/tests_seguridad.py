@@ -113,6 +113,38 @@ class DosFactoresObligatorioTests(BaseSeguridad):
         self.assertContains(activar, "svg")  # el código QR para la app autenticadora
         self.assertEqual(self.client.post(reverse("account_logout")).status_code, 302)
 
+    def test_desde_las_paginas_de_cuenta_siempre_se_puede_volver_al_inicio(self):
+        """Quien no quiere escanear el QR (o ingresar el código) tiene cómo salir, sin quedar dando vueltas."""
+        boton = f'href="{reverse("website:home")}" class="inline-flex'
+        self.assertContains(self.client.get(reverse("account_login")), boton)
+        self.client.post(reverse("account_login"), {"login": "col@x.cl", "password": CLAVE})
+        confirmar = self.client.get(reverse("mfa_activate_totp"), follow=True)
+        self.assertContains(confirmar, boton)
+        self.client.post(confirmar.redirect_chain[-1][0].split("?")[0], {"password": CLAVE})
+        activar = self.client.get(reverse("mfa_activate_totp"))
+        self.assertContains(activar, boton)
+        self.assertContains(activar, "Volver al inicio")
+        # Sin 2FA el panel lo devuelve aquí: no se le ofrece «Ir al panel».
+        self.assertNotContains(activar, "Ir al panel")
+        self.assertEqual(self.client.get(reverse("website:home")).status_code, 200)
+
+    def test_quien_deja_el_2fa_a_medias_puede_cerrar_sesion(self):
+        """Volvió al inicio sin escanear el QR: la sesión sigue abierta, así que debe poder cerrarla desde ahí."""
+        salir = f'action="{reverse("account_logout")}"'
+        self.client.post(reverse("account_login"), {"login": "col@x.cl", "password": CLAVE})
+        self.assertContains(self.client.get(reverse("mfa_activate_totp"), follow=True), salir)
+        inicio = self.client.get(reverse("website:home"))
+        self.assertContains(inicio, salir, count=2)  # cabecera de escritorio y menú del celular
+        self.assertContains(inicio, "Cerrar sesión")
+        self.assertRedirects(self.client.post(reverse("account_logout")), reverse("website:home"), fetch_redirect_response=False)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertNotContains(self.client.get(reverse("website:home")), salir)
+
+    def test_con_2fa_activo_tambien_puede_ir_al_panel(self):
+        self._activar_totp(self.colab)
+        self.client.force_login(self.colab)
+        self.assertContains(self.client.get(reverse("mfa_index")), "Ir al panel")
+
     def test_equipo_con_2fa_entra_normal(self):
         self._activar_totp(self.colab)
         self.client.force_login(self.colab)

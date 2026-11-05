@@ -38,8 +38,27 @@
   }
   .logo-sombra { transform: translateX(calc(var(--ry-num, -10) * -1.2px)) scaleX(.85); transition: transform .6s cubic-bezier(.16, .84, .3, 1); }
 
+  /* ── El cosmopolitan: la copa del logo oficial («AC con la copa»), en su propia capa de profundidad ── */
+  .logo-copa { transform: translateZ(125px); }
+  .logo-copa svg { overflow: visible; filter: drop-shadow(0 18px 22px rgb(0 0 0 / .35)) drop-shadow(0 0 22px rgb(244 127 177 / .35)); }
+  .copa-cuerpo { transform-origin: 50% 92%; animation: copa-flotar 6.5s ease-in-out infinite; transition: rotate .7s cubic-bezier(.16, .84, .3, 1), scale .7s cubic-bezier(.16, .84, .3, 1); }
+  @keyframes copa-flotar { 50% { translate: 0 -9px; } }
+  /* Al pasar el mouse por el logo, la copa se inclina como en un brindis. */
+  .logo-escena:hover .copa-cuerpo { rotate: -11deg; scale: 1.07; }
+  .copa-superficie { transform-box: fill-box; transform-origin: center; animation: copa-ola 3.6s ease-in-out infinite; }
+  @keyframes copa-ola { 50% { transform: scaleX(.93) translateY(1.5px); } }
+  .copa-destello { animation: copa-destello 5s ease-in-out infinite; }
+  @keyframes copa-destello {
+    0%, 55% { transform: translateX(-70px) skewX(-18deg); opacity: 0; }
+    65% { opacity: .85; }
+    85%, 100% { transform: translateX(80px) skewX(-18deg); opacity: 0; }
+  }
+  .copa-rodaja { transform-box: fill-box; transform-origin: 30% 75%; animation: copa-rodaja 5.5s ease-in-out infinite; }
+  @keyframes copa-rodaja { 50% { transform: rotate(8deg); } }
+
   @media (prefers-reduced-motion: reduce) {
-    .logo-flotar, .logo-anillo, .logo-chip, .logo-tarjeta { animation: none; }
+    .logo-flotar, .logo-anillo, .logo-chip, .logo-tarjeta, .copa-cuerpo, .copa-superficie, .copa-destello, .copa-rodaja { animation: none; }
+    .copa-cuerpo { transition: none; }
     .logo-tarjeta, .logo-letra, .logo-escena:hover .logo-letra { transition: none; }
   }
 </style>
@@ -93,9 +112,9 @@
 
     {# Monograma AC interactivo: se inclina hacia el mouse; al pasar por encima, las letras se separan en profundidad. #}
     {# TODO: reemplazar las letras por el SVG oficial (AC con la copa) cuando la agencia entregue los archivos. #}
-    <div data-revelar="escala" style="--retraso: 200ms" class="relative mx-auto w-full max-w-[30rem] {% if hero.caso_destacado %}pb-12{% endif %}">
+    <div data-revelar="escala" style="--retraso: 200ms" class="relative mx-auto w-full max-w-[34rem] {% if hero.caso_destacado %}pb-12{% endif %}">
       <div id="logo-escena" class="logo-escena logo-flotar">
-        <div id="logo-tarjeta" class="logo-tarjeta relative aspect-square w-full">
+        <div id="logo-tarjeta" class="logo-tarjeta relative aspect-[7/6] w-full">
           {# Fondo de la tarjeta #}
           <div class="logo-capa inset-0 overflow-hidden rounded-[2.75rem] border border-white/15 bg-gradient-to-br from-vino via-vino to-vino-oscuro sombra-3">
             <div class="fondo-grilla absolute inset-0 opacity-60"></div>
@@ -103,15 +122,58 @@
             <div class="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-rosa-viejo/20 blur-3xl"></div>
           </div>
           {# Anillo que gira #}
-          <div class="logo-capa inset-[12%]" style="transform: translateZ(30px)">
+          <div class="logo-capa inset-y-[12%] inset-x-[17.4%]" style="transform: translateZ(30px)">
             <div class="logo-anillo h-full w-full rounded-full border border-dashed border-rosa/35"></div>
           </div>
-          <div class="logo-capa inset-[22%] rounded-full border border-white/10" style="transform: translateZ(45px)"></div>
+          <div class="logo-capa inset-y-[22%] inset-x-[26%] rounded-full border border-white/10" style="transform: translateZ(45px)"></div>
           {# Letras #}
-          <div class="logo-capa inset-0 grid place-items-center" aria-hidden="true">
+          <div class="logo-capa inset-0 grid place-items-center pr-[22%]" aria-hidden="true">
             <span class="flex items-baseline font-serif text-[clamp(8rem,26vw,15rem)] font-bold leading-none" style="transform-style: preserve-3d">
               <span class="logo-letra letra-a text-rosa" style="--z: 90px">A</span><span class="logo-letra -ml-[0.06em] text-white" style="--z: 60px">C</span>
             </span>
+          </div>
+          {# El cosmopolitan: copa de martini con el trago rosado y una rodaja de lima en el borde. #}
+          <div class="logo-capa logo-copa right-[5%] top-[29%] w-[25%]" aria-hidden="true">
+            <svg class="copa-cuerpo block w-full" viewBox="0 0 150 190" fill="none">
+              <defs>
+                <linearGradient id="copa-liquido" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#FFA3CB"/>
+                  <stop offset=".45" stop-color="#F47FB1"/>
+                  <stop offset="1" stop-color="#B02F64"/>
+                </linearGradient>
+                <linearGradient id="copa-vidrio" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#fff" stop-opacity=".38"/>
+                  <stop offset="1" stop-color="#fff" stop-opacity=".06"/>
+                </linearGradient>
+                <clipPath id="copa-interior"><path d="M10 22 L130 22 L70 97 Z"/></clipPath>
+              </defs>
+              <!-- Vidrio y trago -->
+              <path d="M8 22 L132 22 L70 99 Z" fill="url(#copa-vidrio)"/>
+              <path d="M20 34 L120 34 L70 92 Z" fill="url(#copa-liquido)"/>
+              <ellipse class="copa-superficie" cx="70" cy="34" rx="50" ry="5" fill="#FFC6DE" opacity=".95"/>
+              <g clip-path="url(#copa-interior)">
+                <rect class="copa-destello" x="44" y="14" width="13" height="96" fill="#fff" opacity=".6"/>
+              </g>
+              <path d="M24 30 L58 74" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/>
+              <path d="M8 22 L132 22 L70 99 Z" stroke="#fff" stroke-opacity=".85" stroke-width="2.2" stroke-linejoin="round"/>
+              <ellipse cx="70" cy="22" rx="62" ry="5.5" stroke="#fff" stroke-opacity=".9" stroke-width="2.2"/>
+              <!-- Tallo y base -->
+              <path d="M70 99 L70 160" stroke="#fff" stroke-opacity=".9" stroke-width="4" stroke-linecap="round"/>
+              <ellipse cx="70" cy="165" rx="30" ry="6.5" fill="#fff" fill-opacity=".9"/>
+              <ellipse cx="70" cy="163.5" rx="20" ry="2.6" fill="#F2E4EA"/>
+              <!-- Rodaja de lima calzada en el borde -->
+              <g class="copa-rodaja">
+                <circle cx="127" cy="22" r="16" fill="#6FA33A"/>
+                <circle cx="127" cy="22" r="13.6" fill="#F4F9DF"/>
+                <circle cx="127" cy="22" r="12" fill="#B9DA6B"/>
+                <g stroke="#F4F9DF" stroke-width="1.4" stroke-linecap="round">
+                  <path d="M127 11.5 V32.5"/><path d="M116.5 22 H137.5"/>
+                  <path d="M119.6 14.6 L134.4 29.4"/><path d="M134.4 14.6 L119.6 29.4"/>
+                </g>
+                <circle cx="127" cy="22" r="2.2" fill="#F4F9DF"/>
+                <path d="M118 15 a 12 12 0 0 1 9 -5" stroke="#fff" stroke-opacity=".7" stroke-width="1.6" stroke-linecap="round"/>
+              </g>
+            </svg>
           </div>
           {# Nombre #}
           <div class="logo-capa inset-x-0 bottom-[9%] text-center" style="transform: translateZ(40px)" aria-hidden="true">
@@ -224,23 +286,18 @@
     <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {% for servicio in servicios %}
       <article data-revelar style="--retraso: {% widthratio forloop.counter0 1 90 %}ms" class="tarjeta-viva flex flex-col rounded-3xl border border-gris-borde bg-white p-6 sombra-1">
-        <span class="grid h-10 w-10 place-items-center rounded-xl bg-rubor font-serif text-base text-vino">{{ forloop.counter|stringformat:"02d" }}</span>
-        <h3 class="mt-5 font-serif text-2xl text-vino">{{ servicio.nombre }}</h3>
+        <span class="h-1 w-10 rounded-full bg-gradient-to-r from-rosa to-rosa-viejo" aria-hidden="true"></span>
+        <h3 class="mt-5 font-serif text-2xl leading-snug text-vino">{{ servicio.nombre|sin_detalle }}</h3>
         {% if servicio.descripcion %}<p class="mt-3 text-sm leading-relaxed">{{ servicio.descripcion }}</p>{% endif %}
-        <div class="flex-1"></div>
-        <div class="mt-6 flex items-end justify-between gap-3 border-t border-gris-borde pt-4">
-          <p class="text-sm text-vino"><strong class="text-base">{{ servicio.precio|clp }}</strong>{{ servicio.sufijo_precio }}</p>
-          <a href="{% url 'website:cotizacion' %}" class="shrink-0 text-xs font-semibold uppercase tracking-[0.14em] text-malva transition hover:text-vino" aria-label="Cotizar {{ servicio.nombre }}">Cotizar →</a>
-        </div>
       </article>
       {% endfor %}
       {% if plan_desde %}
       <a data-revelar style="--retraso: {% widthratio servicios|length 1 90 %}ms" href="{% url 'website:planes' %}" class="tarjeta-viva oscura group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-vino to-vino-oscuro p-6 text-lila sombra-2">
         <span class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-rosa/30 blur-2xl transition duration-700 group-hover:scale-150" aria-hidden="true"></span>
         <span class="relative text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
-        <span class="relative mt-3 font-serif text-3xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
+        <span class="relative mt-2 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
         <span class="relative mt-1 text-xs text-lila">+ IVA</span>
-        <span class="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
+        <span class="relative mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
       </a>
       {% endif %}
     </div>
