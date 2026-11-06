@@ -42,11 +42,17 @@ SILENCED_SYSTEM_CHECKS = ["security.W008", "security.W005", "security.W021"]
 if DATABASES:
     DATABASES["default"]["CONN_MAX_AGE"] = 0
 
-# Sin collectstatic en el despliegue: WhiteNoise sirve los estáticos (admin, allauth) directo desde las apps.
-WHITENOISE_USE_FINDERS = True
-STATIC_ROOT = None  # no hay carpeta staticfiles (no se corre collectstatic); evita un aviso en cada arranque
-STORAGES = {**STORAGES, "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}}
+# Definir STATIC_ROOT para que collectstatic tenga un destino válido si Vercel lo ejecuta
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# WhiteNoise sirve estáticos en producción comprimiendo los archivos sin validar manifiestos estrictos
+WHITENOISE_USE_FINDERS = True
+STORAGES = {
+    **STORAGES,
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 # En Vercel no hay worker de Celery: si se encola una tarea, se ejecuta en el momento (y sus errores se ven).
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
