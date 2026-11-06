@@ -221,7 +221,7 @@ STORAGES = {
         },
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
@@ -262,3 +262,5 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_TIMEOUT = 10  # segundos: si el proveedor no responde, no se cuelga la página
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Agencia Cosmopolitan <contacto@agenciacosmopolitan.cl>")
+
+WHITENOISE_MANIFEST_STRICT = False
