@@ -282,10 +282,13 @@
 {% if panel_puede_administrar %}
 <section class="mt-8 rounded-2xl border border-gris-borde bg-white p-6">
   <h2 class="font-serif text-xl text-vino">Datos personales</h2>
-  <p class="mt-1 max-w-3xl text-sm">Si la persona pide ver, llevarse o eliminar sus datos (Ley 21.719), responde desde aquí. Ambas acciones quedan en el registro de auditoría.</p>
+  <p class="mt-1 max-w-3xl text-sm">Si la persona pide ver, llevarse o eliminar sus datos (Ley 21.719), responde desde aquí: el PDF es para que los lea y el JSON para llevárselos a otro proveedor. Todo queda en el registro de auditoría.</p>
   <div class="mt-4 flex flex-wrap gap-2">
-    <a href="{% url 'crm:prospecto_datos_personales' prospecto.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Descargar sus datos (JSON)</a>
-    {% if not prospecto.cliente %}
+    <a href="{% url 'crm:prospecto_datos_personales_pdf' prospecto.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Descargar sus datos (PDF)</a>
+    <a href="{% url 'crm:prospecto_datos_personales' prospecto.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila" title="Formato para llevarse los datos a otro proveedor (portabilidad)">Descargar sus datos (JSON)</a>
+    {% if prospecto.cliente %}
+    <a href="{% url 'crm:cliente_ficha' prospecto.cliente.pk %}#datos-personales" class="self-center text-sm font-medium text-vino underline decoration-rosa decoration-2 underline-offset-2">Ya es cliente: para eliminar sus datos, ve a su ficha</a>
+    {% else %}
     <form method="post" action="{% url 'crm:prospecto_anonimizar' prospecto.pk %}"
           data-confirmar-titulo="¿Eliminar los datos personales de «{{ prospecto.empresa }}»?"
           data-confirmar="Se borran nombre, correo, teléfono, RUT, redes, el texto de su caso y el historial de interacciones. No se puede deshacer."

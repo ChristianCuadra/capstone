@@ -240,6 +240,29 @@
   </div>
 </div>
 
+{# ── Datos personales (Ley 21.719): acceso, portabilidad y supresión. Solo administración. ─────── #}
+{% if puede_editar %}
+<section id="datos-personales" class="mt-8 rounded-2xl border border-gris-borde bg-white p-6">
+  <h2 class="font-serif text-xl text-vino">Datos personales</h2>
+  <p class="mt-1 max-w-3xl text-sm">Si el cliente pide ver, llevarse o eliminar sus datos (Ley 21.719), responde desde aquí: el PDF es para que los lea y el JSON para llevárselos a otro proveedor. Todo queda en el registro de auditoría.</p>
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <a href="{% url 'crm:cliente_datos_personales_pdf' cliente.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Descargar sus datos (PDF)</a>
+    <a href="{% url 'crm:cliente_datos_personales' cliente.pk %}" class="rounded-full border border-gris-borde bg-white px-4 py-2 text-sm font-medium text-vino hover:border-lila">Descargar sus datos (JSON)</a>
+    {% if cliente.activo %}
+    <p class="text-xs">Para eliminar sus datos, primero desmarca «Cliente activo» y guarda la ficha.</p>
+    {% else %}
+    <form method="post" action="{% url 'crm:cliente_anonimizar' cliente.pk %}"
+          data-confirmar-titulo="¿Eliminar los datos de «{{ cliente.nombre }}»?"
+          data-confirmar="Se borran la ficha y sus contactos, las cuentas del portal, los documentos, las solicitudes con sus archivos, los reportes y el contenido de las piezas. Solo quedan cifras sin identificar (plan, fechas, métricas). No se puede deshacer."
+          data-confirmar-boton="Sí, eliminar sus datos" data-confirmar-peligro>
+      {% csrf_token %}
+      <button type="submit" class="rounded-full border border-[#B3261E]/40 bg-white px-4 py-2 text-sm font-medium text-[#B3261E] hover:bg-[#B3261E]/5">Eliminar sus datos</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
 {% if puede_invitar %}
 <script>
   // Copiar el enlace de activación (para enviarlo por otro medio si el correo no sale).

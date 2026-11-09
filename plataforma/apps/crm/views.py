@@ -477,6 +477,27 @@ def prospecto_datos_personales(request, pk):
     return respuesta
 
 
+def _respuesta_pdf_datos(titulo, datos, nombre_archivo):
+    from apps.core.pdf_datos import generar_pdf_datos
+
+    respuesta = HttpResponse(generar_pdf_datos(titulo, datos), content_type="application/pdf")
+    respuesta["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+    return respuesta
+
+
+@solo_equipo
+def prospecto_datos_personales_pdf(request, pk):
+    """Derecho de acceso (Ley 21.719): los mismos datos del JSON, en un PDF legible para la persona."""
+    if not puede_aprobar(request.user):
+        return _denegar_acceso(request)
+    prospecto = get_object_or_404(Prospecto, pk=pk)
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.EXPORTAR, entidad="datos personales de prospecto",
+        entidad_id=prospecto.pk, detalle="Descarga en PDF para responder una solicitud de acceso",
+    )
+    return _respuesta_pdf_datos(f"Datos personales · {prospecto.empresa}", datos_personales_prospecto(prospecto), f"datos-prospecto-{prospecto.pk}.pdf")
+
+
 @solo_equipo
 @require_POST
 def prospecto_anonimizar(request, pk):
@@ -930,6 +951,52 @@ def cliente_ficha(request, pk):
         kpis=_kpis_del_cliente(cliente), kpi_form=KPIForm(cliente=cliente), medicion_form=MedicionForm(initial={"fecha": timezone.localdate()}),
         **_contexto_acceso_portal(request, cliente),
     ))
+
+
+# ── Datos personales del cliente (Ley 21.719) ────────────────────────────────
+
+@solo_equipo
+def cliente_datos_personales(request, pk, formato="json"):
+    """Acceso (PDF) y portabilidad (JSON) de los datos del cliente. Solo administración."""
+    from apps.clients.servicios_datos import datos_personales_cliente
+
+    cliente = obtener_cliente_visible(request.user, pk)
+    if not puede_aprobar(request.user):
+        return _denegar_acceso(request)
+    datos = datos_personales_cliente(cliente)
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.EXPORTAR, entidad="datos personales de cliente",
+        entidad_id=cliente.pk, detalle=f"Descarga en {formato.upper()} (solicitud de acceso o portabilidad)",
+    )
+    if formato == "pdf":
+        return _respuesta_pdf_datos(f"Datos personales · {cliente.nombre}", datos, f"datos-cliente-{cliente.pk}.pdf")
+    respuesta = JsonResponse(datos, json_dumps_params={"ensure_ascii": False, "indent": 2})
+    respuesta["Content-Disposition"] = f'attachment; filename="datos-cliente-{cliente.pk}.json"'
+    return respuesta
+
+
+@requiere_administradora
+@require_POST
+def cliente_anonimizar(request, pk):
+    """Supresión (Ley 21.719): solo con el cliente desactivado; conserva cifras sin identificar."""
+    from apps.clients.servicios_datos import anonimizar_cliente
+
+    cliente = obtener_cliente_visible(request.user, pk)
+    if cliente.activo:
+        messages.error(request, "Primero desactiva al cliente (termina su contrato) y luego elimina sus datos.")
+        return redirect("crm:cliente_ficha", pk=cliente.pk)
+    nombre = cliente.nombre
+    anonimizar_cliente(cliente, request.user)
+    RegistroAuditoria.registrar(
+        usuario=request.user, accion=RegistroAuditoria.Accion.ELIMINAR, entidad="datos personales de cliente",
+        entidad_id=pk, detalle="Datos del cliente eliminados (solicitud de supresión)",
+    )
+    messages.success(
+        request,
+        f"Se eliminaron los datos de «{nombre}»: ficha, contactos, cuentas del portal, documentos, solicitudes, "
+        "reportes y contenido de las piezas. Quedan solo cifras sin identificar.",
+    )
+    return redirect("crm:cliente_ficha", pk=pk)
 
 
 # ── Acceso al portal del cliente (PC-AUT-07) ──────────────────────────────────
