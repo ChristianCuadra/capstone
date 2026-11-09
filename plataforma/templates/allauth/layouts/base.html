@@ -8,7 +8,7 @@
   <style type="text/tailwindcss">
     .cuenta h1 { @apply font-serif text-3xl text-vino; }
     .cuenta p { @apply mt-3 text-sm leading-relaxed; }
-    .cuenta a { @apply font-medium text-vino underline decoration-rosa underline-offset-2; }
+    .cuenta a:not(.boton) { @apply font-medium text-vino underline decoration-rosa underline-offset-2; }
     .cuenta form { @apply mt-6 space-y-4; }
     .cuenta label { @apply block text-sm font-medium text-vino; }
     .cuenta input[type=email], .cuenta input[type=text], .cuenta input[type=password] {
