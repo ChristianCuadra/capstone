@@ -3,7 +3,9 @@ from .base import BASE_DIR, DATABASE_URL, STORAGES, AWS_STORAGE_BUCKET_NAME
 
 DEBUG = True
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Por defecto los correos se imprimen en la terminal. Para enviarlos de verdad (p. ej. Gmail con contraseña de
+# aplicación), definir EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend y EMAIL_HOST* en .env.
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")  # noqa: F405
 
 # Sin DATABASE_URL en .env se usa SQLite local, solo para levantar el proyecto.
 # pgvector no está disponible en SQLite: la migración que lo habilita se omite.
