@@ -51,6 +51,18 @@ class PiezaContenido(TenantModel):
     # Programación
     fecha_programada = models.DateTimeField("fecha y hora programada")
     
+    # Cumplimiento del plan (PC-CUM-01): qué entregable del plan es esta pieza (historia, carrusel, reel...).
+    tipo_entregable = models.ForeignKey(
+        "catalog.TipoEntregable",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="piezas",
+        verbose_name="tipo de entregable",
+    )
+    # PC-IA-03 / PC-IA-04: el copy partió de un borrador generado por IA (queda identificado).
+    texto_generado_ia = models.BooleanField("texto asistido por IA", default=False)
+
     # Versionado 
     version = models.PositiveIntegerField("versión", default=1)
 
@@ -118,3 +130,71 @@ class ComentarioPieza(models.Model):
 
     def __str__(self):
         return f"Comentario de {self.usuario} en {self.pieza.titulo}"
+
+# ── Solicitudes y archivos del cliente (PC-SOL-01) ─────────────────────────
+
+EXTENSIONES_SOLICITUD = {
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".mov", ".zip",
+}
+TAMANO_MAX_SOLICITUD_MB = 20
+MAX_ARCHIVOS_POR_MENSAJE = 5
+
+
+def ruta_archivo_solicitud(instance, filename):
+    return f"clientes/{instance.mensaje.solicitud.cliente_id}/solicitudes/{instance.mensaje.solicitud_id}/{filename}"
+
+
+class Solicitud(TenantModel):
+    """Pedido del cliente a la agencia desde el portal, en reemplazo de WhatsApp o el correo."""
+
+    class Estado(models.TextChoices):
+        ABIERTA = "abierta", "Abierta"
+        RESPONDIDA = "respondida", "Respondida"
+        CERRADA = "cerrada", "Cerrada"
+
+    asunto = models.CharField(max_length=150)
+    estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.ABIERTA)
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="solicitudes_creadas"
+    )
+
+    class Meta:
+        db_table = "solicitudes"
+        verbose_name = "solicitud"
+        verbose_name_plural = "solicitudes"
+        ordering = ["-actualizado_en"]
+
+    def __str__(self):
+        return f"{self.asunto} · {self.cliente}"
+
+
+class MensajeSolicitud(models.Model):
+    """Cada mensaje del hilo de una solicitud (del cliente o de la agencia)."""
+
+    solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name="mensajes")
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    texto = models.TextField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "solicitudes_mensajes"
+        ordering = ["creado_en"]
+
+    @property
+    def es_de_la_agencia(self):
+        return bool(self.usuario and not self.usuario.es_cliente)
+
+
+class ArchivoSolicitud(models.Model):
+    mensaje = models.ForeignKey(MensajeSolicitud, on_delete=models.CASCADE, related_name="archivos")
+    archivo = models.FileField(upload_to=ruta_archivo_solicitud, max_length=300)
+    nombre = models.CharField(max_length=200)
+    tamano = models.PositiveIntegerField("tamaño (bytes)")
+
+    class Meta:
+        db_table = "solicitudes_archivos"
+        ordering = ["pk"]
+
+    def __str__(self):
+        return self.nombre

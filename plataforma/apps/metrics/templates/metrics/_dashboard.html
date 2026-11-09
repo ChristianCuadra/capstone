@@ -1,0 +1,60 @@
+{# Indicadores, gráfico y resumen por mes. Mismo bloque en el panel (PC-DSH-01) y en el portal (PC-DSH-02). Parámetros: resumen, kpis, mensaje_vacio. #}
+{% load formato %}
+{% if not resumen.hay_datos %}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white px-6 py-14 text-center">
+  <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rosa/15 text-vino">
+    <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  </span>
+  <h2 class="mt-4 font-serif text-2xl text-vino">Sin métricas en este período</h2>
+  <p class="mx-auto mt-2 max-w-md text-sm">{{ mensaje_vacio }}</p>
+</section>
+{% else %}
+<p class="mt-4 text-xs">Del {{ resumen.desde|date:"j \d\e F Y" }} al {{ resumen.hasta|date:"j \d\e F Y" }} · {{ resumen.dias }} día{{ resumen.dias|pluralize }} con datos.</p>
+<section class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" aria-label="Indicadores del período">
+  {% for i in resumen.indicadores %}
+  <article class="rounded-2xl border border-gris-borde bg-white p-4">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-malva" {% if i.ayuda %}title="{{ i.ayuda }}"{% endif %}>{{ i.nombre }}</p>
+    <p class="mt-1 font-serif text-2xl text-vino tabular-nums">{% if i.tipo == "pesos" %}{{ i.valor|clp }}{% elif i.tipo == "porcentaje" %}{{ i.valor }} %{% else %}{{ i.valor|miles }}{% endif %}</p>
+    {% if i.variacion is not None %}<p class="text-xs {% if i.variacion >= 0 %}text-[#1E6B34]{% else %}text-[#B3261E]{% endif %}">{% if i.variacion >= 0 %}+{% endif %}{{ i.variacion|miles }} en el período</p>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white p-5" aria-labelledby="titulo-grafico">
+  <h2 id="titulo-grafico" class="font-serif text-xl text-vino">Alcance e interacciones por día</h2>
+  <div class="mt-3 h-64"><canvas id="grafico-metricas" role="img" aria-label="Gráfico de alcance e interacciones por día"></canvas></div>
+</section>
+{{ resumen.grafico|json_script:"datos-metricas" }}
+
+{% if resumen.por_mes|length > 1 %}
+<section class="mt-4 overflow-x-auto rounded-2xl border border-gris-borde bg-white p-5" aria-labelledby="titulo-meses">
+  <h2 id="titulo-meses" class="font-serif text-xl text-vino">Por mes</h2>
+  <table class="mt-3 w-full text-left text-sm">
+    <thead class="text-[11px] uppercase tracking-[0.12em] text-malva"><tr><th scope="col" class="py-2">Mes</th><th scope="col" class="py-2 text-right">Alcance</th><th scope="col" class="py-2 text-right">Interacciones</th><th scope="col" class="py-2 text-right">Inversión</th><th scope="col" class="py-2 text-right">Resultados</th></tr></thead>
+    <tbody class="divide-y divide-gris-borde">
+      {% for m in resumen.por_mes %}<tr><th scope="row" class="py-2 font-semibold text-vino">{{ m.mes }}</th><td class="py-2 text-right tabular-nums">{{ m.alcance|miles }}</td><td class="py-2 text-right tabular-nums">{{ m.interacciones|miles }}</td><td class="py-2 text-right tabular-nums">{{ m.gasto|clp }}</td><td class="py-2 text-right tabular-nums">{{ m.resultados|miles }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endif %}
+
+{% if kpis %}
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white p-5" aria-labelledby="titulo-kpis">
+  <h2 id="titulo-kpis" class="font-serif text-xl text-vino">KPIs comprometidos</h2>
+  <ul class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    {% for k in kpis %}
+    <li class="rounded-xl border border-gris-borde p-4">
+      <p class="text-sm font-semibold text-vino">{{ k.get_indicador_display }}</p>
+      <p class="text-xs">Inicial {{ k.valor_inicial|floatformat:"0g" }} · meta {{ k.meta|floatformat:"0g" }} · actual {% if k.valor_actual is not None %}{{ k.valor_actual|floatformat:"0g" }}{% else %}sin medición{% endif %}</p>
+      {% if k.porcentaje_cumplimiento is not None %}
+      <div class="mt-2 h-2 rounded-full bg-fondo-suave" role="progressbar" aria-valuenow="{{ k.porcentaje_cumplimiento }}" aria-valuemin="0" aria-valuemax="100" aria-label="Avance hacia la meta">
+        <div class="h-2 rounded-full bg-vino" style="width: {% if k.porcentaje_cumplimiento > 100 %}100{% else %}{{ k.porcentaje_cumplimiento|floatformat:0 }}{% endif %}%"></div>
+      </div>
+      <p class="mt-1 text-xs">{{ k.porcentaje_cumplimiento }} % de la meta</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

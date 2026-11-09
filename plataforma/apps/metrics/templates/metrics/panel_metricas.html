@@ -1,0 +1,93 @@
+{% extends "crm/base_panel.html" %}
+{% load formato %}
+
+{% block page_title %}Métricas y reportes{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Métricas y reportes</h1>
+    <p class="mt-1 text-sm">Resultados de redes y campañas por cliente, y su reporte mensual.</p>
+  </div>
+  {% if clientes %}
+  <form method="get" class="flex items-end gap-2">
+    <label class="text-xs font-semibold text-malva">Cliente
+      <select name="cliente" onchange="this.form.submit()" class="mt-0.5 block rounded-full border border-gris-borde bg-white px-3.5 py-1.5 text-sm text-vino">
+        {% for c in clientes %}<option value="{{ c.pk }}"{% if cliente and c.pk == cliente.pk %} selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+  </form>
+  {% endif %}
+</header>
+
+{% if not cliente %}
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white px-5 py-14 text-center text-sm">No hay clientes activos.</section>
+{% else %}
+<div class="mt-6">{% include "metrics/_filtro_fechas.html" with cliente_param=cliente.pk %}</div>
+{% include "metrics/_dashboard.html" with mensaje_vacio="Carga un archivo de Instagram o Meta Ads para este cliente, o elige otro rango de fechas." %}
+
+<div class="mt-6 grid gap-4 xl:grid-cols-2">
+  <section class="rounded-2xl border border-gris-borde bg-white p-5" aria-labelledby="titulo-carga">
+    <h2 id="titulo-carga" class="font-serif text-xl text-vino">Cargar métricas por archivo</h2>
+    {% if puede_administrar %}
+    <p class="mt-1 text-sm">CSV o Excel con una fila por día. Sirven la plantilla o una exportación diaria de Instagram Insights o Meta Ads. Si hay un error, no se carga nada; los días que ya existían se reemplazan.</p>
+    <form method="post" action="{% url 'metrics:importar' %}" enctype="multipart/form-data" class="mt-4 grid gap-3 sm:grid-cols-2" data-un-envio>
+      {% csrf_token %}
+      <input type="hidden" name="cliente" value="{{ cliente.pk }}">
+      <label class="text-xs font-semibold text-malva">Fuente
+        <select name="fuente" required class="mt-1 block w-full rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm text-vino">
+          {% for clave, nombre in fuentes %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="text-xs font-semibold text-malva">Archivo (.csv o .xlsx, máx. {{ tamano_max }} MB)
+        <input type="file" name="archivo" required accept=".csv,.xlsx" class="mt-1 block w-full text-sm">
+      </label>
+      <div class="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <button type="submit" class="rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">Cargar para {{ cliente.nombre }}</button>
+        <a href="{% url 'metrics:plantilla' %}" class="text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-2">Descargar plantilla</a>
+      </div>
+    </form>
+    {% else %}
+    <p class="mt-1 text-sm">Solo la administradora carga métricas.</p>
+    {% endif %}
+    {% if importaciones %}
+    <h3 class="mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-malva">Últimas cargas</h3>
+    <ul class="mt-2 divide-y divide-gris-borde text-xs">
+      {% for i in importaciones %}<li class="py-2">{{ i.creado_en|date:"j M Y, H:i" }} · {{ i.get_fuente_display }} · {{ i.nombre_archivo }} · {{ i.filas }} días ({{ i.desde|date:"d-m-Y" }} al {{ i.hasta|date:"d-m-Y" }}){% if i.subido_por %} · {{ i.subido_por.get_full_name|default:i.subido_por.email }}{% endif %}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section class="rounded-2xl border border-gris-borde bg-white p-5" aria-labelledby="titulo-reportes">
+    <h2 id="titulo-reportes" class="font-serif text-xl text-vino">Reporte mensual</h2>
+    <p class="mt-1 text-sm">La IA arma un borrador solo con las métricas y el cumplimiento de este cliente. Nadie lo ve fuera de la agencia hasta que la administradora lo revisa y lo aprueba.</p>
+    <form method="post" action="{% url 'reports:generar' %}" class="mt-4 flex flex-wrap items-end gap-3" data-un-envio>
+      {% csrf_token %}
+      <input type="hidden" name="cliente" value="{{ cliente.pk }}">
+      <label class="text-xs font-semibold text-malva">Mes
+        <select name="mes" class="mt-1 block rounded-xl border border-gris-borde bg-white px-3 py-2 text-sm text-vino">
+          {% for valor, nombre in meses_reporte %}<option value="{{ valor }}"{% if forloop.counter == 2 %} selected{% endif %}>{{ nombre|capfirst }}</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit" name="con_ia" value="1" class="rounded-full bg-vino px-4 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">✨ Generar borrador con IA</button>
+      <button type="submit" name="con_ia" value="0" class="rounded-full px-4 py-2.5 text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Escribirlo a mano</button>
+    </form>
+    {% if reportes %}
+    <ul class="mt-5 divide-y divide-gris-borde">
+      {% for r in reportes %}
+      <li class="flex flex-wrap items-center justify-between gap-2 py-2.5">
+        <span class="text-sm"><span class="font-semibold capitalize text-vino">{{ r.mes|date:"F Y" }}</span>{% if r.generado_con_ia %} <span class="rounded bg-lila/30 px-1.5 text-[10px] font-semibold text-vino">IA</span>{% endif %}</span>
+        <span class="flex items-center gap-2">
+          <span class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {% if r.estado == 'aprobado' %}bg-[#E6F4EA] text-[#1E6B34] ring-[#1E6B34]/25{% else %}bg-fondo-suave text-gris-txt ring-gris-borde{% endif %}">{% if r.estado == 'aprobado' %}Aprobado{% else %}Borrador{% endif %}</span>
+          <a href="{% url 'reports:editar' r.pk %}" class="rounded-full px-3 py-1 text-xs font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Abrir</a>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block page_scripts %}{% include "metrics/_grafico.html" %}{% endblock %}

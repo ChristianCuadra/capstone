@@ -1,0 +1,37 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}Solicitudes{% endblock %}
+
+{% block content %}
+<header>
+  <h1 class="font-serif text-3xl text-vino lg:text-4xl">Solicitudes de clientes</h1>
+  <p class="mt-1 text-sm">Pedidos y archivos que los clientes envían desde su portal.</p>
+</header>
+
+<nav class="mt-6 flex flex-wrap gap-2" aria-label="Filtrar por estado">
+  <a href="{% url 'content:panel_solicitudes' %}" class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ring-gris-borde {% if not estado %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Todas</a>
+  {% for clave, nombre in estados %}
+  <a href="?estado={{ clave }}" class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ring-gris-borde {% if estado == clave %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">{{ nombre }}{% for k, n in conteo.items %}{% if k == clave %} ({{ n }}){% endif %}{% endfor %}</a>
+  {% endfor %}
+</nav>
+
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white">
+  {% if not solicitudes %}
+  <p class="px-5 py-14 text-center text-sm">No hay solicitudes{% if estado %} en este estado{% endif %}.</p>
+  {% else %}
+  <ul class="divide-y divide-gris-borde">
+    {% for s in solicitudes %}
+    <li>
+      <a href="{% url 'content:panel_solicitud' s.pk %}" class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-fondo-suave">
+        <span>
+          <span class="block font-semibold text-vino">{{ s.asunto }}</span>
+          <span class="block text-xs">{{ s.cliente.nombre }} · {{ s.creado_por.get_full_name|default:s.creado_por.email|default:"—" }} · actualizada {{ s.actualizado_en|date:"j M Y, H:i" }}</span>
+        </span>
+        {% include "content/_estado_solicitud.html" with estado=s.estado etiqueta=s.get_estado_display %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

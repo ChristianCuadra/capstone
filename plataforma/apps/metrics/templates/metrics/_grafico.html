@@ -1,0 +1,28 @@
+{% include "partials/chartjs.html" %}
+<script>
+  (() => {
+    const fuente = document.getElementById('datos-metricas');
+    const lienzo = document.getElementById('grafico-metricas');
+    if (!fuente || !lienzo) return;
+    const d = JSON.parse(fuente.textContent);
+    new Chart(lienzo, {
+      type: 'line',
+      data: {
+        labels: d.fechas,
+        datasets: [
+          { label: 'Alcance', data: d.alcance, borderColor: '#522136', backgroundColor: '#522136', tension: 0.3, pointRadius: 2 },
+          { label: 'Interacciones', data: d.interacciones, borderColor: '#E18BA6', backgroundColor: '#E18BA6', tension: 0.3, pointRadius: 2, yAxisID: 'y2' },
+        ],
+      },
+      options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top', align: 'end' } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, border: { display: false }, title: { display: true, text: 'Alcance' } },
+          y2: { beginAtZero: true, position: 'right', grid: { display: false }, title: { display: true, text: 'Interacciones' } },
+        },
+      },
+    });
+  })();
+</script>

@@ -89,6 +89,7 @@ TEMPLATES = [
                 "apps.website.context_processors.agencia",
                 "apps.website.context_processors.analitica",
                 "apps.website.context_processors.metadatos_pagina",
+                "apps.notifications.context_processors.notificaciones",
             ],
         },
     },
@@ -249,6 +250,13 @@ AI_API_KEY = config("AI_API_KEY", default="")
 # gemini-2.5-flash ya no se habilita para cuentas nuevas de Google AI Studio (oct. 2026).
 # Flash-Lite: borradores de igual calidad en ~3 s; gemini-3.8-flash tardaba 18-50 s según la demanda.
 AI_MODEL = config("AI_MODEL", default="") or "gemini-3.5-flash-lite"
+# Respaldo con otros proveedores gratuitos (API compatible con OpenAI). Si Gemini se queda sin cuota, falla o no
+# tiene clave, se intenta con el siguiente de AI_PROVEEDORES que tenga clave. Ver apps/ai/proveedores.py.
+AI_PROVEEDORES = [p.strip() for p in config("AI_PROVEEDORES", default="gemini,groq,openrouter").split(",") if p.strip()]
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
+GROQ_MODEL = config("GROQ_MODEL", default="") or "llama-3.3-70b-versatile"
+OPENROUTER_API_KEY = config("OPENROUTER_API_KEY", default="")
+OPENROUTER_MODEL = config("OPENROUTER_MODEL", default="") or "openrouter/free"
 EMAIL_API_KEY = config("EMAIL_API_KEY", default="")
 
 # Correo saliente: activación de cuentas (PC-AUT-07), recuperar contraseña y envío de cotizaciones.

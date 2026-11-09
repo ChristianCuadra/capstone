@@ -1,0 +1,27 @@
+{% extends "crm/base_panel.html" %}
+
+{% block page_title %}{{ solicitud.asunto }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'content:panel_solicitudes' %}" class="text-sm font-medium text-malva hover:text-vino">← Volver a solicitudes</a>
+<header class="mt-3 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="font-serif text-3xl text-vino">{{ solicitud.asunto }}</h1>
+      {% include "content/_estado_solicitud.html" with estado=solicitud.estado etiqueta=solicitud.get_estado_display %}
+    </div>
+    <p class="mt-1 text-sm">{{ solicitud.cliente.nombre }} · creada el {{ solicitud.creado_en|date:"j M Y, H:i" }}</p>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    {% if solicitud.estado == "cerrada" %}
+    <button type="submit" name="accion" value="reabrir" class="rounded-full px-4 py-2 text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Reabrir</button>
+    {% else %}
+    <button type="submit" name="accion" value="cerrar" class="rounded-full px-4 py-2 text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Cerrar solicitud</button>
+    {% endif %}
+  </form>
+</header>
+<div class="mt-6">
+  {% include "content/_hilo_solicitud.html" with vista_archivo="content:panel_solicitud_archivo" puede_responder=True %}
+</div>
+{% endblock %}

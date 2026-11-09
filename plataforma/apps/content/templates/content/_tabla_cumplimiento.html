@@ -1,0 +1,31 @@
+{# Tabla de cumplimiento de un cliente. Parámetros: c (resultado de cumplimiento_cliente), mostrar_programado. #}
+{% if c.filas %}
+<div class="overflow-x-auto">
+  <table class="w-full text-left text-sm">
+    <thead class="text-[11px] uppercase tracking-[0.12em] text-malva">
+      <tr>
+        <th scope="col" class="py-2 pr-4 font-semibold">Entregable</th>
+        <th scope="col" class="py-2 pr-4 text-right font-semibold">Comprometido</th>
+        {% if mostrar_programado %}<th scope="col" class="py-2 pr-4 text-right font-semibold">Programado</th>{% endif %}
+        <th scope="col" class="py-2 pr-4 text-right font-semibold">Entregado</th>
+        <th scope="col" class="py-2 pr-4 text-right font-semibold">Aprobado</th>
+        <th scope="col" class="py-2 font-semibold">Estado</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gris-borde">
+      {% for f in c.filas %}
+      <tr>
+        <th scope="row" class="py-2.5 pr-4 font-semibold text-vino">{{ f.tipo }}</th>
+        <td class="py-2.5 pr-4 text-right tabular-nums">{{ f.comprometido }}</td>
+        {% if mostrar_programado %}<td class="py-2.5 pr-4 text-right tabular-nums">{{ f.programado }}</td>{% endif %}
+        <td class="py-2.5 pr-4 text-right tabular-nums">{{ f.entregado }}</td>
+        <td class="py-2.5 pr-4 text-right tabular-nums">{{ f.aprobado }}</td>
+        <td class="py-2.5">{% include "content/_badge_cumplimiento.html" with estado=f.estado etiqueta=f.etiqueta %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-sm">{% if c.plan %}El plan {{ c.plan.nombre }} no tiene entregables con cuota mensual.{% else %}Sin plan contratado.{% endif %}</p>
+{% endif %}

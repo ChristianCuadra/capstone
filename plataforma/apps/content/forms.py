@@ -14,7 +14,13 @@ class PiezaForm(forms.ModelForm):
 
     class Meta:
         model = PiezaContenido
-        fields = ["titulo", "texto", "red_social", "fecha_programada", "archivo"]
+        fields = ["titulo", "texto", "red_social", "tipo_entregable", "fecha_programada", "archivo", "texto_generado_ia"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.catalog.models import TipoEntregable
+
+        self.fields["tipo_entregable"].queryset = TipoEntregable.objects.filter(activo=True)
 
     def clean_archivo(self):
         archivo = self.cleaned_data.get("archivo")

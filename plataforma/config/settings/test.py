@@ -20,3 +20,5 @@ EXIGIR_2FA_EQUIPO = False
 
 # Los tests nunca llaman a Gemini aunque .env tenga clave: los que prueban la IA la simulan con override_settings.
 AI_API_KEY = ""
+GROQ_API_KEY = ""
+OPENROUTER_API_KEY = ""

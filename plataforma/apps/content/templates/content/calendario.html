@@ -68,6 +68,21 @@
 </section>
 {% endif %}
 
+{# ── Cumplimiento del plan del mes mostrado (PC-CUM-02) ─────────────── #}
+{% if cumplimiento and cumplimiento.filas %}
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white p-5 shadow-sm" aria-labelledby="titulo-cumplimiento">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-malva">Cumplimiento de {{ mes_nombre }} {{ anio }}</p>
+      <h2 id="titulo-cumplimiento" class="font-serif text-xl text-vino">{{ cumplimiento.entregado }} de {{ cumplimiento.comprometido }} entregables{% if cumplimiento.porcentaje is not None %} ({{ cumplimiento.porcentaje }}%){% endif %}</h2>
+    </div>
+    {% include "content/_badge_cumplimiento.html" with estado=cumplimiento.estado etiqueta=cumplimiento.etiqueta %}
+  </div>
+  {% include "content/_tabla_cumplimiento.html" with c=cumplimiento mostrar_programado=False %}
+  <p class="mt-2 text-[11px] text-gris-txt">Entregado: piezas que la agencia ya te envió (en revisión, aprobadas o publicadas). Aprobado: las que aprobaste o ya se publicaron.</p>
+</section>
+{% endif %}
+
 {# ── Leyenda ────────────────────────────────────────────────────────── #}
 <ul class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs" aria-label="Estados">
   {% for clave, nombre in estados %}

@@ -15,6 +15,12 @@
   <script>
     // La cabecera de cada página (primera <header> del contenido) sigue al mouse con su foco de luz.
     document.querySelector('.app-main > header')?.setAttribute('data-foco', '');
+    // Formularios con data-un-envio: se desactiva el botón al enviar para no duplicar (doble clic).
+    document.querySelectorAll('form[data-un-envio]').forEach((f) => f.addEventListener('submit', (e) => {
+      const boton = e.submitter || f.querySelector('[type=submit]');
+      // Se espera a que corran los demás manejadores: si alguno detuvo el envío (p. ej. el modal de confirmación), no se bloquea.
+      if (boton) { setTimeout(() => { if (!e.defaultPrevented) { boton.disabled = true; boton.classList.add('opacity-60'); } }, 0); }
+    }));
   </script>
   {% include "website/_movimiento.html" %}
   {% block scripts %}{% endblock %}

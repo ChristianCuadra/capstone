@@ -16,6 +16,9 @@ urlpatterns = [
     # activación de la cuenta del cliente invitado (antes de allauth para que no la tape).
     path("accounts/activar/<uidb64>/<token>/", activar_cuenta, name="cuenta_activar"),
     path("accounts/", include("allauth.urls")),
+    path("notificaciones/", include("apps.notifications.urls")),
+    path("panel/metricas/", include("apps.metrics.urls")),
+    path("", include("apps.reports.urls")),
     path("panel/", include("apps.crm.urls")),
     
     # Rutas del Sprint 3 (content/portal) cargadas sin prefijo para que respondan /panel/... y /portal/...

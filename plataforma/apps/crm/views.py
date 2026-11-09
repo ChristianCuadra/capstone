@@ -108,7 +108,14 @@ def contexto_panel(request, seccion, **context):
         "cargo": u.get_rol_display() if u.rol else ("Administradora" if u.is_superuser else "Equipo"),
         "iniciales": _iniciales(u),
     }
-    context["panel_badges"] = {"prospectos": Prospecto.objects.filter(etapa=Prospecto.Etapa.NUEVO).count()}
+    from apps.content.models import Solicitud
+
+    context["panel_badges"] = {
+        "prospectos": Prospecto.objects.filter(etapa=Prospecto.Etapa.NUEVO).count(),
+        "solicitudes": Solicitud.all_objects.filter(
+            cliente__in=clientes_visibles(u), estado=Solicitud.Estado.ABIERTA
+        ).count(),
+    }
     context["panel_clientes"] = list(clientes_visibles(u).filter(activo=True).values("pk", "nombre"))
     context["panel_cliente_activo"] = getattr(request, "client_id", None)
     # Exportar prospectos y gestionar datos personales: solo administración (no colaboradoras).

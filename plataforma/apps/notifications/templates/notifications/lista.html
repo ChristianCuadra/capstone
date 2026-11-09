@@ -1,0 +1,39 @@
+{% extends layout %}
+
+{% block page_title %}Notificaciones{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="font-serif text-3xl text-vino lg:text-4xl">Notificaciones</h1>
+    <p class="mt-1 text-sm">Avisos de piezas por revisar, solicitudes y respuestas. También te llegan por correo.</p>
+  </div>
+  {% if notificaciones_sin_leer %}
+  <form method="post" action="{% url 'notifications:marcar_todas' %}">
+    {% csrf_token %}
+    <button type="submit" class="rounded-full px-4 py-2 text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Marcar todas como leídas</button>
+  </form>
+  {% endif %}
+</header>
+
+<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+  {% if not avisos %}
+  <p class="px-5 py-14 text-center text-sm">No tienes notificaciones.</p>
+  {% else %}
+  <ul class="divide-y divide-gris-borde">
+    {% for a in avisos %}
+    <li>
+      <a href="{% url 'notifications:abrir' a.pk %}" class="flex items-start gap-3 px-5 py-4 hover:bg-fondo-suave">
+        <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {% if a.leida %}bg-gris-borde{% else %}bg-rosa{% endif %}" aria-hidden="true"></span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm {% if a.leida %}text-gris-txt{% else %}font-semibold text-vino{% endif %}">{{ a.titulo }}{% if not a.leida %} <span class="sr-only">(sin leer)</span>{% endif %}</span>
+          {% if a.mensaje %}<span class="mt-0.5 block text-xs">{{ a.mensaje }}</span>{% endif %}
+        </span>
+        <time class="shrink-0 text-xs text-gris-txt" datetime="{{ a.creado_en|date:'c' }}">{{ a.creado_en|date:"j M, H:i" }}</time>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

@@ -8,8 +8,6 @@ from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
-from django.core.mail import send_mail
-from django.conf import settings
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.urls import reverse
@@ -17,6 +15,8 @@ from apps.accounts.activacion import Estado, estado_cuenta
 from apps.accounts.decorators import requiere_equipo, requiere_rol_cliente
 from apps.core.access import clientes_visibles
 from apps.accounts.models import Rol
+from apps.catalog.models import TipoEntregable
+from apps.content.cumplimiento import cumplimiento_cliente
 from apps.content.forms import PiezaForm
 from apps.content.models import PiezaContenido, EstadoPieza, ComentarioPieza, HistorialVersionPieza
 
@@ -168,6 +168,7 @@ def calendario(request):
         request,
         "calendario",
         resumen_plan=_resumen_plan(cliente, request.user),
+        cumplimiento=cumplimiento_cliente(cliente, primero, hoy) if cliente else None,
         mes_nombre=MESES[primero.month - 1],
         anio=primero.year,
         mes_param=f"{primero.year}-{primero.month:02d}",
@@ -306,27 +307,18 @@ def aprobacion(request):
     return render(request, "content/aprobacion.html", context)
 
 def notificar_agencia_solicitud_cambios(request, pieza, comentario):
-    """Notifica al creador o equipo de la agencia cuando se solicitan cambios."""
-    destinatarios = []
-    if pieza.creado_por and pieza.creado_por.email:
-        destinatarios.append(pieza.creado_por.email)
+    """Avisa al equipo que el cliente pidió cambios: a quien creó la pieza o, si no hay, al equipo del cliente (PC-SOL-02)."""
+    from apps.notifications.services import equipo_del_cliente, notificar
 
-    if destinatarios:
-        asunto = f"Cambios solicitados en pieza: {pieza.titulo} ({pieza.cliente.nombre})"
-        mensaje = (
-            f"El cliente {request.user.get_full_name() or request.user.username} ha solicitado cambios en la pieza '{pieza.titulo}'.\n\n"
-            f"Observaciones:\n\"{comentario}\"\n\n"
-            f"Puedes ingresar al panel interno para realizar las correcciones necesarias."
-        )
-        try:
-            send_mail(asunto, mensaje, settings.DEFAULT_FROM_EMAIL, destinatarios, fail_silently=True)
-        except Exception:
-            pass
-
-@requiere_rol_cliente
-def metricas(request):
-    context = contexto_portal(request, "metricas", hay_datos=False)
-    return render(request, "content/metricas.html", context)
+    destinatarios = [pieza.creado_por] if pieza.creado_por and pieza.creado_por.is_active else list(equipo_del_cliente(pieza.cliente))
+    cliente_nombre = request.user.get_full_name() or request.user.username
+    notificar(
+        destinatarios,
+        f"Cambios solicitados: {pieza.titulo} ({pieza.cliente.nombre})",
+        f"{cliente_nombre} pidió cambios en la pieza «{pieza.titulo}»: {comentario}"[:500],
+        url=reverse("content:interna_calendario") + f"?cliente_id={pieza.cliente_id}&mes=todos",
+        request=request,
+    )
 
 
 # ==========================================
@@ -378,7 +370,7 @@ def interna_calendario(request):
         )
     # Un mes se lee en orden de publicación; la lista completa, de lo más nuevo a lo más antiguo.
     orden = "-fecha_programada" if todos_los_meses else "fecha_programada"
-    piezas_generales = piezas_generales.select_related("cliente").order_by(orden)
+    piezas_generales = piezas_generales.select_related("cliente", "tipo_entregable").order_by(orden)
 
     nombre_usuario = user.get_full_name() or user.username or user.email
     iniciales = "".join(p[0] for p in nombre_usuario.replace("@", " ").split()[:2]).upper()
@@ -393,6 +385,7 @@ def interna_calendario(request):
             "piezas": piezas_generales,
             "piezas_rechazadas": piezas_rechazadas,
             "estados": EstadoPieza.choices,
+            "tipos_entregable": TipoEntregable.objects.filter(activo=True),
             "todos_los_meses": todos_los_meses,
             "mes_nombre": MESES[primero.month - 1],
             "anio": primero.year,
@@ -410,29 +403,19 @@ def interna_calendario(request):
     )
 
 def notificar_pieza_en_revision(request, pieza):
-    usuarios_cliente = pieza.cliente.usuarios.filter(rol=Rol.CLIENTE_APROBADOR, is_active=True)
-    # Solo cuentas activadas: una invitada todavía no puede iniciar sesión para revisar.
-    destinatarios = [u.email for u in usuarios_cliente if u.email and estado_cuenta(u) == Estado.ACTIVA]
+    """Avisa a los clientes aprobadores con cuenta activada que hay una pieza por revisar (PC-SOL-02)."""
+    from apps.notifications.services import notificar, usuarios_del_cliente
 
-    if destinatarios:
-        url_directa = request.build_absolute_uri(reverse("content:aprobacion"))
-        asunto = f"Nueva pieza pendiente de aprobación: {pieza.titulo}"
-        mensaje = (
-            f"Hola,\n\nSe ha cargado una nueva pieza de contenido para {pieza.cliente.nombre} "
-            f"programada para el {_fecha_local(pieza.fecha_programada)}.\n\n"
-            f"Puedes revisar y aprobarla directamente en el portal:\n{url_directa}\n\n"
-            f"Saludos,\nAgencia Cosmopolitan"
-        )
-        try:
-            send_mail(
-                asunto,
-                mensaje,
-                settings.DEFAULT_FROM_EMAIL,
-                destinatarios,
-                fail_silently=True
-            )
-        except Exception:
-            pass
+    # Solo cuentas activadas: una invitada todavía no puede iniciar sesión para revisar.
+    destinatarios = [u for u in usuarios_del_cliente(pieza.cliente, solo_aprobadores=True) if estado_cuenta(u) == Estado.ACTIVA]
+    notificar(
+        destinatarios,
+        f"Nueva pieza por aprobar: {pieza.titulo}",
+        f"Se cargó una pieza para {pieza.cliente.nombre} programada para el {_fecha_local(pieza.fecha_programada)}.",
+        url=reverse("content:aprobacion"),
+        request=request,
+        asunto=f"Nueva pieza pendiente de aprobación: {pieza.titulo}",
+    )
 
 @requiere_equipo
 def crear_pieza(request):

@@ -12,3 +12,5 @@ python-decouple==3.8
 whitenoise==6.7.*
 pillow>=11.0
 gunicorn==23.0.*  # solo para el plan B en Render (Vercel no lo usa)
+openpyxl==3.1.*  # lectura de métricas en Excel (PC-MET-01)
+fpdf2==2.8.*  # PDF del reporte mensual, Python puro (PC-REP-01)

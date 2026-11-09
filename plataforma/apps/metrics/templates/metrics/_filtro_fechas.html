@@ -1,0 +1,12 @@
+{# Filtro por rango de fechas (PC-DSH-01, criterio 2). Parámetros: atajos, atajo, desde, hasta, extra (campos ocultos opcionales: cliente). #}
+<div class="flex flex-wrap items-end gap-2">
+  {% for clave, nombre in atajos %}
+  <a href="?periodo={{ clave }}{% if cliente_param %}&cliente={{ cliente_param }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset ring-gris-borde {% if atajo == clave %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">{{ nombre }}</a>
+  {% endfor %}
+  <form method="get" class="flex flex-wrap items-end gap-2">
+    {% if cliente_param %}<input type="hidden" name="cliente" value="{{ cliente_param }}">{% endif %}
+    <label class="text-xs font-semibold text-malva">Desde <input type="date" name="desde" value="{{ desde|date:'Y-m-d' }}" class="mt-0.5 block rounded-lg border border-gris-borde px-2 py-1 text-xs text-vino"></label>
+    <label class="text-xs font-semibold text-malva">Hasta <input type="date" name="hasta" value="{{ hasta|date:'Y-m-d' }}" class="mt-0.5 block rounded-lg border border-gris-borde px-2 py-1 text-xs text-vino"></label>
+    <button type="submit" class="rounded-full bg-vino px-3 py-1.5 text-xs font-semibold text-white hover:bg-vino-oscuro">Aplicar</button>
+  </form>
+</div>

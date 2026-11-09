@@ -15,6 +15,7 @@ class RegistroIA(models.Model):
     modelo = models.CharField(max_length=60)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     prospecto = models.ForeignKey("crm.Prospecto", null=True, blank=True, on_delete=models.SET_NULL, related_name="registros_ia")
+    cliente = models.ForeignKey("clients.Cliente", null=True, blank=True, on_delete=models.SET_NULL, related_name="registros_ia")
     tokens_entrada = models.PositiveIntegerField(null=True, blank=True)
     tokens_salida = models.PositiveIntegerField(null=True, blank=True)
     duracion_ms = models.PositiveIntegerField(null=True, blank=True)
