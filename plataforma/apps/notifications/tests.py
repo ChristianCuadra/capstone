@@ -108,3 +108,36 @@ class NotificacionesTests(TestCase):
         salida = StringIO()
         call_command("reintentar_correos", stdout=salida)
         self.assertIn("Correos revisados: 0", salida.getvalue())
+
+
+class ListaNotificacionesTests(TestCase):
+    """Al abrir o marcar leída, el aviso sale de la lista; las leídas quedan en su pestaña."""
+
+    def setUp(self):
+        self.u = get_user_model().objects.create_user("apa", "apa@x.cl", "x", rol=Rol.CLIENTE_APROBADOR)
+        self.otro = get_user_model().objects.create_user("otro", "otro@x.cl", "x", rol=Rol.CLIENTE_APROBADOR)
+        self.a1 = Notificacion.objects.create(usuario=self.u, titulo="Aviso uno")
+        self.a2 = Notificacion.objects.create(usuario=self.u, titulo="Aviso dos")
+        self.client.force_login(self.u)
+
+    def test_abrir_lo_saca_de_sin_leer_y_queda_en_leidas(self):
+        self.client.get(reverse("notifications:abrir", args=[self.a1.pk]))
+        sin_leer = self.client.get(reverse("notifications:lista"))
+        self.assertNotContains(sin_leer, "Aviso uno")
+        self.assertContains(sin_leer, "Aviso dos")
+        self.assertContains(self.client.get(reverse("notifications:lista"), {"ver": "leidas"}), "Aviso uno")
+
+    def test_marcar_una_sin_abrirla(self):
+        self.client.post(reverse("notifications:marcar_leida", args=[self.a2.pk]))
+        self.a2.refresh_from_db()
+        self.assertTrue(self.a2.leida)
+
+    def test_marcar_todas_deja_la_lista_vacia(self):
+        self.client.post(reverse("notifications:marcar_todas"))
+        self.assertContains(self.client.get(reverse("notifications:lista")), "Estás al día")
+
+    def test_no_marca_avisos_ajenos(self):
+        ajeno = Notificacion.objects.create(usuario=self.otro, titulo="Ajeno")
+        self.client.post(reverse("notifications:marcar_leida", args=[ajeno.pk]))
+        ajeno.refresh_from_db()
+        self.assertFalse(ajeno.leida)

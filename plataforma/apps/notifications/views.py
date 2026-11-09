@@ -23,8 +23,19 @@ def _contexto_layout(request, **context):
 
 @login_required
 def lista(request):
-    avisos = Notificacion.objects.filter(usuario=request.user)[:100]
-    return render(request, "notifications/lista.html", _contexto_layout(request, avisos=avisos))
+    """Por defecto solo las sin leer: al abrir una (o marcarla leída) sale de la lista. Las leídas quedan
+    en su propia pestaña, por si hay que volver a una."""
+    leidas = request.GET.get("ver") == "leidas"
+    avisos = Notificacion.objects.filter(usuario=request.user, leida=leidas)[:100]
+    return render(request, "notifications/lista.html", _contexto_layout(request, avisos=avisos, viendo_leidas=leidas))
+
+
+@login_required
+@require_POST
+def marcar_leida(request, pk):
+    """Quitar un aviso de la lista sin abrirlo."""
+    Notificacion.objects.filter(pk=pk, usuario=request.user).update(leida=True)
+    return redirect("notifications:lista")
 
 
 @login_required

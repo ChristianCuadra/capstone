@@ -8,7 +8,7 @@
     <h1 class="font-serif text-3xl text-vino lg:text-4xl">Notificaciones</h1>
     <p class="mt-1 text-sm">Avisos de piezas por revisar, solicitudes y respuestas. También te llegan por correo.</p>
   </div>
-  {% if notificaciones_sin_leer %}
+  {% if not viendo_leidas and avisos %}
   <form method="post" action="{% url 'notifications:marcar_todas' %}">
     {% csrf_token %}
     <button type="submit" class="rounded-full px-4 py-2 text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Marcar todas como leídas</button>
@@ -16,21 +16,34 @@
   {% endif %}
 </header>
 
-<section class="mt-6 rounded-2xl border border-gris-borde bg-white">
+<nav class="mt-6 flex gap-2" aria-label="Notificaciones">
+  <a href="{% url 'notifications:lista' %}" class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ring-gris-borde {% if not viendo_leidas %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Sin leer{% if notificaciones_sin_leer %} ({{ notificaciones_sin_leer }}){% endif %}</a>
+  <a href="?ver=leidas" class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ring-gris-borde {% if viendo_leidas %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">Leídas</a>
+</nav>
+
+<section class="mt-4 rounded-2xl border border-gris-borde bg-white">
   {% if not avisos %}
-  <p class="px-5 py-14 text-center text-sm">No tienes notificaciones.</p>
+  <p class="px-5 py-14 text-center text-sm">{% if viendo_leidas %}Aún no tienes notificaciones leídas.{% else %}Estás al día: no tienes notificaciones sin leer.{% endif %}</p>
   {% else %}
   <ul class="divide-y divide-gris-borde">
     {% for a in avisos %}
-    <li>
-      <a href="{% url 'notifications:abrir' a.pk %}" class="flex items-start gap-3 px-5 py-4 hover:bg-fondo-suave">
+    <li class="flex items-center gap-2 pr-3">
+      <a href="{% url 'notifications:abrir' a.pk %}" class="flex min-w-0 flex-1 items-start gap-3 px-5 py-4 hover:bg-fondo-suave">
         <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {% if a.leida %}bg-gris-borde{% else %}bg-rosa{% endif %}" aria-hidden="true"></span>
         <span class="min-w-0 flex-1">
-          <span class="block text-sm {% if a.leida %}text-gris-txt{% else %}font-semibold text-vino{% endif %}">{{ a.titulo }}{% if not a.leida %} <span class="sr-only">(sin leer)</span>{% endif %}</span>
+          <span class="block text-sm {% if a.leida %}text-gris-txt{% else %}font-semibold text-vino{% endif %}">{{ a.titulo }}</span>
           {% if a.mensaje %}<span class="mt-0.5 block text-xs">{{ a.mensaje }}</span>{% endif %}
         </span>
         <time class="shrink-0 text-xs text-gris-txt" datetime="{{ a.creado_en|date:'c' }}">{{ a.creado_en|date:"j M, H:i" }}</time>
       </a>
+      {% if not a.leida %}
+      <form method="post" action="{% url 'notifications:marcar_leida' a.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="grid h-8 w-8 place-items-center rounded-full text-malva hover:bg-fondo-suave hover:text-vino" title="Marcar como leída" aria-label="Marcar como leída: {{ a.titulo }}">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </form>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>

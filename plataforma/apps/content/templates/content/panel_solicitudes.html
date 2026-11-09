@@ -15,13 +15,19 @@
     <a href="?estado={{ clave }}&cliente={{ cliente.pk|default:'' }}" class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ring-gris-borde {% if estado == clave %}bg-vino text-white{% else %}text-vino hover:bg-fondo-suave{% endif %}">{{ nombre }}{% for k, n in conteo.items %}{% if k == clave %} ({{ n }}){% endif %}{% endfor %}</a>
     {% endfor %}
   </nav>
-  <form method="get" class="flex items-center gap-2">
+  <form method="get" id="filtro-cliente-form" class="flex items-center gap-2" role="search">
     {% if estado %}<input type="hidden" name="estado" value="{{ estado }}">{% endif %}
+    <input type="hidden" name="cliente" id="filtro-cliente-id" value="{{ cliente.pk|default:'' }}">
     <label for="filtro-cliente" class="text-xs font-semibold text-malva">Cliente</label>
-    <select id="filtro-cliente" name="cliente" onchange="this.form.submit()" class="rounded-full border border-gris-borde bg-white px-3.5 py-1.5 text-sm text-vino">
-      <option value="">Todos los clientes</option>
-      {% for c in clientes %}<option value="{{ c.pk }}"{% if cliente and c.pk == cliente.pk %} selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
-    </select>
+    <div class="relative">
+      <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-malva" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
+      <input id="filtro-cliente" list="lista-clientes" autocomplete="off" placeholder="Todos los clientes" value="{{ cliente.nombre|default:'' }}"
+             class="w-64 rounded-full border border-gris-borde bg-white py-1.5 pl-9 pr-8 text-sm text-vino placeholder:text-malva focus:border-rosa focus:ring-rosa">
+      {% if cliente %}<button type="button" id="filtro-cliente-limpiar" class="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-malva hover:bg-fondo-suave hover:text-vino" aria-label="Quitar filtro de cliente">×</button>{% endif %}
+      <datalist id="lista-clientes">
+        {% for c in clientes %}<option value="{{ c.nombre }}" data-id="{{ c.pk }}"></option>{% endfor %}
+      </datalist>
+    </div>
   </form>
 </div>
 
@@ -44,4 +50,29 @@
   </ul>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+  // Filtro de cliente con búsqueda: se escribe parte del nombre y se elige de la lista sugerida.
+  (() => {
+    const form = document.getElementById('filtro-cliente-form');
+    const campo = document.getElementById('filtro-cliente');
+    const oculto = document.getElementById('filtro-cliente-id');
+    const opciones = [...document.querySelectorAll('#lista-clientes option')];
+    // Sin tildes ni mayúsculas: «cafe» encuentra «Café Prueba».
+    const normalizar = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const aplicar = () => {
+      const texto = normalizar(campo.value);
+      if (!texto) { oculto.value = ''; form.submit(); return; }
+      const exacta = opciones.find((o) => normalizar(o.value) === texto);
+      const parciales = opciones.filter((o) => normalizar(o.value).includes(texto));
+      const elegida = exacta || (parciales.length === 1 ? parciales[0] : null);
+      if (elegida) { oculto.value = elegida.dataset.id; form.submit(); }
+    };
+    campo.addEventListener('change', aplicar);
+    campo.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); aplicar(); } });
+    document.getElementById('filtro-cliente-limpiar')?.addEventListener('click', () => { campo.value = ''; oculto.value = ''; form.submit(); });
+  })();
+</script>
 {% endblock %}
