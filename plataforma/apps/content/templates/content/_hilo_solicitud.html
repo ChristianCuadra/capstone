@@ -5,7 +5,7 @@
     <article class="w-full max-w-2xl rounded-2xl border p-4 {% if m.es_de_la_agencia %}border-gris-borde bg-white{% else %}border-rosa/40 bg-rosa/10{% endif %}">
       <header class="flex flex-wrap items-baseline justify-between gap-2">
         <p class="text-sm font-semibold text-vino">
-          {{ m.usuario.get_full_name|default:m.usuario.email|default:"Usuario eliminado" }}
+          {% if m.usuario %}{{ m.usuario.get_full_name|default:m.usuario.email }}{% else %}Usuario eliminado{% endif %}
           <span class="ml-1 text-xs font-normal text-gris-txt">{% if m.es_de_la_agencia %}Agencia{% else %}Cliente{% endif %}</span>
         </p>
         <time class="text-xs text-gris-txt" datetime="{{ m.creado_en|date:'c' }}">{{ m.creado_en|date:"j M Y, H:i" }}</time>

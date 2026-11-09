@@ -20,7 +20,7 @@
         <a href="{% url 'content:solicitud' s.pk %}" class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-fondo-suave">
           <span>
             <span class="block font-semibold text-vino">{{ s.asunto }}</span>
-            <span class="block text-xs">Enviada por {{ s.creado_por.get_full_name|default:s.creado_por.email|default:"—" }} · {{ s.creado_en|date:"j M Y" }}</span>
+            <span class="block text-xs">Enviada por {% if s.creado_por %}{{ s.creado_por.get_full_name|default:s.creado_por.email }}{% else %}—{% endif %} · {{ s.creado_en|date:"j M Y" }}</span>
           </span>
           {% include "content/_estado_solicitud.html" with estado=s.estado etiqueta=s.get_estado_display %}
         </a>

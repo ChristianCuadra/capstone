@@ -9,7 +9,7 @@
   <div>
     <h1 class="font-serif text-3xl text-vino">Reporte de {{ mes_nombre }}</h1>
     <p class="mt-1 text-sm">{{ reporte.cliente.nombre }} ·
-      {% if reporte.estado == "aprobado" %}Aprobado por {{ reporte.aprobado_por.get_full_name|default:reporte.aprobado_por.email }} el {{ reporte.fecha_aprobacion|date:"j M Y, H:i" }}: el cliente puede descargarlo.
+      {% if reporte.estado == "aprobado" %}Aprobado{% if reporte.aprobado_por %} por {{ reporte.aprobado_por.get_full_name|default:reporte.aprobado_por.email }}{% endif %} el {{ reporte.fecha_aprobacion|date:"j M Y, H:i" }}: el cliente puede descargarlo.
       {% else %}Borrador: el cliente todavía no lo ve.{% endif %}
     </p>
   </div>
