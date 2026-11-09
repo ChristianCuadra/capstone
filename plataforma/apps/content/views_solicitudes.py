@@ -180,16 +180,27 @@ def _solicitudes_del_equipo(user):
 def panel_solicitudes(request):
     from apps.crm.views import contexto_panel
 
-    solicitudes = _solicitudes_del_equipo(request.user).select_related("cliente", "creado_por")
+    from .views import _entero
+
+    clientes = clientes_visibles(request.user).order_by("nombre")
+    # Filtro por cliente: el elegido en la página o, si no hay, el cliente activo del panel.
+    parametro = request.GET.get("cliente")
+    cliente_id = _entero(parametro) if parametro is not None else getattr(request, "client_id", None)
+    cliente = clientes.filter(pk=cliente_id).first() if cliente_id else None
+
+    base = _solicitudes_del_equipo(request.user)
+    if cliente:
+        base = base.filter(cliente=cliente)
     estado = request.GET.get("estado", "")
-    if estado in Solicitud.Estado.values:
-        solicitudes = solicitudes.filter(estado=estado)
-    else:
+    if estado not in Solicitud.Estado.values:
         estado = ""
-    conteo = {e: _solicitudes_del_equipo(request.user).filter(estado=e).count() for e in Solicitud.Estado.values}
+    solicitudes = base.filter(estado=estado) if estado else base
+    conteo = {e: base.filter(estado=e).count() for e in Solicitud.Estado.values}
     return render(request, "content/panel_solicitudes.html", contexto_panel(
         request, "solicitudes",
-        solicitudes=solicitudes, estado=estado, estados=Solicitud.Estado.choices, conteo=conteo,
+        solicitudes=solicitudes.select_related("cliente", "creado_por"),
+        estado=estado, estados=Solicitud.Estado.choices, conteo=conteo,
+        clientes=clientes, cliente=cliente,
     ))
 
 

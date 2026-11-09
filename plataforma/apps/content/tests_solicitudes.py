@@ -124,3 +124,26 @@ class SolicitudesTests(TestCase):
         self.client.force_login(self.admin)
         respuesta = self.client.get(reverse("content:panel_solicitudes"))
         self.assertEqual(respuesta.context["panel_badges"]["solicitudes"], 1)
+
+
+class FiltroClienteSolicitudesTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.a = Cliente.objects.create(nombre="Alfa")
+        self.b = Cliente.objects.create(nombre="Beta")
+        self.admin = User.objects.create_user("adm", "adm@x.cl", "x", rol=Rol.ADMINISTRADORA, is_staff=True)
+        Solicitud.all_objects.create(cliente=self.a, asunto="De Alfa")
+        Solicitud.all_objects.create(cliente=self.b, asunto="De Beta", estado=Solicitud.Estado.CERRADA)
+
+    def test_filtra_por_cliente_y_combina_con_estado(self):
+        self.client.force_login(self.admin)
+        url = reverse("content:panel_solicitudes")
+        r = self.client.get(url, {"cliente": self.a.pk})
+        self.assertContains(r, "De Alfa")
+        self.assertNotContains(r, "De Beta")
+        self.assertEqual(r.context["conteo"]["cerrada"], 0)
+        r = self.client.get(url, {"cliente": self.b.pk, "estado": "abierta"})
+        self.assertNotContains(r, "De Beta")
+        r = self.client.get(url, {"cliente": ""})
+        self.assertContains(r, "De Alfa")
+        self.assertContains(r, "De Beta")
