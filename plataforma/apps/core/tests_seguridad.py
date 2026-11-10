@@ -155,6 +155,29 @@ class DosFactoresObligatorioTests(BaseSeguridad):
         self.assertEqual(self.client.get(reverse("content:calendario")).status_code, 200)
 
 
+class ToleranciaRelojTOTPTests(TestCase):
+    """Un desfase de reloj de hasta 30 s (teléfono o servidor) no rechaza un código correcto; uno viejo sí.
+
+    Con desfases mayores (p. ej. el computador de desarrollo 34 s atrasado, 10-11-2026) hay que sincronizar el reloj.
+    """
+
+    def test_acepta_el_intervalo_vecino_y_rechaza_codigos_viejos(self):
+        import time
+        from unittest import mock
+
+        from allauth.mfa.totp.internal.auth import format_hotp_value, hotp_value, validate_totp_code
+
+        secreto = "JBSWY3DPEHPK3PXP"
+        ahora = 1_800_000_000
+        codigo_del_telefono = format_hotp_value(hotp_value(secreto, ahora // 30))
+        with mock.patch.object(time, "time", return_value=ahora - 29):  # servidor 29 s atrasado
+            self.assertTrue(validate_totp_code(secreto, codigo_del_telefono))
+        with mock.patch.object(time, "time", return_value=ahora + 30):  # servidor 30 s adelantado
+            self.assertTrue(validate_totp_code(secreto, codigo_del_telefono))
+        with mock.patch.object(time, "time", return_value=ahora + 120):  # código de hace 2 minutos
+            self.assertFalse(validate_totp_code(secreto, codigo_del_telefono))
+
+
 class ExportacionDeProspectosTests(BaseSeguridad):
     def test_colaboradora_no_exporta_datos_personales(self):
         self.client.force_login(self.colab)

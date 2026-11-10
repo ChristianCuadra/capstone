@@ -452,3 +452,62 @@ class PendientesPortalYCalendarioTests(TestCase):
         _, respuesta = self._titulos(mes="abc")
         self.assertEqual(respuesta.status_code, 200)
         self.assertFalse(respuesta.context["todos_los_meses"])
+
+
+class VerYDescargarArchivoTests(TestCase):
+    """Portal del cliente: ver en grande y descargar el archivo de la pieza antes de aprobarla."""
+
+    setUp = SeguridadPanelCalendarioTests.setUp
+
+    def _con_archivo(self, pieza, nombre="lanzamiento-final.png"):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        pieza.archivo = SimpleUploadedFile(nombre, b"\x89PNG imagen de prueba", content_type="image/png")
+        pieza.save()
+        return pieza
+
+    def test_aprobador_y_lector_descargan_el_archivo_con_su_nombre(self):
+        pieza = self._con_archivo(self.en_revision)
+        for usuario in (self.aprobador_a, self.lector_a):
+            with self.subTest(usuario=usuario.username):
+                self.client.force_login(usuario)
+                respuesta = self.client.get(reverse("content:pieza_descargar", args=[pieza.pk]))
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertIn("attachment", respuesta["Content-Disposition"])
+                self.assertIn("lanzamiento-final", respuesta["Content-Disposition"])
+
+    def test_no_se_descargan_borradores_ni_piezas_de_otra_empresa(self):
+        borrador = self._con_archivo(self.borrador)
+        self.client.force_login(self.aprobador_a)
+        self.assertEqual(self.client.get(reverse("content:pieza_descargar", args=[borrador.pk])).status_code, 404)
+        pieza = self._con_archivo(self.en_revision)
+        self.client.force_login(self.aprobador_b)
+        self.assertEqual(self.client.get(reverse("content:pieza_descargar", args=[pieza.pk])).status_code, 404)
+
+    def test_el_equipo_no_usa_la_descarga_del_portal(self):
+        pieza = self._con_archivo(self.en_revision)
+        self.client.force_login(self.colab)
+        self.assertEqual(self.client.get(reverse("content:pieza_descargar", args=[pieza.pk])).status_code, 302)
+
+    def test_aprobaciones_ofrece_ver_en_grande_y_descargar(self):
+        pieza = self._con_archivo(self.en_revision)
+        self.client.force_login(self.aprobador_a)
+        respuesta = self.client.get(reverse("content:aprobacion"))
+        self.assertContains(respuesta, "Ver en grande")
+        self.assertContains(respuesta, reverse("content:pieza_descargar", args=[pieza.pk]))
+        self.assertContains(respuesta, 'id="visor-archivo"')
+
+
+class IdaYVueltaSitioPortalTests(TestCase):
+    """El cliente puede ir del portal a la página principal y volver a su portal."""
+
+    setUp = SeguridadPanelCalendarioTests.setUp
+
+    def test_del_portal_a_la_pagina_principal_y_de_vuelta(self):
+        self.client.force_login(self.aprobador_a)
+        portal = self.client.get(reverse("content:calendario"))
+        self.assertContains(portal, f'href="{reverse("website:home")}" class="inline-flex h-9')
+        self.assertContains(portal, "Página principal")
+        inicio = self.client.get(reverse("website:home"))
+        self.assertContains(inicio, f'href="{reverse("content:calendario")}"')
+        self.assertContains(inicio, "Mi portal")

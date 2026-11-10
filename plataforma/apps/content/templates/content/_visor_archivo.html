@@ -1,0 +1,51 @@
+{# Visor a pantalla completa del archivo de una pieza (imagen o video), con botón de descarga. #}
+{# Se abre desde cualquier elemento con data-ver-archivo="<url del archivo>" (opcionales: data-descargar="<url>", data-titulo). #}
+<dialog id="visor-archivo" class="m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-black/90 backdrop:backdrop-blur-sm" aria-label="Archivo en grande">
+  <div class="flex h-full flex-col">
+    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <p id="visor-titulo" class="min-w-0 truncate font-serif text-lg text-white"></p>
+      <div class="flex shrink-0 items-center gap-2">
+        <a id="visor-descargar" href="#" class="boton-brillo inline-flex items-center gap-2 rounded-full bg-vino px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/25 shadow-lg shadow-black/30 hover:bg-vino-oscuro">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+          Descargar
+        </a>
+        <button type="button" id="visor-cerrar" class="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/25" aria-label="Cerrar">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="visor-contenido" class="flex min-h-0 flex-1 items-center justify-center px-4 pb-6 sm:px-8"></div>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const visor = document.getElementById('visor-archivo');
+    const contenido = document.getElementById('visor-contenido');
+    const titulo = document.getElementById('visor-titulo');
+    const descargar = document.getElementById('visor-descargar');
+    const esVideo = (url) => ['mp4', 'mov', 'webm'].includes(url.split('?')[0].split('.').pop().toLowerCase());
+
+    document.addEventListener('click', (e) => {
+      const disparador = e.target.closest('[data-ver-archivo]');
+      if (!disparador || !disparador.dataset.verArchivo) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const url = disparador.dataset.verArchivo;
+      const medio = document.createElement(esVideo(url) ? 'video' : 'img');
+      medio.src = url;
+      medio.className = 'max-h-full max-w-full rounded-lg object-contain shadow-2xl';
+      if (medio.tagName === 'VIDEO') { medio.controls = true; medio.autoplay = true; } else { medio.alt = disparador.dataset.titulo || 'Archivo de la pieza'; }
+      contenido.replaceChildren(medio);
+      titulo.textContent = disparador.dataset.titulo || '';
+      descargar.hidden = !disparador.dataset.descargar;
+      descargar.href = disparador.dataset.descargar || '#';
+      visor.showModal();
+    }, true);
+
+    const cerrar = () => visor.close();
+    document.getElementById('visor-cerrar').addEventListener('click', cerrar);
+    // Clic fuera de la imagen (en el fondo) también cierra.
+    visor.addEventListener('click', (e) => { if (e.target === visor || e.target === contenido) cerrar(); });
+    visor.addEventListener('close', () => contenido.replaceChildren());
+  })();
+</script>

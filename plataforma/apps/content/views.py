@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.db import transaction
-from django.http import Http404, JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.urls import reverse
 from apps.accounts.activacion import Estado, estado_cuenta
 from apps.accounts.decorators import requiere_equipo, requiere_rol_cliente
@@ -183,6 +183,32 @@ def calendario(request):
         dias_con_piezas=[{"fecha": f, "hoy": f == hoy, "piezas": por_dia[f]} for f in sorted(por_dia)],
     )
     return render(request, "content/calendario.html", context)
+
+
+@requiere_rol_cliente
+def pieza_descargar(request, pk):
+    """Descarga el archivo de una pieza con su nombre original (portal del cliente).
+
+    Revisa permisos aquí (solo piezas de su propia empresa, nunca borradores) y luego redirige a un enlace firmado
+    del bucket que ya trae la orden de descarga: el archivo no pasa por Django porque Vercel no puede devolver
+    respuestas de más de 4,5 MB, y el navegador no permite forzar la descarga desde la URL directa de otro dominio.
+    """
+    piezas = PiezaContenido.objects.filter(cliente=request.user.cliente).exclude(estado=EstadoPieza.BORRADOR)
+    pieza = _obtener_o_404(piezas, pk)
+    if not pieza.archivo:
+        raise Http404("Esta pieza no tiene archivo.")
+    nombre = pieza.archivo.name.rsplit("/", 1)[-1].replace('"', "")
+    try:
+        return redirect(pieza.archivo.storage.url(
+            pieza.archivo.name, parameters={"ResponseContentDisposition": f'attachment; filename="{nombre}"'}
+        ))
+    except TypeError:
+        pass  # almacenamiento local (desarrollo y tests): no acepta parámetros, se entrega directo
+    try:
+        abierto = pieza.archivo.open("rb")
+    except (FileNotFoundError, ValueError) as exc:
+        raise Http404("El archivo ya no está disponible.") from exc
+    return FileResponse(abierto, as_attachment=True, filename=nombre)
 
 
 @requiere_rol_cliente

@@ -159,6 +159,9 @@ LOGIN_REDIRECT_URL = "/"
 # Sin webauthn/passkeys por ahora para no depender de esas librerías extra.
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 MFA_TOTP_ISSUER = "Cosmopolitan"
+# Se acepta el código del intervalo de 30 s actual y también el anterior o el siguiente: los relojes de teléfonos y
+# servidores nunca están perfectamente sincronizados (con 0, un desfase de pocos segundos rechazaba códigos correctos).
+MFA_TOTP_TOLERANCE = 1
 # El equipo (administradora y colaboradoras) ve datos personales de todos los clientes y prospectos:
 # sin 2FA activo no entra al panel ni al admin, se le pide configurarlo primero (Ley 21.719, medidas de seguridad).
 # Solo para una emergencia (p. ej. nadie puede configurar la app) se puede apagar con EXIGIR_2FA_EQUIPO=False.

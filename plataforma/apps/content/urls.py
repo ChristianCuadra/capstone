@@ -11,6 +11,7 @@ urlpatterns = [
     path("portal/", RedirectView.as_view(pattern_name="content:calendario"), name="inicio"),
     path("portal/calendario/", views.calendario, name="calendario"),
     path("portal/aprobaciones/", views.aprobacion, name="aprobacion"),
+    path("portal/piezas/<int:pk>/descargar/", views.pieza_descargar, name="pieza_descargar"),
     path("portal/metricas/", portal_metricas, name="metricas"),
     path("portal/solicitudes/", views_solicitudes.portal_solicitudes, name="solicitudes"),
     path("portal/solicitudes/<int:pk>/", views_solicitudes.portal_solicitud, name="solicitud"),
