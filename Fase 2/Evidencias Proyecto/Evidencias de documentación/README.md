@@ -1,6 +1,6 @@
 # Evidencias de documentación
 
-Documentos Scrum de cada sprint del proyecto Plataforma Cosmopolitan (Sprint 0 a Sprint 4, en 15 semanas según la Carta Gantt).
+Documentos Scrum de cada sprint del proyecto Plataforma Cosmopolitan (Sprint 0 a Sprint 3, en 15 semanas según la Carta Gantt; el Sprint 3 es el último).
 
 Cada sprint tiene su carpeta (`Sprint 0`, `Sprint 1`, ...) con los 9 documentos:
 
