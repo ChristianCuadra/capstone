@@ -1,6 +1,6 @@
 # Evidencias de documentación
 
-Documentos Scrum de cada sprint del proyecto Plataforma Cosmopolitan (Sprint 0 a Sprint 5).
+Documentos Scrum de cada sprint del proyecto Plataforma Cosmopolitan (Sprint 0 a Sprint 3, en 15 semanas según la Carta Gantt; el Sprint 3 es el último).
 
 Cada sprint tiene su carpeta (`Sprint 0`, `Sprint 1`, ...) con los 9 documentos:
 
@@ -25,5 +25,6 @@ La carpeta `Documentos generales` reúne los documentos transversales del proyec
 | Planilla de Riesgos | Excel |
 | Plan de Pruebas | Excel |
 | Documento de Arquitectura | Word |
+| Manual de administración por rol | Word |
 
 El modelo de datos está en `Evidencias Proyecto/Base de datos` y la presentación en `Evidencias Proyecto/Presentación Proyecto.pptx`.
