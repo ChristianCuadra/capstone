@@ -146,7 +146,7 @@ def _llamar_gemini(instrucciones, prompt):
     )
     for intento in range(len(ESPERAS_REINTENTO) + 1):
         try:
-            with urllib.request.urlopen(peticion, timeout=60) as respuesta:
+            with urllib.request.urlopen(peticion, timeout=15) as respuesta:
                 datos = json.loads(respuesta.read())
             break
         except urllib.error.HTTPError as e:
@@ -165,7 +165,7 @@ def _llamar_gemini(instrucciones, prompt):
         except TimeoutError as e:
             raise ErrorIA(
                 "Gemini tardó demasiado en responder. Intenta de nuevo o continúa escribiendo el texto a mano.",
-                f"Sin respuesta de Gemini en 60 s: {e}",
+                f"Sin respuesta de Gemini en 15 s: {e}",
             ) from e
         except urllib.error.URLError as e:
             raise ErrorIA(

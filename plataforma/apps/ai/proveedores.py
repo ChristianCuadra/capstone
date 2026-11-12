@@ -47,12 +47,16 @@ def llamar_openai_compatible(proveedor, instrucciones, prompt):
         "temperature": 0.6,
         "max_tokens": 2048,
     }
-    cabeceras = {"Content-Type": "application/json", "Authorization": f"Bearer {clave_de(proveedor)}"}
+    cabeceras = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {clave_de(proveedor)}",
+        "User-Agent": "Mozilla/5.0 (compatible; PlataformaCosmopolitan/1.0)",
+    }
     if proveedor == "openrouter":
         cabeceras["X-Title"] = "Plataforma Cosmopolitan"
     peticion = urllib.request.Request(datos["url"], data=json.dumps(cuerpo).encode(), headers=cabeceras, method="POST")
     try:
-        with urllib.request.urlopen(peticion, timeout=60) as respuesta:
+        with urllib.request.urlopen(peticion, timeout=15) as respuesta:
             datos_respuesta = json.loads(respuesta.read())
     except urllib.error.HTTPError as e:
         detalle = f"{nombre} respondió {e.code}: {e.read().decode(errors='replace')[:500]}"
@@ -65,7 +69,7 @@ def llamar_openai_compatible(proveedor, instrucciones, prompt):
         }
         raise ErrorIA(mensajes.get(e.code, f"{nombre} no está respondiendo."), detalle) from e
     except TimeoutError as e:
-        raise ErrorIA(f"{nombre} tardó demasiado en responder.", f"Sin respuesta de {nombre} en 60 s: {e}") from e
+        raise ErrorIA(f"{nombre} tardó demasiado en responder.", f"Sin respuesta de {nombre} en 15 s: {e}") from e
     except urllib.error.URLError as e:
         raise ErrorIA(f"No se pudo conectar con {nombre}.", f"No se pudo conectar con {nombre}: {e.reason}") from e
 

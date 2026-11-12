@@ -154,6 +154,28 @@
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });  // clic fuera del cuadro
     dlg.addEventListener('close', () => { pendiente = null; });
   })();
+  // Indicador visual "Generando con IA..." y bloqueo de doble clic en botones de IA
+  document.addEventListener('submit', (e) => {
+    if (e.defaultPrevented) return; // Si abrió el modal de confirmación, espera a que el usuario confirme
+    const form = e.target;
+    const btn = e.submitter || form.querySelector("button[type='submit']");
+    if (!btn) return;
+
+    const texto = (btn.textContent || '').toLowerCase();
+    if (texto.includes('ia') || texto.includes('diagnóstico') || texto.includes('generar') || texto.includes('reescribir')) {
+      setTimeout(() => {
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-wait');
+        btn.innerHTML = `
+          <svg class="inline-block w-4 h-4 mr-1.5 -mt-0.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          Generando con IA...
+        `;
+      }, 10);
+    }
+  });
 </script>
 {% block page_scripts %}{% endblock %}
 {% endblock %}
