@@ -25,5 +25,6 @@ La carpeta `Documentos generales` reúne los documentos transversales del proyec
 | Planilla de Riesgos | Excel |
 | Plan de Pruebas | Excel |
 | Documento de Arquitectura | Word |
+| Manual de administración por rol | Word |
 
 El modelo de datos está en `Evidencias Proyecto/Base de datos` y la presentación en `Evidencias Proyecto/Presentación Proyecto.pptx`.

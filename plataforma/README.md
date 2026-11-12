@@ -1,6 +1,6 @@
 # Plataforma Cosmopolitan
 
-Sitio corporativo, panel interno (CRM) y portal de clientes de la agencia. Django 5.1 + Tailwind (CDN) + Chart.js (CDN).
+Sitio corporativo, panel interno (CRM) y portal de clientes de la agencia. Django 5.2 (LTS) + Supabase PostgreSQL + Tailwind (CDN) + Chart.js (CDN).
 
 ## Levantar en local
 
@@ -18,11 +18,16 @@ Sin `DATABASE_URL` en `.env` se usa SQLite local; sin `AWS_STORAGE_BUCKET_NAME`,
 
 | URL | Qué es |
 |---|---|
-| `/`, `/planes/`, `/cotizacion/` | Sitio corporativo (`apps/website`) |
-| `/panel/` | Panel interno: dashboard, `prospectos/<slug>/`, `cotizaciones/nueva/` (`apps/crm`) |
-| `/portal/` | Portal del cliente: `calendario/`, `aprobaciones/`, `metricas/` (`apps/content`) |
-| `/accounts/` | Login (django-allauth) |
-| `/admin/` | Admin de Django |
+| `/`, `/planes/`, `/cotizacion/`, `/asesoria-gratuita/`, `/novedades/`, `/privacidad/` | Sitio corporativo (`apps/website`) |
+| `/panel/` | Panel interno: dashboard, `prospectos/`, `cotizaciones/`, `clientes/`, `usuarios/`, `auditoria/`, `planes-servicios/`, `contenidos/`, `configuracion/` (`apps/crm`) |
+| `/panel/calendario/`, `/panel/cumplimiento/`, `/panel/solicitudes/` | Calendario editorial, cumplimiento del plan y solicitudes (`apps/content`) |
+| `/panel/metricas/`, `/panel/reportes/` | Carga de métricas por archivo y reportes mensuales (`apps/metrics`, `apps/reports`) |
+| `/portal/` | Portal del cliente: `calendario/`, `aprobaciones/`, `metricas/`, `solicitudes/` (`apps/content`) |
+| `/accounts/` | Inicio de sesión, activación de cuenta y 2FA (django-allauth) |
+| `/admin/` | Admin de Django (solo equipo con 2FA) |
+
+Roles: Administradora, Colaboradora, Cliente aprobador y Cliente lector. Qué puede hacer cada uno está en el
+**Manual de administración por rol** (`Evidencias de documentación/Documentos generales/Manual-Administracion-Cosmopolitan.docx`).
 
 ## Flujo comercial (funcional)
 
@@ -33,14 +38,17 @@ Sin `DATABASE_URL` en `.env` se usa SQLite local; sin `AWS_STORAGE_BUCKET_NAME`,
 3. «Crear cotización» arma un borrador con precios del catálogo; se edita, se imprime/guarda como PDF desde el navegador
    y se marca enviada → aceptada/rechazada. Los KPIs del dashboard salen de estas cotizaciones.
 
-El panel exige usuario del equipo (`is_staff`) y el portal, usuario con sesión. Sin datos, todo se muestra vacío.
+El panel exige usuario del equipo (administradora o colaboradora, con 2FA activo) y el portal, un usuario con rol de cliente.
+Cada cliente ve solo sus datos; las colaboradoras ven solo los clientes que se les asignaron.
 
 ## Estado actual
 
-- **Catálogo de planes y servicios** (`apps/catalog`): en la base y editable en `/admin/` (Planes, Tipos de entregable, Servicios).
-  La migración `catalog.0002_catalogo_inicial` carga los 4 planes y 7 servicios vigentes. El sitio (`/planes/` y servicios del inicio) lee de ahí.
-- El resto de las vistas devuelve datos hardcodeados con la forma que tendrán las consultas.
-  Cada dato pendiente está marcado con `TODO: Supabase - <tabla>` en `views.py` y en los templates.
+Panel y portal leen y escriben en la base de datos (Supabase PostgreSQL en producción, SQLite en local):
+prospectos y cotizaciones, clientes, calendario editorial con versiones y aprobación del cliente, cumplimiento del plan,
+solicitudes, métricas cargadas por archivo CSV o Excel, reportes mensuales en PDF, usuarios con invitación y 2FA, y auditoría.
+La integración automática con la API de Meta no forma parte de lo entregado.
+En el sitio público quedan algunos textos fijos (portada, estadísticas, sobre nosotras), marcados en los templates con
+`TODO: Supabase`; el catálogo de planes y servicios, el contenido de novedades y los datos de contacto sí se editan desde el panel.
 
 Para entrar al admin, crear una cuenta: `.\.venv\Scripts\python.exe manage.py createsuperuser`
 
@@ -85,6 +93,5 @@ los correos quedan en los logs de Vercel.
 
 ## Notas
 
-- WeasyPrint (PDFs) necesita GTK/Pango instalado en el sistema. En Windows: instalar MSYS2 y `pacman -S mingw-w64-x86_64-pango`
-  (ver https://doc.courtbouillon.org/weasyprint/stable/first_steps.html). Solo es necesario al implementar los PDFs.
+- Los PDF del reporte mensual se generan con fpdf2 (Python puro), sin dependencias del sistema.
 - `config/settings/prod.py` es el de producción (Vercel); `dev.py` el local y `test.py` el de los tests.
