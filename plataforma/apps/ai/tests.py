@@ -70,7 +70,7 @@ class ClienteGeminiTests(TestCase):
             with self.assertRaises(ErrorIA) as error:
                 reescribir_texto("Borrador", "Acórtalo", None)
         self.assertIn("tardó demasiado", str(error.exception))
-        self.assertIn("60 s", RegistroIA.objects.get().error)
+        self.assertIn("15 s", RegistroIA.objects.get().error)
 
 
 class RespaldoProveedoresTests(TestCase):
