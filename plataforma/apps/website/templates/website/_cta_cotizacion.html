@@ -4,7 +4,9 @@
 {% endcomment %}
 <section class="relative isolate overflow-hidden bg-vino-oscuro" aria-labelledby="cta-cotizacion-titulo" data-foco>
   {% include "website/_fondo_oscuro.html" %}
-  <div class="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:py-28">
+  {# desvanecer=True: la sección se funde con lo anterior (sin filo). escena=True: el contenido se acerca desde la profundidad al bajar (lo mueve el JS de la portada). #}
+  {% if desvanecer %}<div class="cta-desvanecido pointer-events-none absolute inset-x-0 top-0 h-72 lg:h-96" aria-hidden="true"></div>{% endif %}
+  <div {% if escena %}data-escena="acercar" {% endif %}class="relative mx-auto max-w-4xl px-4 {% if desvanecer %}pb-24 pt-10 lg:pb-36 lg:pt-6{% else %}py-20 lg:py-28{% endif %} text-center sm:px-6">
     <p data-revelar class="text-xs font-semibold uppercase tracking-[0.22em] text-rosa">Da el primer paso</p>
     <h2 id="cta-cotizacion-titulo" data-revelar style="--retraso: 80ms" class="mt-4 font-serif text-4xl text-white sm:text-6xl">¿Conversamos sobre tu marca?</h2>
     <p data-revelar style="--retraso: 160ms" class="mx-auto mt-5 max-w-xl text-lg text-lila">Cuéntanos de tu marca y te enviamos una cotización con diagnóstico en 3 días hábiles.</p>

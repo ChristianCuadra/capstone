@@ -10,7 +10,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from apps.core.red import ip_del_cliente
-from apps.catalog.models import Plan
+from apps.catalog.models import Plan, Servicio
 from apps.catalog.services import comparativa_de_planes, planes_del_sitio, servicios_del_sitio
 from apps.crm.models import Prospecto
 from apps.crm.services import notificar_asesoria, registrar_asesoria, registrar_solicitud
@@ -103,7 +103,12 @@ def cotizacion(request):
             return redirect(reverse("website:cotizacion") + "?enviado=1")
     else:
         # Si ya pidió la asesoría gratuita en esta visita, sus datos quedan precargados (no los escribe de nuevo).
-        form = SolicitudCotizacionForm(initial=_datos_desde_asesoria(request))
+        inicial = _datos_desde_asesoria(request)
+        # «Cotizar este servicio» desde la portada: el servicio llega ya marcado (?servicio=<slug>).
+        servicio = Servicio.objects.filter(activo=True, slug=request.GET.get("servicio") or None).first()
+        if servicio:
+            inicial["servicios_requeridos"] = [servicio.pk]
+        form = SolicitudCotizacionForm(initial=inicial)
 
     enviado = request.GET.get("enviado") == "1"
     prospecto_enviado = None

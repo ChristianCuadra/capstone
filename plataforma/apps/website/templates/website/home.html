@@ -11,13 +11,14 @@
   @keyframes logo-flotar { 50% { transform: translateY(-14px); } }
   .logo-tarjeta {
     transform-style: preserve-3d;
-    transform: rotateX(var(--rx, 6deg)) rotateY(var(--ry, -10deg));
+    /* --rx/--ry los pone el mouse; --srx/--sry el recorrido con scroll (se suman). */
+    transform: rotateX(calc(var(--rx, 6deg) + var(--srx, 0deg))) rotateY(calc(var(--ry, -10deg) + var(--sry, 0deg)));
     transition: transform .6s cubic-bezier(.16, .84, .3, 1);
   }
   .logo-escena.siguiendo .logo-tarjeta { transition: transform .12s linear; }
   .logo-capa { position: absolute; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.16, .84, .3, 1), opacity .6s; }
-  .logo-letra { transform: translateZ(var(--z)); transition: transform .6s cubic-bezier(.16, .84, .3, 1), text-shadow .6s; }
-  .logo-escena:hover .logo-letra { transform: translateZ(calc(var(--z) * 1.7)); }
+  .logo-letra { transform: translateZ(calc(var(--z) * var(--explotar, 1))); transition: transform .6s cubic-bezier(.16, .84, .3, 1), text-shadow .6s; }
+  .logo-escena:hover .logo-letra { transform: translateZ(calc(var(--z) * var(--explotar, 1) * 1.7)); }
   .logo-escena:hover .letra-a { text-shadow: 0 0 40px rgb(244 127 177 / .65); }
   .logo-brillo {
     background: radial-gradient(420px circle at var(--bx, 30%) var(--by, 20%), rgb(255 255 255 / .22), transparent 55%);
@@ -26,7 +27,7 @@
   .logo-anillo { animation: logo-girar 30s linear infinite; }
   .logo-escena:hover .logo-anillo { animation-duration: 9s; }
   @keyframes logo-girar { to { transform: translateZ(30px) rotate(360deg); } }
-  .logo-chip { transform: translateZ(var(--z)); animation: chip-flotar 6s ease-in-out infinite; animation-delay: var(--retraso, 0s); }
+  .logo-chip { transform: translateZ(calc(var(--z) * var(--explotar, 1))); animation: chip-flotar 6s ease-in-out infinite; animation-delay: var(--retraso, 0s); }
   @keyframes chip-flotar { 50% { translate: 0 -10px; } }
   /* En pantallas táctiles no hay mouse que seguir: el logo se balancea solo. */
   @media (hover: none) {
@@ -39,7 +40,7 @@
   .logo-sombra { transform: translateX(calc(var(--ry-num, -10) * -1.2px)) scaleX(.85); transition: transform .6s cubic-bezier(.16, .84, .3, 1); }
 
   /* ── El cosmopolitan: la copa del logo oficial («AC con la copa»), en su propia capa de profundidad ── */
-  .logo-copa { transform: translateZ(125px); }
+  .logo-copa { transform: translateZ(calc(125px * var(--explotar, 1))); }
   .logo-copa svg { overflow: visible; filter: drop-shadow(0 18px 22px rgb(0 0 0 / .35)) drop-shadow(0 0 22px rgb(244 127 177 / .35)); }
   .copa-cuerpo { transform-origin: 50% 92%; animation: copa-flotar 6.5s ease-in-out infinite; transition: rotate .7s cubic-bezier(.16, .84, .3, 1), scale .7s cubic-bezier(.16, .84, .3, 1); }
   @keyframes copa-flotar { 50% { translate: 0 -9px; } }
@@ -56,8 +57,187 @@
   .copa-rodaja { transform-box: fill-box; transform-origin: 30% 75%; animation: copa-rodaja 5.5s ease-in-out infinite; }
   @keyframes copa-rodaja { 50% { transform: rotate(8deg); } }
 
+  /* ── Recorrido continuo: puntos tenues de fondo que se desvanecen arriba y abajo ── */
+  /* ── Apertura y resto de la portada: una sola noche en vino oscuro ── */
+  .apertura { background: #3D1828; }
+  /* El cierre se funde con lo anterior (sus brillos no empiezan con filo). */
+  .cta-desvanecido { background: linear-gradient(180deg, #3D1828, transparent); }
+  .cinta-desvanecida {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  }
+
+  /* ── Servicios: anillo 3D ──
+     Sin JS (o con «reducir movimiento»): grilla de tarjetas. Con JS (.activo): las tarjetas forman un cilindro que
+     gira solo, con el scroll de la escena, con el mouse hacia los lados, arrastrando, con las flechas o los puntos. */
+  .anillo { position: relative; --ancho-cara: 14rem; --alto-cara: 19rem; }
+  @media (min-width: 640px) { .anillo { --ancho-cara: 16rem; --alto-cara: 21rem; } }
+  @media (min-width: 1024px) and (min-height: 860px) { .anillo { --ancho-cara: 17.5rem; --alto-cara: 22.5rem; } }
+  .anillo:focus-visible { outline: 2px solid var(--rosa); outline-offset: 4px; border-radius: 2rem; }
+  .anillo-cilindro {
+    list-style: none; margin: 0 auto; padding: 2rem 1rem; max-width: 80rem;
+    display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  }
+  .anillo-piso { display: none; }
+  .anillo.activo { height: calc(var(--alto-cara) + 7rem); perspective: 1700px; perspective-origin: 50% 40%; cursor: grab; touch-action: pan-y; user-select: none; }
+  .anillo.activo.arrastrando { cursor: grabbing; }
+  .anillo.activo .anillo-cilindro {
+    display: block; position: absolute; left: 50%; top: 3rem; padding: 0; max-width: none;
+    width: var(--ancho-cara); height: var(--alto-cara); margin-left: calc(var(--ancho-cara) / -2);
+    transform-style: preserve-3d; will-change: transform;
+  }
+  .anillo.activo .anillo-cara {
+    position: absolute; inset: 0; transform: rotateY(var(--ang)) translateZ(var(--radio));
+    -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  }
+  /* Reflejo de luz en el piso, bajo el anillo */
+  .anillo.activo .anillo-piso {
+    display: block; position: absolute; left: 50%; bottom: 0; width: min(64rem, 92vw); height: 5rem; transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgb(255 255 255 / .22), rgb(244 127 177 / .16) 40%, transparent 70%); filter: blur(6px);
+  }
+
+  /* Tarjeta: blanca y luminosa sobre la noche, inicial gigante en contorno rosado y el nombre abajo */
+  .cara-servicio {
+    position: relative; display: flex; flex-direction: column; height: var(--alto-cara, 21rem); overflow: hidden; isolation: isolate;
+    border-radius: 1.75rem; padding: 1.6rem 1.6rem 1.5rem; color: #522136; text-decoration: none;
+    background:
+      radial-gradient(120% 70% at 100% 0%, rgb(244 127 177 / .16), transparent 60%),
+      linear-gradient(170deg, #FFFFFF, #FBF3F7);
+    border: 1px solid rgb(255 255 255 / .9);
+    box-shadow: 0 1px 0 rgb(255 255 255 / .6) inset, 0 30px 60px -22px rgb(0 0 0 / .75), 0 0 50px -18px rgb(255 255 255 / .25);
+    transition: box-shadow .5s, border-color .5s;
+  }
+  .cara-servicio::after {  /* destello que cruza la tarjeta del frente */
+    content: ""; position: absolute; inset: -20% -60%; z-index: -1; pointer-events: none;
+    background: linear-gradient(105deg, transparent 42%, rgb(244 127 177 / .16) 50%, transparent 58%);
+    transform: translateX(-60%); transition: transform 1.4s cubic-bezier(.16, .84, .3, 1);
+  }
+  .al-frente .cara-servicio::after { transform: translateX(60%); }
+  .al-frente .cara-servicio {
+    border-color: var(--rosa);
+    box-shadow: 0 0 0 1px rgb(244 127 177 / .55), 0 0 80px -8px rgb(244 127 177 / .7), 0 0 40px -10px rgb(255 255 255 / .5), 0 40px 70px -24px rgb(0 0 0 / .8);
+  }
+  .cara-inicial {
+    position: absolute; right: -.6rem; bottom: -4.2rem; z-index: -1; font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600;
+    font-size: 16rem; line-height: 1; color: transparent; -webkit-text-stroke: 1.5px rgb(244 127 177 / .45); pointer-events: none;
+    transition: -webkit-text-stroke-color .6s, transform .8s cubic-bezier(.16, .84, .3, 1);
+  }
+  .al-frente .cara-inicial { -webkit-text-stroke-color: rgb(244 127 177 / .9); transform: translateY(-.5rem); }
+  .cara-etiqueta { display: inline-flex; align-items: center; gap: .55rem; font-size: .66rem; font-weight: 600; letter-spacing: .26em; text-transform: uppercase; color: var(--rosa); }
+  .cara-etiqueta::before { content: ""; width: .45rem; height: .45rem; border-radius: 9999px; background: currentColor; box-shadow: 0 0 12px currentColor; }
+  .cara-nombre { margin-top: auto; font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 2rem; line-height: 1.04; }
+  .cara-descripcion { margin-top: .6rem; font-size: .85rem; line-height: 1.5; color: var(--gris-txt); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .cara-enlace { margin-top: 1.1rem; display: inline-flex; align-items: center; gap: .5rem; font-size: .82rem; font-weight: 600; color: #522136; }
+  .cara-enlace span { transition: transform .3s; }
+  .cara-enlace:hover { color: var(--rosa); }
+  .cara-enlace:hover span { transform: translateX(4px); }
+  /* La tarjeta de planes es la única rosada: el acento del anillo */
+  .cara-plan { color: #3D1828; border-color: rgb(255 255 255 / .5); background: radial-gradient(120% 80% at 0% 0%, rgb(255 255 255 / .55), transparent 55%), linear-gradient(155deg, #FFC6DE, #F47FB1 55%, #C9457F); }
+  .cara-plan .cara-etiqueta, .cara-plan .cara-enlace { color: #3D1828; }
+  .cara-plan .cara-inicial { -webkit-text-stroke-color: rgb(61 24 40 / .25); }
+  .al-frente .cara-plan { border-color: #fff; }
+
+  /* Controles: pausa, flechas y un punto por servicio */
+  .anillo-boton {
+    display: grid; place-items: center; width: 2.9rem; height: 2.9rem; border-radius: 9999px; flex-shrink: 0;
+    border: 1px solid rgb(255 255 255 / .22); background: rgb(255 255 255 / .06); color: #fff; backdrop-filter: blur(6px);
+    transition: background-color .3s, color .3s, border-color .3s, transform .3s cubic-bezier(.16, .84, .3, 1), box-shadow .3s;
+  }
+  .anillo-boton:hover { background: var(--rosa); border-color: var(--rosa); color: #3D1828; transform: translateY(-2px); box-shadow: 0 0 28px rgb(244 127 177 / .5); }
+  .anillo-boton:active { transform: scale(.94); }
+  .anillo-boton:focus-visible, .anillo-punto:focus-visible { outline: 2px solid var(--rosa); outline-offset: 3px; }
+  .anillo-punto { width: .55rem; height: .55rem; border-radius: 9999px; background: rgb(255 255 255 / .28); transition: width .4s cubic-bezier(.16, .84, .3, 1), background-color .4s; }
+  .anillo-punto:hover { background: rgb(255 255 255 / .6); }
+  .anillo-punto[aria-current="true"] { width: 1.8rem; background: var(--rosa); box-shadow: 0 0 14px rgb(244 127 177 / .6); }
+  /* Sin JS no hay nada que girar */
+  .anillo-controles, .anillo-ayuda { visibility: hidden; }
+  .anillo-controles.listo, .anillo-ayuda.listo { visibility: visible; }
+  .ayuda-tactil, .ayuda-fijo { display: none; }
+  @media (hover: none) { .ayuda-mouse { display: none; } .ayuda-tactil { display: inline; } }
+
+  /* ── 3D ligado al scroll: el JS escribe transform/opacity en cada cuadro; aquí solo el punto de giro ── */
+  [data-escena], [data-hero-texto], [data-hero-logo] { will-change: transform, opacity; }
+  [data-escena="inclinar"], [data-escena="levantar"] { transform-origin: 50% 100%; }
+  [data-escena="girar"] { transform-origin: 0 50%; }
+  [data-hero-logo] { transform-origin: 50% 0; }
+
+  /* ── Escenario fijo del hero (solo escritorio con altura suficiente y sin «reducir movimiento») ── */
+  .escenario-luces, .hero-capitulos, .pasos-riel, .paso-fondo { display: none; }
+  /* Tarjeta de cada paso: vidrio rosado de la paleta (translúcido, desenfoca lo de atrás) con canto de luz y reflejo */
+  .paso-vidrio {
+    background: linear-gradient(145deg, rgb(244 127 177 / .42), rgb(225 139 166 / .22) 55%, rgb(244 127 177 / .32));
+    border: 1px solid rgb(255 214 230 / .42);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+            backdrop-filter: blur(24px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 0 50px rgb(244 127 177 / .14),
+                0 30px 60px -24px rgb(0 0 0 / .6), 0 0 70px -22px rgb(244 127 177 / .65);
+  }
+  .paso-vidrio::after {  /* reflejo de luz en la esquina superior, como en un vidrio */
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(135deg, rgb(255 255 255 / .26), rgb(255 255 255 / .05) 30%, transparent 45%);
+  }
+  .paso-vidrio.tarjeta-viva:hover { border-color: rgb(255 214 230 / .7); }
+  /* Número gigante del paso, en contorno claro (solo en el escenario fijo) */
+  .paso-fondo {
+    position: absolute; right: 1.5rem; top: -1rem; font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600;
+    font-size: clamp(7rem, 15vh, 9.5rem); line-height: 1; color: transparent; -webkit-text-stroke: 1.5px rgb(255 255 255 / .55); pointer-events: none;
+  }
+  /* Línea con los pasos bajo la escena: los ya vistos en rosado, el actual brillando */
+  .riel-paso { display: flex; flex-direction: column; align-items: center; gap: .8rem; text-align: center; font-size: .82rem; line-height: 1.3; color: rgb(201 168 188 / .55); transition: color .45s; }
+  .riel-punto { width: .95rem; height: .95rem; border-radius: 9999px; border: 1px solid rgb(255 255 255 / .35); background: #3D1828; transition: background-color .45s, border-color .45s, box-shadow .45s, transform .45s; }
+  .riel-paso.hecho { color: var(--lila); }
+  .riel-paso.hecho .riel-punto { background: var(--rosa); border-color: var(--rosa); }
+  .riel-paso.actual { color: #fff; font-weight: 600; }
+  .riel-paso.actual .riel-punto { background: var(--rosa); border-color: #fff; transform: scale(1.25); box-shadow: 0 0 0 6px rgb(244 127 177 / .18), 0 0 22px rgb(244 127 177 / .8); }
+  @media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
+    .js-mov .escena-hero { height: 225vh; }
+    .js-mov .hero-escenario { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+    .js-mov .hero-escenario > .hero-grilla { width: 100%; padding-top: 5.5rem; padding-bottom: 1.5rem; }
+    .js-mov .escenario-luces, .js-mov .hero-capitulos { display: block; }
+    .js-mov .hero-compromisos { display: none; }
+    .escena-activa .logo-tarjeta, .escena-activa .logo-letra { transition-duration: .12s; transition-timing-function: linear; }
+
+    /* Servicios: la pantalla queda fija mientras el scroll recorre las tarjetas */
+    .js-mov .escena-servicios { height: 205vh; }
+    .js-mov .escenario-servicios { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; padding-top: 5rem; padding-bottom: 0; }
+    .js-mov .escenario-servicios .ayuda-mouse { display: none; }
+    .js-mov .escenario-servicios .ayuda-fijo { display: inline; }
+
+    /* Cómo trabajamos: pila de pasos en 3D */
+    .js-mov .escena-pasos { height: 265vh; }
+    /* El contenido llena la pantalla: tarjetas altas (según el alto de la ventana) y, abajo, la línea de los pasos. */
+    .js-mov .escenario-pasos { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; padding-top: 5rem; padding-bottom: 1.5rem; }
+    .js-mov .pasos-contenido { width: 100%; }
+    .js-mov .pasos-linea { display: none; }
+    .js-mov .pasos-lista { height: clamp(14rem, calc(100vh - 32rem), 20rem); max-width: 36rem; width: 100%; justify-self: end; }
+    .js-mov .pasos-lista > .paso { position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: 0 !important; }
+    .js-mov .paso .paso-numero { width: 3rem; height: 3rem; font-size: 1.4rem; }
+    .js-mov .paso .paso-tarjeta { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 2rem 2.25rem; border-radius: 1.5rem; }
+    .js-mov .paso .paso-titulo { font-family: "Cormorant Garamond", Georgia, serif; font-size: clamp(1.75rem, 2.3vw, 2.25rem); line-height: 1.05; font-weight: 600; }
+    .js-mov .paso .paso-texto { margin-top: .7rem; font-size: 1rem; max-width: 26rem; }
+    .js-mov .paso-fondo { display: block; }
+    .js-mov .pasos-riel { display: block; }
+    /* Los pasos que quedan atrás son hojas en blanco: su contenido se desvanece (lo regula el JS con --contenido). */
+    .js-mov .paso .paso-numero, .js-mov .paso .paso-tarjeta > * { opacity: var(--contenido, 1); }
+  }
+  /* Haz de luz tipo neón: línea blanca con núcleo rosado y resplandor */
+  .haz {
+    position: absolute; left: 0; top: 0; width: 75vw; height: 2px; border-radius: 2px; opacity: 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / .95) 42%, #FFC6DE 50%, #F47FB1 58%, transparent);
+    box-shadow: 0 0 14px 1px rgb(244 127 177 / .6), 0 0 48px 6px rgb(244 127 177 / .22);
+    will-change: transform, opacity;
+  }
+  .haz-tenue { height: 1px; width: 55vw; }
+  .particulas { position: absolute; left: 0; top: 0; width: 2px; height: 2px; border-radius: 9999px; will-change: transform; }
+  .capitulo { position: absolute; top: 50%; width: min(18rem, calc((100vw - 36rem) / 2 - 2rem)); opacity: 0; will-change: transform, opacity; }
+  .capitulo.izquierda { left: max(1.5rem, calc((100vw - 84rem) / 2)); }
+  .capitulo.derecha { right: max(1.5rem, calc((100vw - 84rem) / 2)); text-align: right; }
+  .capitulo-linea { display: block; height: 1px; width: 4.5rem; margin-bottom: 1.25rem; background: linear-gradient(90deg, #F47FB1, transparent); }
+  .capitulo.derecha .capitulo-linea { margin-left: auto; background: linear-gradient(270deg, #F47FB1, transparent); }
+
   @media (prefers-reduced-motion: reduce) {
     .logo-flotar, .logo-anillo, .logo-chip, .logo-tarjeta, .copa-cuerpo, .copa-superficie, .copa-destello, .copa-rodaja { animation: none; }
+    .anillo-boton, .anillo-punto, .cara-servicio, .cara-servicio::after, .cara-inicial { transition: none; }
     .copa-cuerpo { transition: none; }
     .logo-tarjeta, .logo-letra, .logo-escena:hover .logo-letra { transition: none; }
   }
@@ -68,11 +248,18 @@
 
 {# ── Hero ───────────────────────────────────────────────────────────── #}
 {# TODO: Supabase - sitio_contenido (hero) #}
-<section id="hero" class="relative isolate overflow-hidden bg-vino-oscuro" data-foco>
-  {% include "website/_fondo_oscuro.html" %}
+{# Apertura: hero, cinta y asesoría comparten un solo fondo que va del vino oscuro al crema (sin cortes). #}
+<div class="apertura relative isolate overflow-hidden" style="overflow: clip" data-foco>
+  {% include "website/_fondo_oscuro.html" with sin_linea=True %}
+  {# Termina en vino oscuro sólido por encima de los brillos, para que no quede filo con lo que sigue. #}
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-[5] h-48 bg-gradient-to-b from-transparent to-vino-oscuro" aria-hidden="true"></div>
+{% comment %}En escritorio, #escena-hero da el largo del recorrido y el hero queda fijo (sticky) mientras tanto: el texto sale, el logo viaja al centro, gira y separa sus capas en profundidad, aparecen los tres compromisos y al final el logo se aleja. En celular o con «reducir movimiento» el hero es normal.{% endcomment %}
+<div id="escena-hero" class="escena-hero" data-escenario="hero">
+<section id="hero" class="hero-escenario relative">
+    {% include "website/_luces_escenario.html" %}
 
-  <div class="mx-auto grid max-w-7xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:pb-28 lg:pt-24">
-    <div>
+  <div class="hero-grilla mx-auto grid max-w-7xl items-center gap-14 px-4 pb-14 pt-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:pb-24 lg:pt-24">
+    <div data-hero-texto>
       <p data-revelar class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-lila backdrop-blur">
         <span class="relative flex h-2 w-2" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rosa opacity-60 motion-reduce:animate-none"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-rosa"></span></span>
         Agencia de {{ agencia.descriptor|lower }}
@@ -97,7 +284,7 @@
       {% endif %}
 
       {# Compromisos del proceso (Documento de Alcance), no cifras de ejemplo. #}
-      <ul data-revelar style="--retraso: 360ms" class="mt-10 grid gap-3 text-sm text-lila sm:grid-cols-3 sm:gap-4">
+      <ul data-revelar style="--retraso: 360ms" class="hero-compromisos mt-10 grid gap-3 text-sm text-lila sm:grid-cols-3 sm:gap-4">
         <li class="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[.04] p-3.5 backdrop-blur">
           <span class="mt-0.5 text-rosa" aria-hidden="true">✦</span><span><strong class="block font-semibold text-white">3 días hábiles</strong>Cotización con diagnóstico</span>
         </li>
@@ -112,7 +299,9 @@
 
     {# Monograma AC interactivo: se inclina hacia el mouse; al pasar por encima, las letras se separan en profundidad. #}
     {# TODO: reemplazar las letras por el SVG oficial (AC con la copa) cuando la agencia entregue los archivos. #}
-    <div data-revelar="escala" style="--retraso: 200ms" class="relative mx-auto w-full max-w-[34rem] {% if hero.caso_destacado %}pb-12{% endif %}">
+    <div data-revelar="escala" style="--retraso: 200ms" class="relative mx-auto w-full max-w-[34rem]">
+      {# Al bajar, el logo se inclina hacia atrás y se aleja en profundidad (el JS de abajo). #}
+      <div data-hero-logo class="relative {% if hero.caso_destacado %}pb-12{% endif %}">
       <div id="logo-escena" class="logo-escena logo-flotar">
         <div id="logo-tarjeta" class="logo-tarjeta relative aspect-[7/6] w-full">
           {# Fondo de la tarjeta #}
@@ -122,10 +311,10 @@
             <div class="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-rosa-viejo/20 blur-3xl"></div>
           </div>
           {# Anillo que gira #}
-          <div class="logo-capa inset-y-[12%] inset-x-[17.4%]" style="transform: translateZ(30px)">
+          <div class="logo-capa inset-y-[12%] inset-x-[17.4%]" style="transform: translateZ(calc(30px * var(--explotar, 1)))">
             <div class="logo-anillo h-full w-full rounded-full border border-dashed border-rosa/35"></div>
           </div>
-          <div class="logo-capa inset-y-[22%] inset-x-[26%] rounded-full border border-white/10" style="transform: translateZ(45px)"></div>
+          <div class="logo-capa inset-y-[22%] inset-x-[26%] rounded-full border border-white/10" style="transform: translateZ(calc(45px * var(--explotar, 1)))"></div>
           {# Letras #}
           <div class="logo-capa inset-0 grid place-items-center pr-[22%]" aria-hidden="true">
             <span class="flex items-baseline font-serif text-[clamp(8rem,26vw,15rem)] font-bold leading-none" style="transform-style: preserve-3d">
@@ -176,12 +365,12 @@
             </svg>
           </div>
           {# Nombre #}
-          <div class="logo-capa inset-x-0 bottom-[9%] text-center" style="transform: translateZ(40px)" aria-hidden="true">
+          <div class="logo-capa inset-x-0 bottom-[9%] text-center" style="transform: translateZ(calc(40px * var(--explotar, 1)))" aria-hidden="true">
             <span class="block font-serif text-sm uppercase tracking-[0.42em] text-rosa">Agencia</span>
             <span class="mt-1 block text-base font-semibold uppercase tracking-[0.3em] text-white">Cosmopolitan</span>
           </div>
           {# Reflejo que sigue al mouse #}
-          <div id="logo-brillo" class="logo-capa logo-brillo inset-0 rounded-[2.75rem]" style="transform: translateZ(100px)"></div>
+          <div id="logo-brillo" class="logo-capa logo-brillo inset-0 rounded-[2.75rem]" style="transform: translateZ(calc(100px * var(--explotar, 1)))"></div>
 
           {# Servicios reales del catálogo flotando alrededor #}
           {% for servicio in servicios|slice:":3" %}
@@ -202,127 +391,192 @@
         <p class="mt-1 font-serif text-lg leading-snug">{{ hero.caso_destacado.texto }}</p>
       </div>
       {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% comment %}Los tres compromisos aparecen de a uno junto al logo mientras gira. En el escenario fijo reemplazan a la lista del texto del hero (que se oculta); fuera de él no se muestran.{% endcomment %}
+  <div class="hero-capitulos pointer-events-none absolute inset-0">
+    <div class="capitulo izquierda" data-capitulo="0">
+      <span class="capitulo-linea"></span>
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Propuesta</p>
+      <p class="mt-3 font-serif text-4xl leading-none text-white xl:text-5xl">3 días hábiles</p>
+      <p class="mt-3 text-lg text-lila">Cotización con diagnóstico de tu marca.</p>
+    </div>
+    <div class="capitulo derecha" data-capitulo="1">
+      <span class="capitulo-linea"></span>
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Aprobación</p>
+      <p class="mt-3 font-serif text-4xl leading-none text-white xl:text-5xl">Tu portal</p>
+      <p class="mt-3 text-lg text-lila">Apruebas cada pieza antes de publicar.</p>
+    </div>
+    <div class="capitulo izquierda" data-capitulo="2">
+      <span class="capitulo-linea"></span>
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Resultados</p>
+      <p class="mt-3 font-serif text-4xl leading-none text-white xl:text-5xl">Reporte mensual</p>
+      <p class="mt-3 text-lg text-lila">Métricas y próximos pasos, cada mes.</p>
     </div>
   </div>
 
   {# Indicador para bajar #}
-  <a href="#asesoria-gratis" class="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-lila/80 transition hover:text-white lg:flex">
+  <a href="#asesoria-gratis" data-hero-bajar class="absolute bottom-2 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-lila/80 transition hover:text-white lg:flex">
     <span class="grid h-9 w-6 justify-center rounded-full border border-white/30 pt-2" aria-hidden="true"><span class="rueda-mouse block h-2 w-1 rounded-full bg-rosa"></span></span>
     Descubre más
   </a>
 </section>
-
-{# ── Cinta con los servicios del catálogo ──────────────────────────── #}
-{% if servicios %}
-<div class="cinta-contenedor overflow-hidden border-b border-gris-borde bg-rubor/60 py-4" aria-hidden="true">
-  <div class="cinta">
-    {% for vuelta in "12" %}
-    <ul class="flex shrink-0 items-center gap-10 pr-10 font-serif text-2xl text-vino/80">
-      {% for servicio in servicios %}
-      <li class="flex items-center gap-10 whitespace-nowrap">{{ servicio.nombre|sin_detalle }} <span class="text-base text-rosa">✦</span></li>
-      {% endfor %}
-    </ul>
-    {% endfor %}
-  </div>
 </div>
-{% endif %}
 
-{# ── Asesoría gratuita (destacado) ─────────────────────────────────── #}
-{# «Más información» lleva a la página de la asesoría gratuita (contenido entregado por la agencia, 11 oct 2026). #}
-<section id="asesoria-gratis" aria-labelledby="asesoria-titulo" class="scroll-mt-20 bg-fondo-suave px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-  <div data-revelar="escala" class="tarjeta-viva oscura relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-vino to-vino-oscuro sombra-3">
-    <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-rosa/25 blur-3xl" aria-hidden="true"></div>
-    <div class="relative flex flex-col items-start gap-8 px-6 py-10 sm:px-10 md:flex-row md:items-center md:justify-between lg:px-14 lg:py-12">
-      <div class="flex items-start gap-5">
-        <span class="relative mt-1 grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-rosa font-serif text-2xl text-vino shadow-lg shadow-rosa/30" aria-hidden="true">
-          ★<span class="absolute inset-0 animate-ping rounded-2xl bg-rosa/40 [animation-duration:2.4s] motion-reduce:animate-none"></span>
-        </span>
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Sin costo</p>
-          <h2 id="asesoria-titulo" class="mt-1 font-serif text-3xl text-white sm:text-4xl">Asesoría gratuita para tu marca</h2>
-          <p class="mt-2 max-w-xl text-lila">Conversa con nosotras y descubre cómo potenciar tu marca, sin compromiso.</p>
+  {# ── Cinta con los servicios: solo tipografía, que aparece y se desvanece en los bordes ── #}
+  {% if servicios %}
+  <div data-escena="levantar" class="cinta-contenedor cinta-desvanecida relative overflow-hidden py-6 lg:py-10" aria-hidden="true">
+    <div class="cinta">
+      {% for vuelta in "12" %}
+      <ul class="flex shrink-0 items-center gap-12 pr-12 font-serif text-3xl italic text-rubor/40 lg:text-5xl">
+        {% for servicio in servicios %}<li class="flex items-center gap-12 whitespace-nowrap">{{ servicio.nombre|sin_detalle }} <span class="text-base not-italic text-rosa/70 lg:text-xl">✦</span></li>{% endfor %}
+      </ul>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Asesoría gratuita (destacado) ─────────────────────────────────── #}
+  {# «Más información» lleva a la página de la asesoría gratuita (contenido entregado por la agencia, 11 oct 2026). #}
+  <section id="asesoria-gratis" data-ancla-centrar aria-labelledby="asesoria-titulo" class="relative scroll-mt-20 px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
+    <div data-escena="inclinar" class="tarjeta-viva oscura relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-vino to-vino-oscuro sombra-2">
+      <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-rosa/25 blur-3xl" aria-hidden="true"></div>
+      <div class="relative flex flex-col items-start gap-8 px-6 py-10 sm:px-10 md:flex-row md:items-center md:justify-between lg:px-14 lg:py-12">
+        <div class="flex items-start gap-5">
+          <span class="relative mt-1 grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-rosa font-serif text-2xl text-vino shadow-lg shadow-rosa/30" aria-hidden="true">
+            ★<span class="absolute inset-0 animate-ping rounded-2xl bg-rosa/40 [animation-duration:2.4s] motion-reduce:animate-none"></span>
+          </span>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Sin costo</p>
+            <h2 id="asesoria-titulo" class="mt-1 font-serif text-3xl text-white sm:text-4xl">Asesoría gratuita para tu marca</h2>
+            <p class="mt-2 max-w-xl text-lila">Conversa con nosotras y descubre cómo potenciar tu marca, sin compromiso.</p>
+          </div>
+        </div>
+        <div class="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row">
+          <a href="{% url 'website:asesoria' %}" id="asesoria-mas-info" data-magnetico class="boton-brillo rounded-full bg-rosa px-7 py-3.5 text-center font-semibold text-vino-oscuro hover:bg-white">Más información <span class="flecha" aria-hidden="true">→</span></a>
+          {% if agencia.whatsapp %}
+          <a href="https://wa.me/{{ agencia.whatsapp }}?text=Hola%2C%20quiero%20pedir%20la%20asesor%C3%ADa%20gratuita%20para%20mi%20marca." target="_blank" rel="noopener" class="rounded-full border border-white/25 px-7 py-3.5 text-center font-semibold text-white transition hover:border-white hover:bg-white/10">Escríbenos por WhatsApp</a>
+          {% endif %}
         </div>
       </div>
-      <div class="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row">
-        <a href="{% url 'website:asesoria' %}" id="asesoria-mas-info" data-magnetico class="boton-brillo rounded-full bg-rosa px-7 py-3.5 text-center font-semibold text-vino-oscuro hover:bg-white">Más información <span class="flecha" aria-hidden="true">→</span></a>
-        {% if agencia.whatsapp %}
-        <a href="https://wa.me/{{ agencia.whatsapp }}?text=Hola%2C%20quiero%20pedir%20la%20asesor%C3%ADa%20gratuita%20para%20mi%20marca." target="_blank" rel="noopener" class="rounded-full border border-white/25 px-7 py-3.5 text-center font-semibold text-white transition hover:border-white hover:bg-white/10">Escríbenos por WhatsApp</a>
-        {% endif %}
+    </div>
+  </section>
+
+</div>
+
+{# ── Desde aquí sigue el mismo recorrido nocturno del inicio: escenarios fijos donde el scroll mueve las piezas en 3D ── #}
+<div class="relative isolate bg-vino-oscuro" style="overflow: hidden; overflow: clip" data-foco>
+  {% include "website/_fondo_oscuro.html" with sin_linea=True %}
+  {# Bordes en el mismo vino oscuro por encima de los brillos: no queda filo con la apertura ni con el cierre. #}
+  <div class="pointer-events-none absolute inset-x-0 top-0 -z-[5] h-48 bg-gradient-to-b from-vino-oscuro to-transparent" aria-hidden="true"></div>
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-[5] h-48 bg-gradient-to-t from-vino-oscuro to-transparent" aria-hidden="true"></div>
+
+  {# ── Stats (solo con cifras reales) ─────────────────────────────────── #}
+  {# TODO: Supabase - sitio_stats #}
+  {% if stats %}
+  <section class="px-4 pt-10 sm:px-6 lg:px-8">
+    <dl data-escena="inclinar" class="mx-auto grid max-w-7xl divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/5 backdrop-blur sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      {% for stat in stats %}
+      <div class="py-8 text-center sm:py-10">
+        <dt class="sr-only">{{ stat.etiqueta }}</dt>
+        <dd class="font-serif text-4xl text-white lg:text-5xl">{{ stat.valor }}</dd>
+        <dd class="mt-2 text-sm text-lila">{{ stat.etiqueta }}</dd>
       </div>
-    </div>
-  </div>
-</section>
-
-{# ── Stats (solo con cifras reales) ─────────────────────────────────── #}
-{# TODO: Supabase - sitio_stats #}
-{% if stats %}
-<section class="border-y border-gris-borde bg-white">
-  <dl class="mx-auto grid max-w-7xl divide-y divide-gris-borde px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6 lg:px-8">
-    {% for stat in stats %}
-    <div data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="py-8 text-center sm:py-10">
-      <dt class="sr-only">{{ stat.etiqueta }}</dt>
-      <dd class="font-serif text-4xl text-vino lg:text-5xl">{{ stat.valor }}</dd>
-      <dd class="mt-2 text-sm">{{ stat.etiqueta }}</dd>
-    </div>
-    {% endfor %}
-  </dl>
-</section>
-{% endif %}
-
-{# ── Servicios ──────────────────────────────────────────────────────── #}
-{# Desde la base: catalog.Service (visibles en el sitio) y el precio más bajo de catalog.Plan #}
-<section id="servicios" class="relative scroll-mt-20 overflow-hidden py-16 lg:py-28">
-  <div class="pointer-events-none absolute -right-40 top-20 -z-10 h-96 w-96 rounded-full bg-rubor blur-3xl" aria-hidden="true"></div>
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="flex flex-wrap items-end justify-between gap-6">
-      <div data-revelar>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Servicios</p>
-        <h2 class="mt-3 font-serif text-4xl text-vino sm:text-5xl">Lo que hacemos por tu marca</h2>
-        <p class="mt-3 max-w-2xl">Contrata un plan mensual o solo el servicio que necesitas. Valores netos, no incluyen IVA.</p>
-      </div>
-      <a data-revelar href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-4 hover:text-rosa">Armar mi cotización →</a>
-    </div>
-
-    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      {% for servicio in servicios %}
-      <article data-revelar style="--retraso: {% widthratio forloop.counter0 1 90 %}ms" class="tarjeta-viva flex flex-col rounded-3xl border border-gris-borde bg-white p-6 sombra-1">
-        <span class="h-1 w-10 rounded-full bg-gradient-to-r from-rosa to-rosa-viejo" aria-hidden="true"></span>
-        <h3 class="mt-5 font-serif text-2xl leading-snug text-vino">{{ servicio.nombre|sin_detalle }}</h3>
-        {% if servicio.descripcion %}<p class="mt-3 text-sm leading-relaxed">{{ servicio.descripcion }}</p>{% endif %}
-      </article>
       {% endfor %}
-      {% if plan_desde %}
-      <a data-revelar style="--retraso: {% widthratio servicios|length 1 90 %}ms" href="{% url 'website:planes' %}" class="tarjeta-viva oscura group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-vino to-vino-oscuro p-6 text-lila sombra-2">
-        <span class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-rosa/30 blur-2xl transition duration-700 group-hover:scale-150" aria-hidden="true"></span>
-        <span class="relative text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Planes mensuales</span>
-        <span class="relative mt-2 font-serif text-2xl leading-snug text-white">Todo junto, desde {{ plan_desde|clp }} al mes</span>
-        <span class="relative mt-1 text-xs text-lila">+ IVA</span>
-        <span class="relative mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">Ver planes <span aria-hidden="true" class="inline-block transition group-hover:translate-x-1">→</span></span>
-      </a>
-      {% endif %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {# ── Servicios: escenario con el anillo 3D ─────────────────────────── #}
+  {# Desde la base: catalog.Service (visibles en el sitio) y el precio más bajo de catalog.Plan. #}
+  {# Las tarjetas forman un cilindro que gira: solo y despacio, con el scroll de la escena (escritorio), con el mouse hacia los lados, arrastrando, con las flechas o los puntos. #}
+  {# Sin JS o con «reducir movimiento» es una grilla de tarjetas. #}
+  <div id="escena-servicios" class="escena-servicios" data-escenario="servicios">
+  <section id="servicios" aria-labelledby="servicios-titulo" class="escenario-servicios relative scroll-mt-20 pb-12 pt-16 lg:pb-16 lg:pt-20">
+    {% include "website/_luces_escenario.html" %}
+    <div data-servicios-cabecera class="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Servicios</p>
+      <h2 id="servicios-titulo" class="mt-3 font-serif text-4xl text-white sm:text-6xl">Lo que hacemos por tu marca</h2>
+      <p class="mx-auto mt-3 max-w-xl text-lila">Contrata un plan mensual o solo el servicio que necesitas. Valores netos, no incluyen IVA.</p>
     </div>
 
-    {# CTA intermedio: para quien no sabe qué elegir #}
-    <div data-revelar class="mt-12 flex flex-col items-start justify-between gap-5 rounded-3xl border border-dashed border-lila bg-fondo-suave px-6 py-6 sm:flex-row sm:items-center sm:px-8">
-      <p class="font-serif text-2xl leading-snug text-vino">¿No sabes por dónde partir? <span class="text-malva">Te ayudamos a elegir, sin costo.</span></p>
-      <a href="{% url 'website:asesoria' %}" data-magnetico class="boton-brillo shrink-0 rounded-full bg-vino px-6 py-3 text-sm font-semibold text-white hover:bg-vino-oscuro">Pedir asesoría gratuita <span class="flecha" aria-hidden="true">→</span></a>
+    <div id="anillo-servicios" data-escena="inclinar" class="anillo" tabindex="0" role="region" aria-roledescription="carrusel" aria-label="Servicios de la agencia">
+      <div class="anillo-piso" aria-hidden="true"></div>
+      <ul data-anillo class="anillo-cilindro">
+        {% for servicio in servicios %}
+        <li class="anillo-cara" data-cara>
+          <article class="cara-servicio">
+            <span class="cara-inicial" aria-hidden="true">{{ servicio.nombre|sin_detalle|first }}</span>
+            <span class="cara-etiqueta">Servicio</span>
+            <h3 class="cara-nombre">{{ servicio.nombre|sin_detalle }}</h3>
+            {% if servicio.descripcion %}<p class="cara-descripcion">{{ servicio.descripcion }}</p>{% endif %}
+            <a href="{% url 'website:cotizacion' %}?servicio={{ servicio.slug|urlencode }}" draggable="false" class="cara-enlace">Cotizar este servicio <span aria-hidden="true">→</span></a>
+          </article>
+        </li>
+        {% endfor %}
+        {% if plan_desde %}
+        <li class="anillo-cara" data-cara>
+          <a href="{% url 'website:planes' %}" draggable="false" class="cara-servicio cara-plan">
+            <span class="cara-inicial" aria-hidden="true">P</span>
+            <span class="cara-etiqueta">Planes mensuales</span>
+            <span class="cara-nombre">Todo junto, desde {{ plan_desde|clp }} al mes</span>
+            <span class="mt-1 text-xs font-semibold">+ IVA</span>
+            <span class="cara-enlace">Ver planes <span aria-hidden="true">→</span></span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div data-anillo-controles class="anillo-controles relative mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 sm:gap-4">
+      {# Todo lo que se mueve solo debe poder detenerse (WCAG 2.2.2). #}
+      <button type="button" data-anillo-pausa class="anillo-boton" aria-pressed="false" aria-label="Pausar el giro" aria-controls="anillo-servicios">
+        <svg data-icono-pausa viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        <svg data-icono-play viewBox="0 0 24 24" class="hidden h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+      </button>
+      <button type="button" data-anillo-anterior class="anillo-boton" aria-label="Servicio anterior" aria-controls="anillo-servicios">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="flex items-center gap-2">
+        {% for servicio in servicios %}<button type="button" data-anillo-punto class="anillo-punto" aria-label="Ver {{ servicio.nombre|sin_detalle }}" aria-controls="anillo-servicios"></button>{% endfor %}
+        {% if plan_desde %}<button type="button" data-anillo-punto class="anillo-punto" aria-label="Ver los planes mensuales" aria-controls="anillo-servicios"></button>{% endif %}
+      </div>
+      <button type="button" data-anillo-siguiente class="anillo-boton" aria-label="Servicio siguiente" aria-controls="anillo-servicios">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+    <p class="anillo-ayuda relative mt-5 text-center text-[11px] uppercase tracking-[0.25em] text-lila/70" aria-hidden="true"><span class="ayuda-mouse">Arrastra o lleva el mouse hacia los lados para girar</span><span class="ayuda-fijo">Baja, arrastra o lleva el mouse hacia los lados para girar</span><span class="ayuda-tactil">Desliza para girar</span></p>
+  </section>
+  </div>
+
+  {# CTA intermedio: para quien no sabe qué elegir #}
+  <div class="relative mx-auto max-w-7xl px-4 pb-6 pt-16 sm:px-6 lg:px-8 lg:pt-28">
+    <div data-escena="inclinar" class="flex flex-col items-start justify-between gap-5 rounded-3xl border border-dashed border-lila/40 bg-white/[.04] px-6 py-6 backdrop-blur sm:flex-row sm:items-center sm:px-8">
+      <p class="font-serif text-2xl leading-snug text-white">¿No sabes por dónde partir? <span class="text-lila">Te ayudamos a elegir, sin costo.</span></p>
+      <div class="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center">
+        <a href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-white underline decoration-rosa decoration-2 underline-offset-4 hover:text-rosa">Armar mi cotización →</a>
+        <a href="{% url 'website:asesoria' %}" data-magnetico class="boton-brillo rounded-full bg-rosa px-6 py-3 text-center text-sm font-semibold text-vino-oscuro shadow-lg shadow-rosa/20 hover:bg-white">Pedir asesoría gratuita <span class="flecha" aria-hidden="true">→</span></a>
+      </div>
     </div>
   </div>
-</section>
 
-{# ── Nosotras: equipo y metodología ─────────────────────────────────── #}
-{# TODO: Supabase - sitio_contenido (nosotras) + fotos del equipo en Storage #}
-<section id="nosotras" class="relative scroll-mt-20 overflow-hidden border-t border-gris-borde bg-gradient-to-b from-fondo-suave to-white py-16 lg:py-28">
-  <div class="mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:gap-20 lg:px-8">
-    <div>
+  {# ── Nosotras: el equipo ───────────────────────────────────────────── #}
+  {# TODO: Supabase - sitio_contenido (nosotras) + fotos del equipo en Storage #}
+  <section id="nosotras" class="relative scroll-mt-20 pb-6 pt-20 lg:pb-0 lg:pt-32">
+    {# Separador: un trazo de luz que se desvanece a los costados #}
+    <div class="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-5xl bg-gradient-to-r from-transparent via-rosa/50 to-transparent" aria-hidden="true"></div>
+    <span class="absolute left-1/2 top-0 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-vino-oscuro text-sm text-rosa shadow-[0_0_24px_rgb(244_127_177/.45)]" aria-hidden="true">✦</span>
+    <div class="mx-auto grid max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-20 lg:px-8">
       <div data-revelar="izquierda">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Nosotras</p>
-        <h2 class="mt-3 font-serif text-4xl text-vino sm:text-5xl">Dos socias, un proceso claro</h2>
-        <p class="mt-4 max-w-lg leading-relaxed">{{ nosotras.intro }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Nosotras</p>
+        <h2 class="mt-3 font-serif text-4xl text-white sm:text-6xl">Dos socias, un proceso claro</h2>
+        <p class="mt-5 max-w-lg text-lg leading-relaxed text-lila">{{ nosotras.intro }}</p>
       </div>
-      <ul class="mt-10 grid gap-5 sm:grid-cols-2">
+      <ul data-escena="inclinar" class="grid gap-5 sm:grid-cols-2">
         {% for persona in nosotras.equipo %}
-        <li data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="tarjeta-viva rounded-3xl border border-gris-borde bg-white p-5 sombra-1">
+        <li class="tarjeta-viva rounded-3xl border border-white/10 bg-white p-5 shadow-[0_30px_60px_-26px_rgb(0_0_0/.6),0_0_50px_-24px_rgb(244_127_177/.5)]">
           <div class="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-rubor to-fondo-suave">
             <div class="placeholder-rayado absolute inset-0 opacity-50"></div>
             <span class="relative grid h-16 w-16 place-items-center rounded-full bg-vino font-serif text-2xl text-white ring-4 ring-white sombra-2">{{ persona.iniciales }}</span>
@@ -333,88 +587,118 @@
         {% endfor %}
       </ul>
     </div>
-    <div>
-      <h3 data-revelar class="font-serif text-3xl text-vino">Cómo trabajamos</h3>
-      <ol class="relative mt-8 space-y-6">
-        {# Línea de tiempo que se llena al bajar #}
-        <span class="absolute bottom-6 left-5 top-5 w-px bg-gris-borde" aria-hidden="true">
-          <span data-linea-progreso class="linea-progreso absolute inset-0 bg-gradient-to-b from-rosa to-vino"></span>
+  </section>
+
+  {# ── Cómo trabajamos: escenario con los pasos apilados en 3D ───────────── #}
+  {# Escritorio: la pantalla queda fija; con el scroll cada paso se voltea hacia adelante y el anterior retrocede en profundidad. #}
+  {# Celular o «reducir movimiento»: lista vertical con línea de tiempo. #}
+  <div id="escena-pasos" class="escena-pasos" data-escenario="pasos">
+  <section id="como-trabajamos" aria-labelledby="pasos-titulo" class="escenario-pasos relative scroll-mt-20 pb-10 pt-10 lg:pb-16">
+    {% include "website/_luces_escenario.html" %}
+    <div class="pasos-contenido relative">
+    <div class="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-16 lg:px-8">
+      <div data-revelar="izquierda">
+        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Proceso</p>
+        <h2 id="pasos-titulo" class="mt-3 font-serif text-4xl text-white sm:text-6xl xl:text-7xl">Cómo trabajamos</h2>
+        <p class="mt-5 max-w-md text-lg leading-relaxed text-lila">De la primera conversación al reporte de cada mes, sabes siempre en qué paso está tu marca.</p>
+        <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a href="{% url 'website:cotizacion' %}" data-magnetico class="boton-brillo whitespace-nowrap rounded-full bg-rosa px-6 py-3 text-center text-sm font-semibold text-vino-oscuro shadow-lg shadow-rosa/20 hover:bg-white">Empezar con mi diagnóstico <span class="flecha" aria-hidden="true">→</span></a>
+          <span class="text-sm text-lila">Paso 1: te enviamos la propuesta en 3 días hábiles.</span>
+        </div>
+      </div>
+      <ol class="pasos-lista relative space-y-6">
+        {# Línea de tiempo que se llena al bajar (lista vertical) #}
+        <span class="pasos-linea absolute bottom-6 left-5 top-5 w-px bg-white/15" aria-hidden="true">
+          <span data-linea-progreso class="linea-progreso absolute inset-0 bg-gradient-to-b from-rosa to-white/60"></span>
         </span>
         {% for paso in nosotras.metodologia %}
-        <li data-revelar="derecha" style="--retraso: {% widthratio forloop.counter0 1 100 %}ms" class="relative flex gap-5">
-          <span class="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-rosa/40 bg-white font-serif text-lg text-vino sombra-1">{{ forloop.counter }}</span>
-          <div class="tarjeta-viva flex-1 rounded-2xl border border-gris-borde bg-white px-5 py-4 sombra-1">
-            <p class="font-semibold text-vino">{{ paso.titulo }}</p>
-            <p class="mt-1 text-sm leading-relaxed">{{ paso.texto }}</p>
+        <li data-escena="girar" data-paso class="paso relative flex gap-5">
+          <span class="paso-numero relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-rosa/50 bg-vino-oscuro font-serif text-lg text-white shadow-[0_0_20px_rgb(244_127_177/.35)]">{{ forloop.counter }}</span>
+          <div class="paso-tarjeta paso-vidrio tarjeta-viva flex-1 rounded-2xl px-5 py-4">
+            <span class="paso-fondo" aria-hidden="true">{{ forloop.counter }}</span>
+            <p class="paso-titulo relative font-semibold text-white">{{ paso.titulo }}</p>
+            <p class="paso-texto relative mt-1 text-sm leading-relaxed text-rubor/90">{{ paso.texto }}</p>
           </div>
         </li>
         {% endfor %}
       </ol>
-      <div data-revelar class="mt-8 flex flex-col gap-3 pl-0 sm:flex-row sm:items-center sm:pl-[3.75rem]">
-        <a href="{% url 'website:cotizacion' %}" data-magnetico class="boton-brillo whitespace-nowrap rounded-full bg-vino px-6 py-3 text-center text-sm font-semibold text-white hover:bg-vino-oscuro">Empezar con mi diagnóstico <span class="flecha" aria-hidden="true">→</span></a>
-        <span class="text-sm text-malva">Paso 1: te enviamos la propuesta en 3 días hábiles.</span>
+    </div>
+
+    {# Línea con todos los pasos (solo en el escenario fijo): llena la parte de abajo y muestra el avance #}
+    <div class="pasos-riel relative mx-auto mt-14 max-w-7xl px-4 sm:px-6 lg:px-8" aria-hidden="true">
+      <div class="relative">
+        <span class="absolute top-[0.47rem] h-px bg-white/15" style="left: {% widthratio 50 nosotras.metodologia|length 1 %}%; right: {% widthratio 50 nosotras.metodologia|length 1 %}%"></span>
+        <span data-riel-barra class="absolute top-[0.47rem] h-px origin-left bg-gradient-to-r from-rosa to-white" style="left: {% widthratio 50 nosotras.metodologia|length 1 %}%; right: {% widthratio 50 nosotras.metodologia|length 1 %}%; transform: scaleX(0)"></span>
+        <ol class="relative grid gap-4" style="grid-template-columns: repeat({{ nosotras.metodologia|length }}, minmax(0, 1fr))">
+          {% for paso in nosotras.metodologia %}<li data-riel-paso class="riel-paso"><span class="riel-punto"></span>{{ paso.titulo }}</li>{% endfor %}
+        </ol>
       </div>
     </div>
+    </div>
+  </section>
   </div>
-</section>
 
-{# ── Casos (solo reales y autorizados por el cliente) ──────────────────── #}
-{# TODO: Supabase - casos #}
-{% if casos %}
-<section id="casos" class="scroll-mt-20 bg-fondo-suave py-16 lg:py-24">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div data-revelar class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rosa">Resultados</p>
-        <h2 class="mt-3 font-serif text-4xl text-vino sm:text-5xl">Casos recientes</h2>
-      </div>
-      <a href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-vino underline decoration-rosa decoration-2 underline-offset-4">Quiero resultados así →</a>
-    </div>
-
-    <div class="mt-10 grid gap-6 md:grid-cols-3">
-      {% for caso in casos %}
-      <article data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="tarjeta-viva overflow-hidden rounded-3xl border border-gris-borde bg-white sombra-1">
-        {# TODO: Supabase Storage - imagen del caso #}
-        <div class="placeholder-rayado aspect-[16/10]"></div>
-        <div class="p-6">
-          <p class="text-xs uppercase tracking-widest text-malva">{{ caso.rubro }}</p>
-          <h3 class="mt-1 font-serif text-xl text-vino">{{ caso.cliente }}</h3>
-          <div class="mt-5 flex items-baseline gap-3">
-            <span class="font-serif text-4xl text-vino">{{ caso.metrica }}</span>
-            <span class="text-sm leading-tight">{{ caso.metrica_etiqueta }}<br><span class="text-malva">{{ caso.detalle }}</span></span>
-          </div>
-          <p class="mt-4 text-sm leading-relaxed">{{ caso.resumen }}</p>
+  {# ── Casos (solo reales y autorizados por el cliente) ──────────────────── #}
+  {# TODO: Supabase - casos #}
+  {% if casos %}
+  <section id="casos" class="scroll-mt-20 pb-16 lg:pb-24">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div data-revelar class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.25em] text-rosa">Resultados</p>
+          <h2 class="mt-3 font-serif text-4xl text-white sm:text-5xl">Casos recientes</h2>
         </div>
-      </article>
+        <a href="{% url 'website:cotizacion' %}" class="text-sm font-semibold text-white underline decoration-rosa decoration-2 underline-offset-4">Quiero resultados así →</a>
+      </div>
+
+      <div data-escena="inclinar" class="mt-10 grid gap-6 md:grid-cols-3">
+        {% for caso in casos %}
+        <article class="tarjeta-viva overflow-hidden rounded-3xl border border-white/10 bg-white sombra-1">
+          {# TODO: Supabase Storage - imagen del caso #}
+          <div class="placeholder-rayado aspect-[16/10]"></div>
+          <div class="p-6">
+            <p class="text-xs uppercase tracking-widest text-malva">{{ caso.rubro }}</p>
+            <h3 class="mt-1 font-serif text-xl text-vino">{{ caso.cliente }}</h3>
+            <div class="mt-5 flex items-baseline gap-3">
+              <span class="font-serif text-4xl text-vino">{{ caso.metrica }}</span>
+              <span class="text-sm leading-tight">{{ caso.metrica_etiqueta }}<br><span class="text-malva">{{ caso.detalle }}</span></span>
+            </div>
+            <p class="mt-4 text-sm leading-relaxed">{{ caso.resumen }}</p>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Testimonios (solo reales y autorizados) ────────────────────────── #}
+  {# TODO: Supabase - testimonios #}
+  {% if testimonios %}
+  <section class="pb-16 lg:pb-24">
+    <div data-escena="inclinar" class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 md:grid-cols-2 lg:gap-10 lg:px-8">
+      {% for testimonio in testimonios %}
+      <figure class="tarjeta-viva rounded-3xl border border-white/10 bg-white p-7 sombra-1 lg:p-10">
+        <span class="font-serif text-5xl leading-none text-rosa" aria-hidden="true">“</span>
+        <blockquote class="mt-2 font-serif text-xl leading-relaxed text-vino lg:text-2xl">{{ testimonio.cita }}</blockquote>
+        <figcaption class="mt-6 flex items-center gap-3">
+          <span class="grid h-11 w-11 place-items-center rounded-full bg-lila font-semibold text-vino">{{ testimonio.autor|slice:":1" }}</span>
+          <span class="text-sm">
+            <strong class="block text-vino">{{ testimonio.autor }}</strong>
+            {{ testimonio.cargo }}, {{ testimonio.empresa }}
+          </span>
+        </figcaption>
+      </figure>
       {% endfor %}
     </div>
-  </div>
-</section>
-{% endif %}
-
-{# ── Testimonios (solo reales y autorizados) ────────────────────────── #}
-{# TODO: Supabase - testimonios #}
-{% if testimonios %}
-<section class="py-16 lg:py-24">
-  <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 md:grid-cols-2 lg:gap-10 lg:px-8">
-    {% for testimonio in testimonios %}
-    <figure data-revelar style="--retraso: {% widthratio forloop.counter0 1 120 %}ms" class="tarjeta-viva rounded-3xl border border-gris-borde bg-white p-7 sombra-1 lg:p-10">
-      <span class="font-serif text-5xl leading-none text-rosa" aria-hidden="true">“</span>
-      <blockquote class="mt-2 font-serif text-xl leading-relaxed text-vino lg:text-2xl">{{ testimonio.cita }}</blockquote>
-      <figcaption class="mt-6 flex items-center gap-3">
-        <span class="grid h-11 w-11 place-items-center rounded-full bg-lila font-semibold text-vino">{{ testimonio.autor|slice:":1" }}</span>
-        <span class="text-sm">
-          <strong class="block text-vino">{{ testimonio.autor }}</strong>
-          {{ testimonio.cargo }}, {{ testimonio.empresa }}
-        </span>
-      </figcaption>
-    </figure>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
+  </section>
+  {% endif %}
+</div>
 
 {% endblock %}
+
+{# El cierre sigue en la misma noche: entra fundido con lo anterior y su título se acerca desde la profundidad. #}
+{% block cta_final %}{% include "website/_cta_cotizacion.html" with desvanecer=True escena=True %}{% endblock %}
 
 {% block scripts %}
 <script>
@@ -460,6 +744,460 @@
       brillo.style.removeProperty('--by');
       sombra.style.removeProperty('--ry-num');
     });
+  })();
+
+  // 3D ligado al scroll: todo se calcula con la posición de la página, en un solo cuadro por scroll.
+  // Escritorio: tres escenarios fijos ([data-escenario]); mientras uno está en pantalla, el scroll mueve sus piezas:
+  //  · hero: sale el texto, el logo AC viaja al centro, gira y separa sus capas, aparecen los tres compromisos
+  //    y al final se aleja.
+  //  · servicios: el título llega desde la profundidad y el scroll hace girar el anillo de tarjetas.
+  //  · pasos: cada paso se voltea hacia adelante y el anterior retrocede en profundidad; la barra muestra el avance.
+  //  En los tres cruzan haces de luz y suben partículas tenues.
+  // Celular: sin escenarios fijos; el hero se inclina al bajar y los bloques entran en 3D.
+  // data-escena: el bloque entra inclinado y se endereza al llegar a ~40% de la pantalla («inclinar»,
+  // «levantar», «girar» como una página, «acercar» desde la profundidad).
+  // Al subir, todo vuelve atrás. Con «reducir movimiento» no se hace nada.
+  (() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const modoFijo = window.matchMedia('(min-width: 1024px) and (min-height: 700px)');
+    const hero = document.getElementById('hero');
+    const heroTexto = document.querySelector('[data-hero-texto]');
+    const heroLogo = document.querySelector('[data-hero-logo]');
+    const tarjeta = document.getElementById('logo-tarjeta');
+    const bajar = document.querySelector('[data-hero-bajar]');
+    const capitulos = [...document.querySelectorAll('[data-capitulo]')];
+    const anillo = document.getElementById('anillo-servicios');
+    const cabeceraServicios = document.querySelector('[data-servicios-cabecera]');
+    const pasos = [...document.querySelectorAll('[data-paso]')];
+    const rielPasos = [...document.querySelectorAll('[data-riel-paso]')];
+    const rielBarra = document.querySelector('[data-riel-barra]');
+    const etapas = [...document.querySelectorAll('[data-escenario]')].map((el) => ({
+      el, tipo: el.dataset.escenario, top: 0, largo: 1, sembradas: 0,
+      haces: [...el.querySelectorAll('[data-haz]')], particulas: el.querySelector('[data-particulas]'),
+    }));
+    const todasLasEscenas = [...document.querySelectorAll('[data-escena]')];
+    const suave = (t) => 1 - Math.pow(1 - t, 3);
+    const enDos = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const limitar = (v) => Math.max(0, Math.min(1, v));
+    const tramo = (p, a, b) => limitar((p - a) / (b - a));
+
+    // Posición en la página sin contar transformaciones (offsetTop no las considera): así el efecto no se
+    // retroalimenta con su propio movimiento.
+    const topReal = (el) => { let y = 0; for (let n = el; n; n = n.offsetParent) y += n.offsetTop; return y; };
+    let fijo = false, alCentro = 0, escenas = [];
+    const limpiar = (el) => el && el.removeAttribute('style');
+
+    const sembrarParticulas = (et) => {
+      if (!et.particulas || et.sembradas === window.innerWidth) return;
+      et.sembradas = window.innerWidth;
+      const w = window.innerWidth, h = window.innerHeight * 1.5, puntos = [];
+      for (let i = 0; i < 70; i++) {
+        const tono = Math.random() < 0.3 ? '244 127 177' : '255 255 255';
+        puntos.push(`${Math.round(Math.random() * w)}px ${Math.round(Math.random() * h)}px 0 ${Math.random() < 0.15 ? 1 : 0}px rgb(${tono} / ${(0.15 + Math.random() * 0.45).toFixed(2)})`);
+      }
+      et.particulas.style.boxShadow = puntos.join(',');
+    };
+
+    const medir = () => {
+      fijo = modoFijo.matches;
+      document.getElementById('escena-hero')?.classList.toggle('escena-activa', fijo);
+      for (const et of etapas) {
+        et.top = topReal(et.el);
+        et.largo = Math.max(1, et.el.offsetHeight - window.innerHeight);
+        if (fijo) sembrarParticulas(et);
+      }
+      if (fijo && heroLogo) {
+        // Cuánto debe moverse el logo para quedar al centro (se mide la caja que lo contiene, que no se mueve).
+        const caja = heroLogo.parentElement.getBoundingClientRect();
+        alCentro = window.innerWidth / 2 - (caja.left + caja.width / 2);
+      }
+      if (!fijo) {
+        [heroTexto, heroLogo, bajar, cabeceraServicios, ...capitulos, ...pasos].forEach(limpiar);
+        etapas.forEach((et) => et.haces.forEach(limpiar));
+        ['--srx', '--sry', '--explotar'].forEach((v) => tarjeta?.style.removeProperty(v));
+        if (anillo) anillo.__extra = 0;
+      }
+      // Dentro de un escenario fijo, sus piezas las mueve el escenario (no la entrada genérica).
+      escenas = todasLasEscenas
+        .filter((el) => !(fijo && (el.closest('[data-escenario="pasos"]') || el === anillo)))
+        .map((el) => ({ el, tipo: el.dataset.escena, top: topReal(el) }));
+      todasLasEscenas.forEach((el) => { if (!escenas.some((e) => e.el === el) && el !== anillo) limpiar(el); });
+    };
+
+    // Haces de luz: ángulo, altura (% de pantalla), tramo del recorrido en que cruzan y sentido.
+    const HACES = [
+      { angulo: -24, alto: 0.22, desde: 0.06, hasta: 0.52, sentido: 1 },
+      { angulo: 30, alto: 0.74, desde: 0.32, hasta: 0.82, sentido: -1 },
+      { angulo: -6, alto: 0.5, desde: 0.58, hasta: 1, sentido: 1 },
+    ];
+    const pintarLuces = (et, p) => {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      HACES.forEach((h, i) => {
+        const el = et.haces[i];
+        if (!el) return;
+        const t = tramo(p, h.desde, h.hasta);
+        const x = (h.sentido > 0 ? -0.8 + 1.9 * t : 1.1 - 1.9 * t) * vw;
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${(h.alto * vh).toFixed(1)}px, 0) rotate(${h.angulo}deg)`;
+        el.style.opacity = (Math.sin(Math.PI * t) * (i === 2 ? 0.5 : 0.95)).toFixed(3);
+      });
+      if (et.particulas) et.particulas.style.transform = `translate3d(0, ${(-p * 0.35 * vh).toFixed(1)}px, 0)`;
+    };
+
+    // Compromisos del hero: tramo en que se ven y lado desde el que entran.
+    const CAPITULOS = [[0.26, 0.47, -1], [0.45, 0.66, 1], [0.64, 0.86, -1]];
+    const pintarHero = (p) => {
+      if (!heroTexto || !heroLogo || !tarjeta) return;
+      const a = enDos(tramo(p, 0.04, 0.24));
+      heroTexto.style.transform = `translate3d(${(-90 * a).toFixed(1)}px, ${(-24 * a).toFixed(1)}px, 0)`;
+      heroTexto.style.opacity = (1 - a).toFixed(3);
+      heroTexto.style.pointerEvents = a > 0.6 ? 'none' : '';
+      if (bajar) bajar.style.opacity = (1 - a).toFixed(3);
+      const m = enDos(tramo(p, 0.04, 0.3));
+      const r = tramo(p, 0.22, 0.88);
+      const fin = enDos(tramo(p, 0.86, 1));
+      heroLogo.style.transform = `translate3d(${(alCentro * m).toFixed(1)}px, ${(-12 * m).toFixed(1)}px, 0) scale(${(1 - 0.1 * m - 0.25 * fin).toFixed(3)})`;
+      heroLogo.style.opacity = (1 - 0.6 * fin).toFixed(3);
+      tarjeta.style.setProperty('--sry', `${(-26 * m + 52 * enDos(r)).toFixed(2)}deg`);
+      tarjeta.style.setProperty('--srx', `${(10 * Math.sin(Math.PI * r) - 4 * m).toFixed(2)}deg`);
+      tarjeta.style.setProperty('--explotar', (1 + 1.5 * Math.sin(Math.PI * tramo(p, 0.2, 0.92))).toFixed(3));
+      CAPITULOS.forEach(([desde, hasta, lado], i) => {
+        const el = capitulos[i];
+        if (!el) return;
+        const o = Math.min(tramo(p, desde, desde + 0.06), 1 - tramo(p, hasta - 0.06, hasta));
+        el.style.opacity = o.toFixed(3);
+        el.style.transform = `translate3d(${(lado * (1 - o) * 50).toFixed(1)}px, calc(-50% + ${((1 - o) * 26).toFixed(1)}px), 0)`;
+      });
+    };
+
+    const pintarServicios = (et, p, y) => {
+      const vh = window.innerHeight;
+      // Llegada: de 0 (el escenario asoma por abajo) a 1 (el escenario toca el borde de arriba).
+      const llegada = suave(limitar((y - et.top + vh) / vh));
+      const r = 1 - llegada;
+      if (cabeceraServicios) {
+        cabeceraServicios.style.transform = `perspective(1200px) translate3d(0, ${(r * 60).toFixed(1)}px, ${(-r * 260).toFixed(1)}px)`;
+        cabeceraServicios.style.opacity = (0.2 + 0.8 * llegada).toFixed(3);
+      }
+      if (anillo) {
+        anillo.style.transform = `perspective(1400px) translate3d(0, ${(r * 90).toFixed(1)}px, ${(-r * 260).toFixed(1)}px) rotateX(${(r * 24).toFixed(2)}deg)`;
+        anillo.style.opacity = (0.2 + 0.8 * llegada).toFixed(3);
+        // Mientras la escena está fija, el scroll gira el anillo unos 290° (seis o siete tarjetas pasan al frente).
+        anillo.__extra = enDos(p) * 290;
+      }
+    };
+
+    const pintarPasos = (p) => {
+      const n = pasos.length;
+      if (!n) return;
+      const q = enDos(limitar(p / 0.9)) * (n - 1);  // índice del paso al frente (con decimales)
+      pasos.forEach((el, i) => {
+        const d = q - i;
+        let t, o;
+        let contenido = 1;
+        if (d < -1) {
+          t = 'perspective(1400px) translate3d(0, 160px, 0) rotateX(-75deg)'; o = 0;
+        } else if (d < 0) {
+          const k = suave(d + 1);  // se voltea hacia adelante
+          t = `perspective(1400px) translate3d(0, ${((1 - k) * 160).toFixed(1)}px, 0) rotateX(${(-(1 - k) * 75).toFixed(2)}deg)`;
+          o = limitar(k * 2.8 - 0.5);  // aparece ya levantada y se vuelve opaca enseguida, tapando a la de atrás
+          contenido = limitar(k * 1.6 - 0.4);
+        } else {
+          // ya pasó: retrocede en profundidad y se apila detrás como hoja en blanco
+          t = `perspective(1400px) translate3d(0, ${(-d * 38).toFixed(1)}px, ${(-d * 130).toFixed(1)}px)`;
+          o = Math.max(0, 1 - d * 0.32);
+          contenido = limitar(1 - d * 2.2);
+        }
+        el.style.transform = t;
+        el.style.opacity = o.toFixed(3);
+        el.style.setProperty('--contenido', contenido.toFixed(3));
+        el.style.zIndex = String(i);
+        el.style.transformOrigin = '50% 100%';
+      });
+      // El número cambia cuando el paso que llega ya tapa al anterior (a mitad de su giro).
+      // Línea de pasos: el actual cambia cuando el que llega ya tapa al anterior (a mitad de su giro).
+      const actual = Math.min(n - 1, Math.floor(q + 0.6));
+      rielPasos.forEach((el, i) => { el.classList.toggle('actual', i === actual); el.classList.toggle('hecho', i < actual); });
+      if (rielBarra) rielBarra.style.transform = `scaleX(${(q / Math.max(1, n - 1)).toFixed(3)})`;
+    };
+
+    const pintarSimple = (y) => {
+      if (!hero || !heroTexto || !heroLogo) return;
+      const s = limitar(y / (hero.offsetHeight * 0.85));
+      heroTexto.style.transform = `translate3d(0, ${(-s * 90).toFixed(1)}px, 0)`;
+      heroTexto.style.opacity = (1 - s * 1.1).toFixed(3);
+      heroLogo.style.transform = `perspective(1400px) translate3d(0, ${(s * 70).toFixed(1)}px, ${(-s * 320).toFixed(1)}px) rotateX(${(s * 32).toFixed(2)}deg)`;
+      heroLogo.style.opacity = (1 - s * 0.75).toFixed(3);
+    };
+
+    const pintar = () => {
+      const y = window.scrollY, vh = window.innerHeight;
+      if (fijo) {
+        for (const et of etapas) {
+          // Solo se pinta el escenario que está cerca de la pantalla.
+          if (y < et.top - vh * 1.2 || y > et.top + et.largo + vh) continue;
+          const p = limitar((y - et.top) / et.largo);
+          pintarLuces(et, p);
+          if (et.tipo === 'hero') pintarHero(p);
+          else if (et.tipo === 'servicios') pintarServicios(et, p, y);
+          else if (et.tipo === 'pasos') pintarPasos(p);
+        }
+      } else {
+        pintarSimple(y);
+      }
+      for (const m of escenas) {
+        // 0 cuando el borde superior asoma por abajo; 1 cuando llega a ~40% desde arriba de la pantalla.
+        const e = suave(limitar((y + vh - m.top) / (vh * 0.6)));
+        const r = 1 - e;
+        if (m.tipo === 'girar') {
+          m.el.style.transform = `perspective(1200px) translate3d(${(r * 70).toFixed(1)}px, 0, ${(-r * 140).toFixed(1)}px) rotateY(${(-r * 38).toFixed(2)}deg)`;
+        } else if (m.tipo === 'levantar') {
+          m.el.style.transform = `perspective(900px) translate3d(0, ${(r * 40).toFixed(1)}px, 0) rotateX(${(r * 62).toFixed(2)}deg)`;
+        } else if (m.tipo === 'acercar') {
+          m.el.style.transform = `perspective(1200px) translate3d(0, ${(r * 60).toFixed(1)}px, ${(-r * 420).toFixed(1)}px)`;
+        } else {
+          m.el.style.transform = `perspective(1400px) translate3d(0, ${(r * 90).toFixed(1)}px, ${(-r * 180).toFixed(1)}px) rotateX(${(r * 26).toFixed(2)}deg)`;
+        }
+        m.el.style.opacity = (0.25 + 0.75 * e).toFixed(3);
+      }
+    };
+
+    let pendiente = false;
+    const alMover = () => { if (!pendiente) { pendiente = true; requestAnimationFrame(() => { pendiente = false; pintar(); }); } };
+    const remedir = () => { medir(); pintar(); };
+    window.addEventListener('scroll', alMover, { passive: true });
+    window.addEventListener('resize', remedir);
+    window.addEventListener('load', remedir);
+    modoFijo.addEventListener?.('change', remedir);
+    document.fonts?.ready.then(remedir);
+    new ResizeObserver(remedir).observe(document.body);
+    remedir();
+  })();
+
+  // Scroll suave con inercia: la rueda del mouse salta ~100 px por paso; en vez de saltar, la página se desliza
+  // hacia el destino y frena de a poco. Así todo lo que está amarrado al scroll (escenas 3D, entradas, anillo)
+  // se mueve fluido. Solo rueda en escritorio: teclado, barra, enlaces y pantallas táctiles siguen igual.
+  // Con «reducir movimiento» no se activa.
+  (() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const SUAVIDAD = 0.09;  // fracción del camino que recorre en cada cuadro de 60 fps
+    let objetivo = window.scrollY, actual = window.scrollY, corriendo = false, anterior = 0;
+    const maximo = () => document.documentElement.scrollHeight - window.innerHeight;
+    // ¿El mouse está sobre algo que se desplaza por su cuenta (un menú o cuadro con scroll)? Entonces manda ese elemento.
+    const desplazable = (el, dy) => {
+      for (let n = el; n && n !== document.body; n = n.parentElement) {
+        const estilo = getComputedStyle(n);
+        if (/(auto|scroll)/.test(estilo.overflowY) && n.scrollHeight > n.clientHeight) {
+          if ((dy < 0 && n.scrollTop > 0) || (dy > 0 && n.scrollTop + n.clientHeight < n.scrollHeight)) return true;
+        }
+      }
+      return false;
+    };
+    const paso = (ahora) => {
+      const dt = anterior ? Math.min(50, ahora - anterior) : 16.7;
+      anterior = ahora;
+      actual += (objetivo - actual) * (1 - Math.pow(1 - SUAVIDAD, dt / 16.7));
+      if (Math.abs(objetivo - actual) < 0.4) { actual = objetivo; corriendo = false; anterior = 0; }
+      window.scrollTo(0, actual);
+      if (corriendo) requestAnimationFrame(paso);
+    };
+    window.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.defaultPrevented) return;           // zoom con Ctrl, o el anillo ya lo usó
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;    // gestos horizontales
+      if (desplazable(e.target, e.deltaY)) return;
+      e.preventDefault();
+      const delta = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
+      if (!corriendo) { actual = window.scrollY; objetivo = actual; }
+      objetivo = Math.max(0, Math.min(maximo(), objetivo + delta));
+      if (!corriendo) { corriendo = true; requestAnimationFrame(paso); }
+    }, { passive: false });
+    // Si la página se movió por otro medio (teclado, barra, enlace a una sección), se parte desde ahí.
+    window.addEventListener('scroll', () => { if (!corriendo) { actual = objetivo = window.scrollY; } }, { passive: true });
+    ['keydown', 'mousedown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { corriendo = false; anterior = 0; }, { passive: true }));
+  })();
+
+  // Servicios: anillo 3D. Las tarjetas forman un cilindro; gira solo y despacio, con el scroll de la escena fija,
+  // con el mouse (hacia la derecha avanza más rápido mientras más cerca del borde, hacia la izquierda retrocede, al
+  // centro se detiene), arrastrando (con inercia), con flechas, puntos y ← →. La tarjeta del frente se ilumina.
+  // Con «reducir movimiento» queda la grilla de tarjetas.
+  (() => {
+    const anillo = document.getElementById('anillo-servicios');
+    const cilindro = anillo?.querySelector('[data-anillo]');
+    const caras = cilindro ? [...cilindro.querySelectorAll('[data-cara]')] : [];
+    if (caras.length < 3 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const punteroFino = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const botonPausa = document.querySelector('[data-anillo-pausa]');
+    const puntos = [...document.querySelectorAll('[data-anillo-punto]')];
+    const n = caras.length, PASO = 360 / n;
+    const VELOCIDAD = 0.008;  // grados por ms (una vuelta cada ~45 s)
+    const VEL_MAX = 0.16;     // con el mouse en el borde (casi media vuelta por segundo)
+
+    anillo.classList.add('activo');
+    document.querySelector('[data-anillo-controles]')?.classList.add('listo');
+    document.querySelector('.anillo-ayuda')?.classList.add('listo');
+    let radio = 0;
+    const armar = () => {
+      const w = caras[0].offsetWidth;
+      // En pantallas anchas el anillo se abre más (las tarjetas se separan y ocupa casi todo el ancho).
+      const holgura = window.innerWidth >= 1024 ? w * 0.7 : window.innerWidth >= 640 ? w * 0.3 : Math.max(24, w * 0.14);
+      radio = Math.round(w / 2 / Math.tan(Math.PI / n) + holgura);
+      anillo.style.setProperty('--radio', `${radio}px`);
+      caras.forEach((c, i) => c.style.setProperty('--ang', `${i * PASO}deg`));
+    };
+    armar();
+
+    const normal = (a) => ((((a + 180) % 360) + 360) % 360) - 180;  // ángulo en (-180, 180]
+    let giro = 0, v = VELOCIDAD, inercia = 0, animacion = null, guia = null;
+    let enfocado = false, pausado = false, visible = false, arrastre = null, evitarClic = false;
+    const suavizar = (t) => 1 - Math.pow(1 - t, 3);
+    const total = () => giro + (anillo.__extra || 0);
+    let activo = -1;
+
+    const pintar = () => {
+      const t = total();
+      cilindro.style.transform = `translateZ(${-radio}px) rotateY(${(-t).toFixed(2)}deg)`;
+      caras.forEach((c, i) => {
+        const rel = normal(i * PASO - t);
+        const frente = Math.cos(rel * Math.PI / 180);
+        // Las cercanas al frente, opacas del todo (blancas de verdad); las de los costados se desvanecen.
+        const luz = Math.max(0, Math.min(1, (frente - 0.3) / 0.55));
+        c.style.opacity = (0.1 + 0.9 * luz * luz * (3 - 2 * luz)).toFixed(3);
+        c.style.pointerEvents = Math.abs(rel) < 60 ? '' : 'none';
+        c.classList.toggle('al-frente', Math.abs(rel) < PASO / 2);
+      });
+      const nuevo = ((Math.round(t / PASO) % n) + n) % n;
+      if (nuevo !== activo) {
+        activo = nuevo;
+        puntos.forEach((pt, i) => pt.setAttribute('aria-current', String(i === activo)));
+      }
+    };
+
+    let anterior = 0, cuadro = 0;
+    const bucle = (ahora) => {
+      const dt = Math.min(50, anterior ? ahora - anterior : 16);
+      anterior = ahora;
+      if (animacion) {
+        const k = animacion.duracion ? Math.min(1, (ahora - animacion.t0) / animacion.duracion) : 1;
+        giro = animacion.desde + (animacion.hasta - animacion.desde) * suavizar(k);
+        if (k >= 1) animacion = null;
+      } else if (!arrastre) {
+        if (Math.abs(inercia) > 0.002) {
+          giro += inercia * dt;
+          inercia *= Math.pow(0.93, dt / 16);
+        } else {
+          inercia = 0;
+          const objetivo = guia !== null ? guia : (enfocado || pausado) ? 0 : VELOCIDAD;
+          v += (objetivo - v) * Math.min(1, dt / (Math.abs(objetivo) > Math.abs(v) ? 380 : 250));
+          if (objetivo === 0 && Math.abs(v) < 0.0008) v = 0;
+          giro += v * dt;
+        }
+      }
+      pintar();
+      cuadro = visible ? requestAnimationFrame(bucle) : 0;
+    };
+    const arrancar = () => { if (!cuadro) { anterior = 0; cuadro = requestAnimationFrame(bucle); } };
+    new IntersectionObserver(([entrada]) => { visible = entrada.isIntersecting; if (visible) arrancar(); }).observe(anillo);
+    pintar();
+
+    // Lleva una tarjeta al frente por el camino más corto
+    const irA = (indice, duracion = 700) => {
+      inercia = 0;
+      const base = animacion ? animacion.hasta : giro;
+      const diferencia = normal(indice * PASO - (base + (anillo.__extra || 0)));
+      animacion = { desde: giro, hasta: base + diferencia, t0: performance.now(), duracion };
+      arrancar();
+    };
+    const mover = (direccion) => {
+      const base = animacion ? animacion.hasta : giro;
+      irA(Math.round((base + (anillo.__extra || 0)) / PASO) + direccion);
+    };
+    document.querySelector('[data-anillo-anterior]')?.addEventListener('click', () => mover(-1));
+    document.querySelector('[data-anillo-siguiente]')?.addEventListener('click', () => mover(1));
+    puntos.forEach((pt, i) => pt.addEventListener('click', () => irA(i)));
+    anillo.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); mover(1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); mover(-1); }
+    });
+    const marcarPausa = () => {
+      botonPausa?.setAttribute('aria-pressed', String(pausado));
+      botonPausa?.setAttribute('aria-label', pausado ? 'Reanudar el giro' : 'Pausar el giro');
+      botonPausa?.querySelector('[data-icono-pausa]')?.classList.toggle('hidden', pausado);
+      botonPausa?.querySelector('[data-icono-play]')?.classList.toggle('hidden', !pausado);
+    };
+    botonPausa?.addEventListener('click', () => { pausado = !pausado; marcarPausa(); arrancar(); });
+    marcarPausa();
+
+    // Mouse: dirección y velocidad según dónde está el cursor (franja central quieta para poder hacer clic).
+    if (punteroFino) {
+      anillo.addEventListener('pointermove', (e) => {
+        if (arrastre?.movido) return;
+        const caja = anillo.getBoundingClientRect();
+        const x = Math.max(-1, Math.min(1, ((e.clientX - caja.left) / caja.width) * 2 - 1));
+        const fuerza = Math.max(0, (Math.abs(x) - 0.22) / 0.78);
+        guia = Math.sign(x) * Math.pow(fuerza, 1.6) * VEL_MAX;
+        arrancar();
+      });
+      anillo.addEventListener('pointerleave', () => { guia = null; });
+    }
+    // Teclado: al enfocar una tarjeta (Tab), gira hasta dejarla al frente y se detiene.
+    anillo.addEventListener('focusin', (e) => {
+      if (!e.target.matches(':focus-visible')) return;
+      const cara = e.target.closest('[data-cara]');
+      if (!cara) return;
+      enfocado = true;
+      irA(caras.indexOf(cara), 600);
+    });
+    anillo.addEventListener('focusout', (e) => { if (!anillo.contains(e.relatedTarget)) enfocado = false; });
+
+    // Arrastre con mouse o dedo: girar como una perilla, con inercia al soltar.
+    const GRADOS_POR_PX = 0.24;
+    anillo.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      arrastre = { x0: e.clientX, desde: giro, movido: false, muestras: [{ t: performance.now(), x: e.clientX }], id: e.pointerId };
+      animacion = null;
+      inercia = 0;
+    });
+    anillo.addEventListener('pointermove', (e) => {
+      if (!arrastre || e.pointerId !== arrastre.id) return;
+      const dx = e.clientX - arrastre.x0;
+      if (!arrastre.movido && Math.abs(dx) > 6) {
+        arrastre.movido = true;
+        anillo.setPointerCapture(e.pointerId);
+        anillo.classList.add('arrastrando');
+      }
+      if (!arrastre.movido) return;
+      giro = arrastre.desde - dx * GRADOS_POR_PX;
+      arrastre.muestras.push({ t: performance.now(), x: e.clientX });
+      if (arrastre.muestras.length > 6) arrastre.muestras.shift();
+      arrancar();
+    });
+    const soltar = (e) => {
+      if (!arrastre || e.pointerId !== arrastre.id) return;
+      if (arrastre.movido) {
+        const [a, b] = [arrastre.muestras[0], arrastre.muestras[arrastre.muestras.length - 1]];
+        inercia = b.t > a.t ? Math.max(-0.6, Math.min(0.6, -((b.x - a.x) / (b.t - a.t)) * GRADOS_POR_PX)) : 0;
+        evitarClic = true;  // soltar después de arrastrar no debe abrir el enlace de la tarjeta
+        setTimeout(() => { evitarClic = false; }, 0);
+        anillo.classList.remove('arrastrando');
+        v = 0;
+      }
+      arrastre = null;
+    };
+    anillo.addEventListener('pointerup', soltar);
+    anillo.addEventListener('pointercancel', soltar);
+    anillo.addEventListener('click', (e) => { if (evitarClic) { e.preventDefault(); e.stopPropagation(); } }, true);
+    anillo.addEventListener('dragstart', (e) => e.preventDefault());
+    // Trackpad: el gesto horizontal de dos dedos gira el anillo.
+    anillo.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      animacion = null;
+      giro += e.deltaX * GRADOS_POR_PX * 0.6;
+      arrancar();
+    }, { passive: false });
+
+    let espera = 0;
+    window.addEventListener('resize', () => { clearTimeout(espera); espera = setTimeout(() => { armar(); pintar(); }, 150); });
   })();
 </script>
 {% endblock %}

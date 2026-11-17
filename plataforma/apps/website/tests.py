@@ -52,6 +52,14 @@ class SitioPublicoTests(TestCase):
         self.assertContains(respuesta, "Pía Mercado")  # sección Nosotras, según el Documento de Alcance
         self.assertNotContains(respuesta, 'href="https://instagram.com/agenciacosmopolitan"')
 
+    def test_paginas_publicas_sin_comentarios_de_plantilla_visibles(self):
+        # {# … #} de Django solo funciona en una línea: si se parte en varias, se imprime como texto en la página.
+        for nombre in ("website:home", "website:planes", "website:cotizacion", "website:asesoria"):
+            with self.subTest(nombre=nombre):
+                respuesta = self.client.get(reverse(nombre))
+                self.assertNotContains(respuesta, "{#")
+                self.assertNotContains(respuesta, "#}")
+
     def test_planes_vienen_del_catalogo(self):
         respuesta = self.client.get(reverse("website:planes"))
         nombres = [p["nombre"] for p in respuesta.context["planes"]]
@@ -87,6 +95,16 @@ class FormularioCotizacionTests(TestCase):
 
         confirmacion = self.client.get(reverse("website:cotizacion") + "?enviado=1")
         self.assertContains(confirmacion, "Posicionamiento")
+
+    def test_cotizar_un_servicio_desde_la_portada_lo_deja_marcado(self):
+        ads = Servicio.objects.get(slug="publicidad-ads")
+        form = self.client.get(reverse("website:cotizacion") + "?servicio=publicidad-ads").context["form"]
+        self.assertEqual(form.initial["servicios_requeridos"], [ads.pk])
+        # Un slug inexistente o inactivo se ignora.
+        Servicio.objects.filter(slug="publicidad-ads").update(activo=False)
+        for slug in ("publicidad-ads", "no-existe"):
+            form = self.client.get(reverse("website:cotizacion") + f"?servicio={slug}").context["form"]
+            self.assertNotIn("servicios_requeridos", form.initial)
 
     def test_campos_obligatorios(self):
         respuesta = self.client.post(reverse("website:cotizacion"), {"nombre": "Ana"})

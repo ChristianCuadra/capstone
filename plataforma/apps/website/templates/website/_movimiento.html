@@ -47,8 +47,24 @@
     const suavizar = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     let animacion = 0;
     const irA = (destino) => {
-      const margen = (cabecera ? cabecera.offsetHeight : 0) + 16;
-      const final = Math.max(0, destino.getBoundingClientRect().top + window.scrollY - margen);
+      // Si el destino es una escena fija (sticky) de la portada, se llega justo a su inicio: la escena ya deja
+      // espacio para la cabecera y así se ve completa desde el primer momento.
+      // La posición se toma del diseño (offsetTop), no de la pantalla: un bloque que está entrando en 3D aparece
+      // desplazado y el cálculo caería en el lugar equivocado.
+      const pegado = getComputedStyle(destino).position === 'sticky';
+      const base = pegado ? destino.parentElement : destino;
+      let arriba = 0;
+      for (let n = base; n; n = n.offsetParent) arriba += n.offsetTop;
+      const alto = cabecera ? cabecera.offsetHeight : 0;
+      let final = pegado ? arriba : arriba - alto - 16;
+      // data-ancla-centrar: el bloque queda al centro del espacio visible (bajo la cabecera).
+      if (destino.hasAttribute('data-ancla-centrar')) {
+        const contenido = destino.lastElementChild || destino;
+        let y = 0;
+        for (let n = contenido; n; n = n.offsetParent) y += n.offsetTop;
+        final = y + contenido.offsetHeight / 2 - (window.innerHeight + alto) / 2;
+      }
+      final = Math.max(0, Math.min(final, document.documentElement.scrollHeight - window.innerHeight));
       const inicio = window.scrollY;
       const distancia = final - inicio;
       cancelAnimationFrame(animacion);

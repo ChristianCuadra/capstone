@@ -206,7 +206,7 @@
         </div>
         <form method="post">
           {% csrf_token %}<input type="hidden" name="accion" value="generar_diagnostico">
-          <button type="submit" class="rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if not ia_configurada %}text-gris-txt{% else %}text-vino{% endif %}"
+          <button type="submit" data-ia class="rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave {% if not ia_configurada %}text-gris-txt{% else %}text-vino{% endif %}"
                   {% if prospecto.diagnostico_ia %}data-confirmar-titulo="¿Regenerar el diagnóstico?" data-confirmar="Se reemplazará el texto actual por uno nuevo." data-confirmar-boton="Sí, regenerar"{% endif %}>
             {% if prospecto.diagnostico_ia %}↻ Regenerar{% else %}Generar con IA{% endif %}
           </button>

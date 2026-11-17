@@ -69,7 +69,7 @@
           {% for valor, nombre in meses_reporte %}<option value="{{ valor }}"{% if forloop.counter == 2 %} selected{% endif %}>{{ nombre|capfirst }}</option>{% endfor %}
         </select>
       </label>
-      <button type="submit" name="con_ia" value="1" class="rounded-full bg-vino px-4 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">✨ Generar borrador con IA</button>
+      <button type="submit" name="con_ia" value="1" data-ia class="rounded-full bg-vino px-4 py-2.5 text-sm font-semibold text-white hover:bg-vino-oscuro">✨ Generar borrador con IA</button>
       <button type="submit" name="con_ia" value="0" class="rounded-full px-4 py-2.5 text-sm font-semibold text-vino ring-1 ring-inset ring-gris-borde hover:bg-fondo-suave">Escribirlo a mano</button>
     </form>
     {% if reportes %}
