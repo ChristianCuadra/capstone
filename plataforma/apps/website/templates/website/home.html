@@ -62,10 +62,24 @@
   .apertura { background: #3D1828; }
   /* El cierre se funde con lo anterior (sus brillos no empiezan con filo). */
   .cta-desvanecido { background: linear-gradient(180deg, #3D1828, transparent); }
-  .cinta-desvanecida {
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
-            mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  /* ── Cinta de servicios (bajo el logo): franja sobria entre dos líneas finas ── */
+  .cinta-viva {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
   }
+  .cinta-viva::before, .cinta-viva::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 1px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgb(244 127 177 / .45), rgb(255 255 255 / .25), rgb(244 127 177 / .45), transparent);
+  }
+  .cinta-viva::before { top: 0; }
+  .cinta-viva::after { bottom: 0; }
+  .cinta-viva-pista { display: flex; width: max-content; will-change: transform; }
+  .cinta-viva-grupo {
+    display: flex; flex-shrink: 0; align-items: center; gap: 2.25rem; padding-right: 2.25rem; margin: 0; list-style: none; white-space: nowrap;
+    font-family: "Cormorant Garamond", Georgia, serif; font-weight: 500; font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.2;
+    letter-spacing: .01em; color: rgb(255 255 255 / .82);
+  }
+  .cinta-estrella { font-size: .55em; color: var(--rosa); text-shadow: 0 0 12px rgb(244 127 177 / .6); }
 
   /* ── Servicios: anillo 3D ──
      Sin JS (o con «reducir movimiento»): grilla de tarjetas. Con JS (.activo): las tarjetas forman un cilindro que
@@ -425,22 +439,25 @@
 </section>
 </div>
 
-  {# ── Cinta con los servicios: solo tipografía, que aparece y se desvanece en los bordes ── #}
+  {# ── Cinta con los servicios: una franja entre líneas finas, texto claro y una estrella entre cada uno ── #}
+  {# Avanza despacio; al bajar rápido acelera un poco y vuelve a su ritmo. #}
   {% if servicios %}
-  <div data-escena="levantar" class="cinta-contenedor cinta-desvanecida relative overflow-hidden py-6 lg:py-10" aria-hidden="true">
-    <div class="cinta">
-      {% for vuelta in "12" %}
-      <ul class="flex shrink-0 items-center gap-12 pr-12 font-serif text-3xl italic text-rubor/40 lg:text-5xl">
-        {% for servicio in servicios %}<li class="flex items-center gap-12 whitespace-nowrap">{{ servicio.nombre|sin_detalle }} <span class="text-base not-italic text-rosa/70 lg:text-xl">✦</span></li>{% endfor %}
-      </ul>
-      {% endfor %}
+  <div data-escena="levantar" class="cinta-viva relative mx-auto mt-2 max-w-7xl overflow-hidden py-6 lg:mt-4" aria-hidden="true">
+    <div class="cinta-viva-fila" data-cinta-fila="-1">
+      <div class="cinta-viva-pista" data-cinta-pista>
+        {% for vuelta in "12" %}
+        <ul class="cinta-viva-grupo">
+          {% for servicio in servicios %}<li>{{ servicio.nombre|sin_detalle }}</li><li class="cinta-estrella">✦</li>{% endfor %}
+        </ul>
+        {% endfor %}
+      </div>
     </div>
   </div>
   {% endif %}
 
   {# ── Asesoría gratuita (destacado) ─────────────────────────────────── #}
   {# «Más información» lleva a la página de la asesoría gratuita (contenido entregado por la agencia, 11 oct 2026). #}
-  <section id="asesoria-gratis" data-ancla-centrar aria-labelledby="asesoria-titulo" class="relative scroll-mt-20 px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
+  <section id="asesoria-gratis" data-ancla-centrar aria-labelledby="asesoria-titulo" class="relative scroll-mt-20 px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-16 lg:pt-36">
     <div data-escena="inclinar" class="tarjeta-viva oscura relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-vino to-vino-oscuro sombra-2">
       <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-rosa/25 blur-3xl" aria-hidden="true"></div>
       <div class="relative flex flex-col items-start gap-8 px-6 py-10 sm:px-10 md:flex-row md:items-center md:justify-between lg:px-14 lg:py-12">
@@ -920,13 +937,23 @@
       if (rielBarra) rielBarra.style.transform = `scaleX(${(q / Math.max(1, n - 1)).toFixed(3)})`;
     };
 
+    // Sin escenario fijo (celular, pantallas bajas): cada pieza sale recién cuando ella misma llega arriba de la
+    // pantalla. En el celular el logo está debajo del texto: si su salida se calculara desde el inicio de la
+    // página, al llegar a verlo ya estaría inclinado y transparente («pasando página»).
+    const salida = (el, y) => {
+      const arriba = topReal(el) - 90;  // 90 ≈ bajo la cabecera
+      return limitar((y - arriba) / Math.max(200, el.offsetHeight * 0.9));
+    };
     const pintarSimple = (y) => {
       if (!hero || !heroTexto || !heroLogo) return;
-      const s = limitar(y / (hero.offsetHeight * 0.85));
-      heroTexto.style.transform = `translate3d(0, ${(-s * 90).toFixed(1)}px, 0)`;
-      heroTexto.style.opacity = (1 - s * 1.1).toFixed(3);
-      heroLogo.style.transform = `perspective(1400px) translate3d(0, ${(s * 70).toFixed(1)}px, ${(-s * 320).toFixed(1)}px) rotateX(${(s * 32).toFixed(2)}deg)`;
-      heroLogo.style.opacity = (1 - s * 0.75).toFixed(3);
+      const t = salida(heroTexto, y);
+      heroTexto.style.transform = `translate3d(0, ${(-t * 60).toFixed(1)}px, 0)`;
+      heroTexto.style.opacity = (1 - t * 0.9).toFixed(3);
+      const s = salida(heroLogo.parentElement, y);
+      heroLogo.style.transform = s > 0
+        ? `perspective(1400px) translate3d(0, ${(s * 70).toFixed(1)}px, ${(-s * 320).toFixed(1)}px) rotateX(${(s * 32).toFixed(2)}deg)`
+        : '';
+      heroLogo.style.opacity = s > 0 ? (1 - s * 0.75).toFixed(3) : '';
     };
 
     const pintar = () => {
@@ -971,6 +998,42 @@
     document.fonts?.ready.then(remedir);
     new ResizeObserver(remedir).observe(document.body);
     remedir();
+  })();
+
+  // Cinta de servicios: avanza despacio; al bajar rápido acelera un poco y vuelve de a poco a su ritmo.
+  // Solo se mueve mientras está en pantalla. Con «reducir movimiento» queda quieta.
+  (() => {
+    const filas = [...document.querySelectorAll('[data-cinta-fila]')].map((fila) => ({
+      fila, pista: fila.querySelector('[data-cinta-pista]'), sentido: parseFloat(fila.dataset.cintaFila) || -1, x: 0, ancho: 0,
+    }));
+    if (!filas.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const VELOCIDAD = 0.04;  // px por ms
+    const medir = () => filas.forEach((f) => { f.ancho = f.pista.scrollWidth / 2; });
+    medir();
+    window.addEventListener('resize', medir);
+    document.fonts?.ready.then(medir);
+
+    let impulso = 0, yAnterior = window.scrollY, anterior = 0, cuadro = 0, visible = false;
+    const bucle = (ahora) => {
+      const dt = Math.min(50, anterior ? ahora - anterior : 16);
+      anterior = ahora;
+      // Impulso: cuánto se movió la página en este cuadro (suavizado), en px por ms.
+      const y = window.scrollY;
+      const vel = (y - yAnterior) / dt;
+      yAnterior = y;
+      impulso += (vel - impulso) * Math.min(1, dt / 120);
+      filas.forEach((f) => {
+        if (!f.ancho) return;
+        f.x += f.sentido * (VELOCIDAD + Math.min(0.5, Math.abs(impulso) * 0.35)) * dt;
+        f.x = ((f.x % f.ancho) - f.ancho) % f.ancho;  // siempre entre -ancho y 0: el bucle no se nota
+        f.pista.style.transform = `translate3d(${f.x.toFixed(1)}px, 0, 0)`;
+      });
+      cuadro = visible ? requestAnimationFrame(bucle) : 0;
+    };
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (visible && !cuadro) { anterior = 0; yAnterior = window.scrollY; cuadro = requestAnimationFrame(bucle); }
+    }).observe(filas[0].fila.parentElement);
   })();
 
   // Scroll suave con inercia: la rueda del mouse salta ~100 px por paso; en vez de saltar, la página se desliza
